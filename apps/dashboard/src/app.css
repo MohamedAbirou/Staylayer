@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+@source "../../../packages/puck-components/**/*.{ts,tsx,js,jsx}";
+
+@source "../../../packages/**/*.{ts,tsx}";

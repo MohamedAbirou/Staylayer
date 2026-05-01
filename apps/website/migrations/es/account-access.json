@@ -1,0 +1,1814 @@
+{
+  "slug": "account-access",
+  "locale": "es",
+  "title": "Acceso a la cuenta",
+  "seoTitle": "Acceso a la cuenta, software para alquileres vacacionales de MyAllocator",
+  "seoDescription": "Gestiona fácilmente tu equipo de alquiler vacacional con MyAllocator. Añade coanfitriones, personal de limpieza y administradores de propiedades con niveles de acceso personalizables.",
+  "seoKeywords": "acceso a la cuenta, MyAllocator, alquiler vacacional, software, gestión de equipos",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Acceso a la cuenta",
+        "seoTitle": "Acceso a la cuenta, software para alquileres vacacionales de MyAllocator",
+        "fontFamily": "Inter",
+        "seoKeywords": "acceso a la cuenta, MyAllocator, alquiler vacacional, software, gestión de equipos",
+        "seoDescription": "Gestiona fácilmente tu equipo de alquiler vacacional con MyAllocator. Añade coanfitriones, personal de limpieza y administradores de propiedades con niveles de acceso personalizables.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Acceso a la cuenta"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-e5a8e308-231a-4477-8378-25efb8e9060c",
+          "links": [
+            {
+              "href": "/",
+              "label": "Plataforma",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Creador de sitios web",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Gestor de canales (alquileres vacacionales)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Comunicaciones con los huéspedes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Motor de reservas",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Sistema de reservas",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Precios dinámicos",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Estadísticas e indicadores clave de rendimiento",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Características"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Recursos",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Embajador",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guía para visitantes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Acceso a la cuenta",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Precios",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Informe anual",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contáctanos",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Explora"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "Acerca de",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Empleo",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Alojamiento y desayuno",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Tienda",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Casa de huéspedes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Apartamentos vacacionales",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Empresa"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Empieza hoy mismo",
+          "logoHref": "/",
+          "logoText": "Tu marca",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 16,
+          "logoImageAlt": "Logotipo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 33,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#ffffff",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 55,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#ffffff",
+          "ctaBackgroundColor": "#ffffff",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "Section",
+        "props": {
+          "id": "Section-d68c1c1c-8a46-4628-b16b-fd673a0a92ac",
+          "content": [
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-b3354982-52c6-477d-8d93-c3b5c18ba224",
+                "size": "2xl",
+                "text": "Simplifica la gestión del equipo y las operaciones de alquiler vacacional con [MyAllocator]{#0930f6}",
+                "color": "",
+                "level": "h2",
+                "weight": "bold",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "tight",
+                "letterSpacing": "tight",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-bd171239-26e4-4557-9b35-3d1f94ca26ee",
+                "size": "lg",
+                "text": "Maximiza los ingresos de tu alquiler vacacional",
+                "color": "#0930f6",
+                "level": "h2",
+                "weight": "medium",
+                "maxWidth": "none",
+                "paddingY": "md",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "tight",
+                "letterSpacing": "normal",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-300bf2b4-c380-4932-a76c-83d30f029791",
+                "size": "xl",
+                "text": "Únete a los miles de propietarios y gestores inmobiliarios que utilizan [**MyAllocator**]{#0930f6} para mejorar la eficiencia y aumentar las reservas. Los usuarios obtienen hasta un [**20 % más de ingresos**]{#0930f6} gracias a las herramientas de automatización inteligente y colaboración en equipo.\n",
+                "color": "#3d3d3e",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "lg",
+                "paddingY": "sm",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradient": true,
+          "maxWidth": "xl",
+          "paddingX": "lg",
+          "paddingY": "3xl",
+          "animation": "none",
+          "borderTop": false,
+          "fullWidth": false,
+          "gradientTo": "#FFFFFF",
+          "borderBottom": false,
+          "gradientFrom": "#f7f9fc",
+          "animationDelay": "none",
+          "overlayOpacity": 50,
+          "backgroundColor": "",
+          "backgroundImage": "",
+          "animationDuration": "normal",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-4009d10b-0264-4c30-989c-6d795d34959f",
+          "size": "xl"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-03a22afa-17f2-4759-b4d1-dae07ba19587",
+          "content": [
+            {
+              "type": "Card",
+              "props": {
+                "id": "Card-e1b9c4d5-b96e-40ce-8289-3842d07c34aa",
+                "shadow": "sm",
+                "content": [
+                  {
+                    "type": "Heading",
+                    "props": {
+                      "id": "Heading-61614942-dc49-4e9c-b7ed-51b1e66529a8",
+                      "size": "sm",
+                      "text": "Prueba la función de precios dinámicos de MyAllocator, que forma parte de nuestro potente conjunto de herramientas de gestión inmobiliaria.",
+                      "color": "#0930f6",
+                      "level": "h2",
+                      "weight": "semibold",
+                      "maxWidth": "none",
+                      "paddingY": "none",
+                      "alignment": "center",
+                      "animation": "none",
+                      "lineHeight": "tight",
+                      "letterSpacing": "wide",
+                      "textTransform": "none",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "id": "Button-5b042b3d-03a7-4953-a04a-23b268258b82",
+                      "url": "/pricing",
+                      "icon": "none",
+                      "size": "lg",
+                      "label": "Empezar",
+                      "shadow": "none",
+                      "rounded": "full",
+                      "variant": "primary",
+                      "fullWidth": false,
+                      "marginTop": 27,
+                      "textColor": "",
+                      "marginLeft": 0,
+                      "marginRight": 0,
+                      "iconPosition": "right",
+                      "marginBottom": 0,
+                      "openInNewTab": false,
+                      "customPaddingX": 22,
+                      "customPaddingY": 9,
+                      "hoverTextColor": "",
+                      "backgroundColor": "#0930f6",
+                      "hoverBackgroundColor": ""
+                    }
+                  }
+                ],
+                "padding": "md",
+                "rounded": "lg",
+                "bordered": true,
+                "gradient": false,
+                "imageAlt": "",
+                "imageUrl": "",
+                "gradientTo": "#8b5cf6",
+                "gradientFrom": "#3b82f6",
+                "imagePosition": "top",
+                "contentSpacing": 16,
+                "backgroundColor": "#ffffff",
+                "contentAlignment": "center",
+                "gradientDirection": "to-br"
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "sm",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "",
+          "gradientFrom": "",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-1c2e170a-cebd-400a-88fe-57b4ba3893d9",
+          "size": "xl"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-20e4ca8b-a2d4-4134-b386-5897ff43f71c",
+          "size": "xl"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-168670a8-12a3-4248-829a-d580fbfed68e",
+          "content": [
+            {
+              "type": "Section",
+              "props": {
+                "id": "Section-984b898a-6cae-473a-bdb3-1d3591c1cfa6",
+                "content": [
+                  {
+                    "type": "Heading",
+                    "props": {
+                      "id": "Heading-d75df28b-7a91-49d2-9f4a-d06962e9791a",
+                      "size": "xl",
+                      "text": "Gestiona tu equipo de alquileres vacacionales con confianza",
+                      "color": "",
+                      "level": "h2",
+                      "weight": "normal",
+                      "maxWidth": "none",
+                      "paddingY": "sm",
+                      "alignment": "center",
+                      "animation": "none",
+                      "lineHeight": "tight",
+                      "letterSpacing": "normal",
+                      "textTransform": "none",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  },
+                  {
+                    "type": "Paragraph",
+                    "props": {
+                      "id": "Paragraph-35fee26c-ccec-4009-a362-b200c3fac894",
+                      "size": "xl",
+                      "text": "Tanto si diriges un hotel boutique, gestionas una pensión o supervisas varias casas de vacaciones, MyAllocator te ayuda a:\n",
+                      "color": "#3d3d3e",
+                      "weight": "normal",
+                      "opacity": "100",
+                      "maxWidth": "lg",
+                      "paddingY": "sm",
+                      "alignment": "center",
+                      "animation": "none",
+                      "lineHeight": "normal",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  },
+                  {
+                    "type": "Spacer",
+                    "props": {
+                      "id": "Spacer-8eebde5b-831e-41ae-ac5e-382e88174839",
+                      "size": "xl",
+                      "backgroundColor": "#f9fafb"
+                    }
+                  },
+                  {
+                    "type": "Grid",
+                    "props": {
+                      "id": "Grid-4f02cedb-414c-4eb6-ab22-d13d6b2e996c",
+                      "gap": "sm",
+                      "columns": "4",
+                      "content": [
+                        {
+                          "type": "FeatureCard",
+                          "props": {
+                            "id": "FeatureCard-d3a6a87e-c178-4982-83d4-bb786ee59acc",
+                            "icon": "star",
+                            "title": "Incorporación sencilla de nuevos miembros al equipo",
+                            "shadow": "sm",
+                            "bordered": true,
+                            "gradient": false,
+                            "showIcon": false,
+                            "showList": false,
+                            "alignment": "center",
+                            "iconColor": "",
+                            "iconShape": "rounded",
+                            "listColor": "",
+                            "listItems": [
+                              {
+                                "icon": "",
+                                "text": "Primer elemento de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Segundo punto de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Tercer punto de la lista"
+                              }
+                            ],
+                            "textColor": "",
+                            "gradientTo": "#8b5cf6",
+                            "titleColor": "",
+                            "description": "Añade y gestiona a los miembros del equipo sin esfuerzo gracias a controles intuitivos y una clara asignación de funciones.\n",
+                            "listVariant": "check",
+                            "titleWeight": "semibold",
+                            "gradientFrom": "#3b82f6",
+                            "listFontSize": 14,
+                            "titleFontSize": 21,
+                            "iconBackground": "",
+                            "listFontWeight": "normal",
+                            "listGlobalIcon": "",
+                            "listTopSpacing": 0,
+                            "backgroundColor": "#ffffff",
+                            "listAccentColor": "#2563eb",
+                            "listItemSpacing": 8,
+                            "descriptionColor": "",
+                            "descriptionWeight": "normal",
+                            "gradientDirection": "to-br",
+                            "descriptionFontSize": 17
+                          }
+                        },
+                        {
+                          "type": "FeatureCard",
+                          "props": {
+                            "id": "FeatureCard-a433a6b9-8ba6-4be5-9c1f-4f054318bc37",
+                            "icon": "star",
+                            "title": "Acceso personalizable",
+                            "shadow": "sm",
+                            "bordered": true,
+                            "gradient": false,
+                            "showIcon": false,
+                            "showList": false,
+                            "alignment": "center",
+                            "iconColor": "",
+                            "iconShape": "rounded",
+                            "listColor": "",
+                            "listItems": [
+                              {
+                                "icon": "",
+                                "text": "Primer elemento de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Segundo punto de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Tercer punto de la lista"
+                              }
+                            ],
+                            "textColor": "",
+                            "gradientTo": "#8b5cf6",
+                            "titleColor": "",
+                            "description": "Asigna permisos y derechos de acceso detallados, garantizando la seguridad de los datos y la precisión operativa para cada miembro del equipo.\n",
+                            "listVariant": "check",
+                            "titleWeight": "semibold",
+                            "gradientFrom": "#3b82f6",
+                            "listFontSize": 14,
+                            "titleFontSize": 21,
+                            "iconBackground": "",
+                            "listFontWeight": "normal",
+                            "listGlobalIcon": "",
+                            "listTopSpacing": 0,
+                            "backgroundColor": "#ffffff",
+                            "listAccentColor": "#2563eb",
+                            "listItemSpacing": 8,
+                            "descriptionColor": "",
+                            "descriptionWeight": "normal",
+                            "gradientDirection": "to-br",
+                            "descriptionFontSize": 17
+                          }
+                        },
+                        {
+                          "type": "FeatureCard",
+                          "props": {
+                            "id": "FeatureCard-3dbdf9c4-b673-431f-ba13-8de3870b2226",
+                            "icon": "star",
+                            "title": "Comunicación fluida con los huéspedes",
+                            "shadow": "sm",
+                            "bordered": true,
+                            "gradient": false,
+                            "showIcon": false,
+                            "showList": false,
+                            "alignment": "center",
+                            "iconColor": "",
+                            "iconShape": "rounded",
+                            "listColor": "",
+                            "listItems": [
+                              {
+                                "icon": "",
+                                "text": "Primer elemento de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Segundo punto de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Tercer punto de la lista"
+                              }
+                            ],
+                            "textColor": "",
+                            "gradientTo": "#8b5cf6",
+                            "titleColor": "",
+                            "description": "Optimice todas las interacciones con los clientes a través de una plataforma centralizada, garantizando respuestas coherentes y oportunas.\n",
+                            "listVariant": "check",
+                            "titleWeight": "semibold",
+                            "gradientFrom": "#3b82f6",
+                            "listFontSize": 14,
+                            "titleFontSize": 21,
+                            "iconBackground": "",
+                            "listFontWeight": "normal",
+                            "listGlobalIcon": "",
+                            "listTopSpacing": 0,
+                            "backgroundColor": "#ffffff",
+                            "listAccentColor": "#2563eb",
+                            "listItemSpacing": 8,
+                            "descriptionColor": "",
+                            "descriptionWeight": "normal",
+                            "gradientDirection": "to-br",
+                            "descriptionFontSize": 17
+                          }
+                        },
+                        {
+                          "type": "FeatureCard",
+                          "props": {
+                            "id": "FeatureCard-2a4edd26-8439-426f-80dd-90cdba5e7b3d",
+                            "icon": "star",
+                            "title": "Operaciones y seguimiento centralizados",
+                            "shadow": "sm",
+                            "bordered": true,
+                            "gradient": false,
+                            "showIcon": false,
+                            "showList": false,
+                            "alignment": "center",
+                            "iconColor": "",
+                            "iconShape": "rounded",
+                            "listColor": "",
+                            "listItems": [
+                              {
+                                "icon": "",
+                                "text": "Primer elemento de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Segundo punto de la lista"
+                              },
+                              {
+                                "icon": "",
+                                "text": "Tercer punto de la lista"
+                              }
+                            ],
+                            "textColor": "",
+                            "gradientTo": "#8b5cf6",
+                            "titleColor": "",
+                            "description": "Supervisa el rendimiento del equipo, automatiza tareas y gestiona todos los aspectos de tu negocio de alquiler desde un único panel de control integrado.\n",
+                            "listVariant": "check",
+                            "titleWeight": "semibold",
+                            "gradientFrom": "#3b82f6",
+                            "listFontSize": 14,
+                            "titleFontSize": 21,
+                            "iconBackground": "",
+                            "listFontWeight": "normal",
+                            "listGlobalIcon": "",
+                            "listTopSpacing": 0,
+                            "backgroundColor": "#ffffff",
+                            "listAccentColor": "#2563eb",
+                            "listItemSpacing": 8,
+                            "descriptionColor": "",
+                            "descriptionWeight": "normal",
+                            "gradientDirection": "to-br",
+                            "descriptionFontSize": 17
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "gradient": false,
+                "maxWidth": "2xl",
+                "paddingX": "none",
+                "paddingY": "md",
+                "animation": "none",
+                "borderTop": false,
+                "fullWidth": false,
+                "gradientTo": "#8b5cf6",
+                "borderBottom": false,
+                "gradientFrom": "#3b82f6",
+                "animationDelay": "none",
+                "overlayOpacity": 50,
+                "backgroundColor": "#f9fafb",
+                "backgroundImage": "",
+                "animationDuration": "normal",
+                "gradientDirection": "to-br"
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "full",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "#f9fafb",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-c8a94e84-6c34-4534-bf04-7465ff9af316",
+          "size": "2xl"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-ce466da6-71ad-49d6-94ef-1ee06c9e2381",
+          "size": "xl",
+          "text": "Dale a tu equipo las herramientas necesarias para ofrecer una experiencia excepcional a los clientes",
+          "level": "h2",
+          "weight": "normal",
+          "maxWidth": "lg",
+          "alignment": "center",
+          "animation": "none",
+          "letterSpacing": "tight"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-435335ab-a1fe-4cf2-94c6-4df2aa393c7e",
+          "size": "sm"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-7abfcdfe-a31a-4d14-bf73-fc547255e3a5",
+          "size": "lg"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-34b64235-1871-4fda-a55a-4e553e4c3475",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-c1deeac4-07f0-4dd1-9a15-2bb60de7a915",
+                "gap": "md",
+                "columns": "2",
+                "content": [
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-c817c8bf-dfd7-451e-9c1e-a466df1b730f",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-1269de0f-7b51-467d-9760-3142260a80d2",
+                            "size": "md",
+                            "text": "Añadir miembros del equipo",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-9aa4ed2b-b8f4-4cf5-8c92-3c8e33560203",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Invita a tus coanfitriones, personal de limpieza, administradores de fincas o asistentes virtuales. Cada uno tendrá acceso exactamente a lo que necesita."
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-92fef39e-4763-4e79-9f57-61412a611278",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-16dcee96-39ab-4275-8e7b-14623f00a129",
+                            "size": "md",
+                            "text": "Personalizar permisos",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-a3e673fb-58bc-4eb6-b301-93601c88f7b2",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Controla quién ve qué. Define los niveles de acceso a tarifas, mensajes, datos de los huéspedes y mucho más, tanto en propiedades concretas como en toda tu cartera."
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-85046c2f-44ca-4696-8be3-e80a6b8c1619",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-665e0653-7823-460b-935b-d9ad55caa905",
+                            "size": "md",
+                            "text": "Colaborar con transparencia",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-d6c2e09d-16f2-495f-998e-214c128fda99",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Mantenga informadas a todas las partes interesadas —propietarios, contables, socios y personal— con accesos personalizados y actualizaciones en tiempo real."
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "sm",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-e910d85e-6feb-43d3-a6e8-5d469caf5ef9",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-018aca58-1db4-4b83-b2ff-6eac9b72dd9f",
+                            "size": "md",
+                            "text": "Mantén el control total",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-b302c2a5-e8a8-4002-a6f5-ac57e3a035d5",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Gestiona todas las propiedades desde un único panel de control, lo que garantiza una visibilidad y un control totales en cada paso."
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 17,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-501e5a4e-6287-47fd-909f-c83be201f2b9",
+          "size": "xl"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-d29abd9b-b79d-4ba8-b949-782c79160605",
+          "size": "xl"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-b08c1fdc-332e-4e91-a664-1fa571d08528",
+          "size": "2xl"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-7df5703a-1121-4952-8899-fb81f12992a2",
+          "size": "xl",
+          "text": "Cuenta con la confianza de propietarios de todo el mundo",
+          "level": "h2",
+          "weight": "normal",
+          "maxWidth": "md",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-80d87d34-c5cf-4a60-8d8c-67558a89b84f",
+          "size": "xl",
+          "text": "Comentarios reales de anfitriones como tú:\n",
+          "color": "",
+          "weight": "normal",
+          "opacity": "100",
+          "maxWidth": "none",
+          "paddingY": "md",
+          "alignment": "center",
+          "animation": "none",
+          "lineHeight": "tight",
+          "animationDelay": "none",
+          "animationDuration": "normal"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-d2c1627f-a118-4d2b-adb7-ce9fb14e02e8",
+          "size": "md"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-9629c1a7-74ef-4009-b2c0-cdc3f18840c8",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-75566f22-20f4-4249-a4c5-c31c56881665",
+                "gap": "md",
+                "columns": "3",
+                "content": [
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-5f5ec0d4-859d-42da-b20b-28d6f68e02bb",
+                      "quote": "«Este es el mejor gestor de canales que he utilizado. Sin gastos ocultos, con todas las herramientas que necesito y que, además, funciona de verdad».\n",
+                      "author": "Hassan",
+                      "shadow": "xl",
+                      "rounded": "xl",
+                      "textColor": "",
+                      "quoteColor": "",
+                      "withBorder": true,
+                      "accentColor": "#e2e8f0",
+                      "authorColor": "",
+                      "quoteFontSize": 0,
+                      "authorFontSize": 0,
+                      "backgroundColor": "#ffffff"
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-19301051-0d9f-40f3-8460-11c530ce6467",
+                      "quote": "«Llevo cuatro años utilizando MyAllocator y he publicado seis anuncios. Es fácil de usar y mi motor de reservas funciona a la perfección».\n",
+                      "author": "Rebecca",
+                      "shadow": "xl",
+                      "rounded": "xl",
+                      "textColor": "",
+                      "quoteColor": "",
+                      "withBorder": true,
+                      "accentColor": "#e2e8f0",
+                      "authorColor": "",
+                      "quoteFontSize": 0,
+                      "authorFontSize": 0,
+                      "backgroundColor": "#ffffff"
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-885f049b-c618-4ae5-9c74-460f2913caf6",
+                      "quote": "«¡Ha automatizado tantas tareas que antes hacía a mano, y además sigue siendo asequible!»\n",
+                      "author": "Stefano",
+                      "shadow": "xl",
+                      "rounded": "xl",
+                      "textColor": "",
+                      "quoteColor": "",
+                      "withBorder": true,
+                      "accentColor": "#e2e8f0",
+                      "authorColor": "",
+                      "quoteFontSize": 0,
+                      "authorFontSize": 0,
+                      "backgroundColor": "#ffffff"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-e6e07f38-0280-4e66-89f4-28fe3842288e",
+          "size": "2xl"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-1c886022-9e8e-4d70-89cf-47c42eeed780",
+          "size": "2xl"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-8532fa3b-300e-4378-9206-6294274eef96",
+          "size": "xl",
+          "text": "Diseñado para todo tipo de alojamientos vacacionales",
+          "level": "h2",
+          "weight": "normal",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-5c45584b-41f5-4d36-8a6e-71f189e601dd",
+          "size": "md"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-33e5fbae-2084-4444-8582-9528d00331e5",
+          "size": "sm"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-8837f049-fbb7-4090-bef5-9d0db3170292",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-fe08f666-680d-440a-8218-9cd496f72019",
+                "gap": "md",
+                "columns": "3",
+                "content": [
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-e117827e-4123-4188-8c44-c594293b3d9b",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-2ddc4b63-7813-4ad1-8e76-958f048c7801",
+                            "size": "md",
+                            "text": "Casas y apartamentos de vacaciones",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-262463d9-c06d-4371-8cea-796754b8c418",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Centraliza las reservas, automatiza la comunicación y aumenta los ingresos."
+                              }
+                            ],
+                            "variant": "unordered",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#000000",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-a92eeb02-8f61-4812-a283-df04a30f662b",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-25e780aa-3f30-41fe-86c5-a1fb5a8f06b3",
+                            "size": "md",
+                            "text": "Hoteles boutique",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-447c7d40-012e-4eae-bf8f-9e46cf054b8e",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Mantén tu toque personal mientras optimizas las operaciones."
+                              }
+                            ],
+                            "variant": "unordered",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#000000",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-ec17bda5-d794-4844-a568-f291e22ae3e2",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-a7ed614d-efc0-4fa5-ae9d-28f8e56fa473",
+                            "size": "md",
+                            "text": "Alojamientos con desayuno incluido",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-e5d46801-89d9-4534-a41e-3ff3f8580769",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Ahorra tiempo con herramientas de reserva y de gestión de equipos que funcionan a la perfección."
+                              }
+                            ],
+                            "variant": "unordered",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#000000",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-c6c76e8d-a020-4b3a-b072-2b6bfd06ecbf",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-2917934c-5695-478e-9649-d39c763d689c",
+                            "size": "md",
+                            "text": "Pensiones",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-ba97bb42-6195-488c-8418-14c7d5c932e9",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Combina la calidez con la eficiencia gracias a un acceso optimizado para el equipo."
+                              }
+                            ],
+                            "variant": "unordered",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#000000",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-29b43a11-250a-4ec5-b9bc-dd8743ad9869",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-0cdc0aa9-d03a-416a-ac92-b23c9f54403a",
+                            "size": "md",
+                            "text": "Campings y glamping",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-e3afc84e-38b8-433b-9a14-3b904a120f21",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Mantén todo organizado con una imagen de marca personalizada y mensajes para los huéspedes."
+                              }
+                            ],
+                            "variant": "unordered",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#000000",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-ca853f8f-ee4d-43e5-98ac-09dd758302fe",
+                      "shadow": "lg",
+                      "content": [
+                        {
+                          "type": "Heading",
+                          "props": {
+                            "id": "Heading-52690d38-b6b0-4c27-be29-63cddfa0966b",
+                            "size": "md",
+                            "text": "Estancias en granjas",
+                            "color": "",
+                            "level": "h2",
+                            "weight": "medium",
+                            "maxWidth": "none",
+                            "alignment": "left",
+                            "animation": "none",
+                            "letterSpacing": "tight",
+                            "textTransform": "none",
+                            "animationDelay": "none",
+                            "animationDuration": "normal"
+                          }
+                        },
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-9e1c8d71-5d13-4507-9f26-ec45c46c8cfb",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Ofrece una experiencia auténtica mientras gestionas varias propiedades sin esfuerzo."
+                              }
+                            ],
+                            "variant": "unordered",
+                            "fontSize": 16,
+                            "paddingX": 0,
+                            "paddingY": 13,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#000000",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": true,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-196f43e9-6296-4ae7-9f67-c52b2efca5f6",
+          "size": "2xl"
+        }
+      },
+      {
+        "type": "FAQ",
+        "props": {
+          "id": "FAQ-9b0e011d-b137-4b8e-bc93-28b08a582b32",
+          "items": [
+            {
+              "answer": "¡Por supuesto! Añade miembros al equipo y concédeles acceso de solo lectura o de edición para funciones específicas.",
+              "question": "¿Puedo añadir otros usuarios a MyAllocator?"
+            },
+            {
+              "answer": "Socios, familiares, personal de limpieza, asesores fiscales y cualquier persona que participe en la gestión de tu propiedad en alquiler.",
+              "question": "¿Con quién puedo compartir el acceso?"
+            },
+            {
+              "answer": "Sí. Asigna funciones para la configuración general, los precios, la información de los huéspedes y mucho más. Personalízalas por establecimiento o para toda la cartera.\n",
+              "question": "¿Puedo controlar lo que ve cada persona?"
+            },
+            {
+              "answer": "Por supuesto. Configura los permisos por propiedad, ideal para administradores de fincas y operadores con múltiples ubicaciones.",
+              "question": "¿Puedo ajustar la configuración para cada propiedad?"
+            }
+          ],
+          "columns": "1",
+          "heading": "Preguntas frecuentes",
+          "maxWidth": "md",
+          "subheading": "",
+          "accentColor": "#000000",
+          "headingWeight": "normal",
+          "backgroundColor": "",
+          "headingPosition": "left"
+        }
+      },
+      {
+        "type": "CTABanner",
+        "props": {
+          "id": "CTABanner-e36c86bb-7910-4221-865e-202daadf54d6",
+          "actions": [
+            {
+              "type": "Button",
+              "props": {
+                "id": "Button-cfe6e366-198e-4e95-a232-48d425e25679",
+                "url": "/pricing",
+                "icon": "none",
+                "size": "lg",
+                "label": "Empezar",
+                "shadow": "none",
+                "rounded": "full",
+                "variant": "outline",
+                "fullWidth": false,
+                "marginTop": 27,
+                "textColor": "#fcfcfc",
+                "iconPosition": "right",
+                "openInNewTab": false,
+                "customPaddingX": 22,
+                "customPaddingY": 9,
+                "backgroundColor": "#0930f6"
+              }
+            }
+          ],
+          "heading": "¿Estás listo para tomar las riendas de tu negocio de alquiler vacacional?",
+          "paddingY": "lg",
+          "alignment": "center",
+          "textColor": "#ffffff",
+          "description": "",
+          "showActions": "show",
+          "headingWeight": "light",
+          "backgroundColor": "#2563eb",
+          "headingFontSize": 38
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-20f5ab08-f67b-4892-a934-5e4d5e64d432",
+          "columns": [
+            {
+              "links": [
+                {
+                  "href": "/about",
+                  "label": "Acerca de",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/contact",
+                  "label": "Contacto",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Precios",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Empleo",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Empresa"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentación",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Recursos"
+            }
+          ],
+          "tagline": "MyAllocator te ayuda a desarrollar más rápido, escalar mejor y ofrecer experiencias web modernas con facilidad.\n",
+          "logoHref": "/",
+          "logoText": "Tu marca",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": false,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#ffffff",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Política de privacidad",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Acuerdo con el cliente",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#ffffff",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logotipo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 Su empresa. Todos los derechos reservados.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#ffffff",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#696969",
+          "bottomBarBorderColor": "#d4d4d4",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

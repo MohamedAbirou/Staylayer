@@ -1,0 +1,909 @@
+{
+  "slug": "pricing",
+  "locale": "fr",
+  "title": "Tarifs",
+  "seoTitle": "Tarifs et formules - Logiciel de gestion de locations saisonnières, gestionnaire de canaux de distribution et PMS | MyAllocator",
+  "seoDescription": "Comparez les formules du logiciel de location saisonnière d'MyAllocator. Outils tout-en-un : gestionnaire de canaux, PMS et tarification dynamique — 0 % de commission, sans frais cachés. Augmentez votre chiffre d'affaires jusqu'à 20 %.",
+  "seoKeywords": "Tarifs des logiciels de location saisonnière, tarifs des gestionnaires de canaux de distribution, tarifs des systèmes de gestion hôtelière (PMS), coûts de gestion des locations saisonnières, formules des logiciels de location saisonnière, tarifs d'MyAllocator",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Tarifs",
+        "seoTitle": "Tarifs et formules - Logiciel de gestion de locations saisonnières, gestionnaire de canaux de distribution et PMS",
+        "fontFamily": "Inter",
+        "seoKeywords": "Tarifs des logiciels de location saisonnière, tarifs des gestionnaires de canaux de distribution, tarifs des systèmes de gestion hôtelière (PMS), coûts de gestion des locations saisonnières, formules des logiciels de location saisonnière, tarifs d'MyAllocator",
+        "seoDescription": " Comparez les formules du logiciel de location saisonnière d'MyAllocator. Un gestionnaire de canaux, un PMS et des outils de tarification dynamique tout-en-un. Augmentez votre chiffre d'affaires jusqu'à 20 %.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Tarifs"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-aaad984a-ede7-425e-a91a-09901019c119",
+          "links": [
+            {
+              "href": "/",
+              "label": "Plateforme",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Créateur de sites web",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Gestionnaire de canaux (location saisonnière)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Communications avec les clients",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Moteur de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Système de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Tarification dynamique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Statistiques et indicateurs clés de performance",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Caractéristiques"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Ressources",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Ambassadeur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guide du visiteur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Accès au compte",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Tarifs",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Rapport annuel",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contactez-nous",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Découvrir"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "À propos",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Carrières",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Chambres d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Boutique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Maison d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Appartements de vacances",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Entreprise"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Commencez dès aujourd'hui",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 32,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#ffffff",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#ffffff",
+          "ctaBackgroundColor": "#ffffff",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "PricingOnePlan",
+        "props": {
+          "id": "PricingOnePlan-e3d83f23-de23-4c08-8a64-db8168af0960",
+          "price": "$99",
+          "ctaUrl": "https://admin.myallocator.com/join",
+          "period": "par mois",
+          "heading": "Un plan tout simple",
+          "ctaLabel": "Abonnez-vous dès maintenant",
+          "features": [
+            {
+              "text": "Toutes les fonctionnalités sont incluses"
+            },
+            {
+              "text": "Sans commission"
+            },
+            {
+              "text": "Assistance par chat"
+            },
+            {
+              "text": "Installation rapide"
+            }
+          ],
+          "animation": "none",
+          "badgeText": "Formule « Accès illimité »",
+          "showBadge": true,
+          "accordions": [
+            {
+              "body": "Cette offre couvre la gestion immobilière, la synchronisation des canaux, la messagerie automatisée, la facturation, l'entretien ménager et le reporting. Vous pouvez ajouter et gérer autant de biens immobiliers que vous le souhaitez. L'assistance est disponible par e-mail et par chat.",
+              "title": "Ce qui est inclus"
+            }
+          ],
+          "blobColor1": "#67e8f9",
+          "blobColor2": "#e879f9",
+          "priceColor": "",
+          "subheading": "Une tarification claire et prévisible. Pas de niveaux de forfait à comparer. Pas de frais cachés. Vous bénéficiez de l'ensemble des fonctionnalités dès le premier jour.",
+          "ctaTextColor": "#ffffff",
+          "featuresNote": "Tout est compris dans votre abonnement, de l'automatisation à l'analyse.",
+          "headingColor": "",
+          "badgeDotColor": "#34d399",
+          "cardBadgeText": "Le meilleur rapport qualité-prix",
+          "headingWeight": "semibold",
+          "priceFontSize": 0,
+          "showAccordion": true,
+          "showCardBadge": true,
+          "animationDelay": "none",
+          "cardBadgeColor": "#34d399",
+          "cardBorderColor": "#e2e8f0",
+          "ctaOpenInNewTab": false,
+          "headingFontSize": 0,
+          "subheadingColor": "",
+          "priceDescription": "Accès à toutes les fonctionnalités pour un forfait mensuel fixe. Résiliation possible à tout moment.",
+          "animationDuration": "normal",
+          "ctaBackgroundColor": "#0f172a",
+          "featureAccentColor": "#10b981",
+          "subheadingFontSize": 0,
+          "cardBackgroundColor": "#ffffff",
+          "showDecorationBlobs": true,
+          "sectionBackgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-ddb056ed-16e4-4aac-8937-e11f4a08a373",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-a0cf3dc3-49fe-4dd5-99e8-ba7029db8e00",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-9408087d-c4a5-478b-b6da-afa21c89ca15",
+          "size": "xl",
+          "text": "Une seule formule. Un logiciel complet de gestion de locations saisonnières.",
+          "level": "h2",
+          "weight": "medium",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-cd2d17cb-0b85-4cc6-9182-0eed455f8c08",
+          "size": "sm",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-417157f0-9fdf-4e0e-96dd-0a44ba8019d7",
+          "size": "lg",
+          "text": "Gestion des canaux de distribution, gestion immobilière, site de réservation directe et outils simples de suivi des revenus, le tout dans une offre claire et unique. Pas de niveaux tarifaires. Pas de conjectures. Juste ce qu'il vous faut pour gérer votre activité plus efficacement et augmenter vos revenus.",
+          "maxWidth": "lg",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-902c0952-5489-4c37-84a6-ad55a1686e68",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "DataTable",
+        "props": {
+          "id": "DataTable-9a49e8fc-6f09-4842-821d-db06598baad9",
+          "rows": [
+            {
+              "cells": [
+                {
+                  "value": "Synchronisation du calendrier sur plusieurs canaux",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Airbnb, Booking.com, Vrbo, Expedia et votre site web restent tous synchronisés. Pas de doubles réservations.",
+                  "featureIncluded": false
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Site web de réservation directe",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Un site rapide à l'image de votre marque et avec votre nom de domaine. Tarifs et disponibilités en temps réel. Pas de commission."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Tarification dynamique",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Les tarifs varient en fonction de la demande, de la saison, des événements locaux et des délais de réservation. Meilleur taux d'occupation. Meilleurs revenus."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Messagerie automatisée destinée aux clients",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Les messages de bienvenue, les guides d'enregistrement, les codes d'accès et les demandes d'avis sont envoyés dans les délais."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Paiements sécurisés",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Paiements par carte et virements bancaires avec vérification anti-fraude et reçus instantanés."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Vérification de l'identité des clients",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Des mesures de sécurité simples qui réduisent les risques et protègent votre domicile."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Règlement intérieur et guide",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Conseils sur le Wi-Fi, le stationnement et les appareils électroménagers, le tout dans une interface mobile claire."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Taxes et frais",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "La taxe de séjour, les frais de ménage, les frais liés aux animaux de compagnie et les règles concernant les invités supplémentaires sont définis une fois pour toutes et s'appliquent à chaque séjour."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Déclarations du propriétaire",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Des relevés mensuels clairs, avec des ventilations et des remarques concernant les dépenses."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Versements aux propriétaires",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Des cycles de paiement simples, adaptés à votre calendrier bancaire."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Rapports sur le chiffre d'affaires et le taux d'occupation",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Consultez le tarif moyen, la période de réservation, la durée du séjour et la répartition par canal."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Mises à jour en masse",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Modifiez une saison ou un ensemble de logements en une seule opération et appliquez les changements partout."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Produit de remplissage",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Prévoyez des séjours courts pour combler les périodes creuses sans nuire à la durée totale du nettoyage."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Tarification spécifique à chaque canal",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Ajustez vos tarifs en fonction de chaque plateforme et conservez votre avantage concurrentiel."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Rôles des utilisateurs",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Accordez aux responsables, aux agents d'entretien et aux propriétaires les droits d'accès nécessaires. Rien de plus."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Gestionnaire de photos",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Veillez à ce que votre galerie reste à jour, se charge rapidement et génère un meilleur taux de conversion."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Couverture des chaînes",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Airbnb, Booking.com, Vrbo, Expedia, Google Vacation Rentals, et bien d'autres encore."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Règles de disponibilité",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Règles relatives au nombre minimum et maximum de nuits, au délai de préavis et au jour de rotation adaptées à vos opérations."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Fenêtres de maintien",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Laissez à votre équipe un peu de répit avant et après les séjours haut de gamme."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Portail des propriétaires",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Les propriétaires peuvent consulter les réservations, les paiements et les notes sans passer par les tickets d'assistance."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Commentaires sur la tâche",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "De brèves mises à jour accompagnées de photos pour ne rien oublier."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Rapports sur les exportations",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Envoyez des fichiers CSV bien formatés à votre comptable en un clic."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Accès à l'API",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Connectez vos outils préférés et créez des automatisations simples."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Modèles d'e-mails",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Des messages rédigés dans un langage simple que les clients lisent réellement."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Un soutien apporté par de vraies personnes",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Des réponses rapides de la part de professionnels de l'hébergement."
+                }
+              ],
+              "isHighlighted": false
+            }
+          ],
+          "shadow": true,
+          "columns": [
+            {
+              "bold": true,
+              "align": "left",
+              "width": "30%",
+              "header": "Fonctionnalité"
+            },
+            {
+              "bold": false,
+              "align": "left",
+              "width": "",
+              "header": "Ce que vous obtenez"
+            }
+          ],
+          "rounded": true,
+          "bordered": true,
+          "maxWidth": "xl",
+          "footerRows": [
+            {
+              "bold": true,
+              "cells": [
+                {
+                  "value": ""
+                }
+              ]
+            }
+          ],
+          "footerText": "Conçu pour les hôtes et les gestionnaires qui souhaitent réduire les tâches administratives et augmenter le nombre de réservations directes.  \nFonctionne sur les principaux canaux, prend en charge la tarification intelligente et assure une gestion rigoureuse des opérations, de la demande de renseignements au paiement.",
+          "showFooter": true,
+          "showCheckmarks": true
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-cd99a132-b06e-4f5b-b970-c25b60806420",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "FAQ",
+        "props": {
+          "id": "FAQ-3087d1e6-55b9-4b37-a5f8-8e633537a37d",
+          "items": [
+            {
+              "answer": "Aucune. MyAllocator ne prélève aucune commission sur les réservations. Vous conservez 100 % de vos revenus locatifs.",
+              "question": "Y a-t-il des frais cachés ?"
+            },
+            {
+              "answer": "Aucune installation n'est nécessaire. MyAllocator est une solution 100 % en ligne. Accédez à votre système de gestion immobilière depuis n'importe quel appareil.",
+              "question": "Dois-je installer un logiciel ?"
+            },
+            {
+              "answer": "Tout à fait. Notre système de gestion de la réservation (PMS) prend en charge les noms de domaine personnalisés pour votre site de réservation directe alimenté par MyAllocator.",
+              "question": "Puis-je associer mon propre nom de domaine ?"
+            },
+            {
+              "answer": "Vous gérez plus de 20 biens en location ou vous êtes une agence immobilière ? Contactez notre équipe commerciale pour bénéficier d'une offre d'entreprise sur mesure et des services d'un spécialiste dédié à votre accompagnement.",
+              "question": "Qu'en est-il des portefeuilles volumineux ?"
+            },
+            {
+              "answer": "Oui. Envoyez des instructions d'enregistrement automatisées, des demandes d'avis et des offres de vente incitative sans avoir à lever le petit doigt.",
+              "question": "MyAllocator prend-il en charge la communication automatisée avec les clients ?"
+            },
+            {
+              "answer": "Notre tarification dynamique, notre distribution multicanal et nos outils marketing sont conçus pour aider les hôtes à augmenter leurs taux d'occupation et à maximiser leurs revenus.",
+              "question": "MyAllocator, cela peut-il m'aider à augmenter mon taux d'occupation ?"
+            }
+          ],
+          "columns": "1",
+          "heading": "Foire aux questions",
+          "textColor": "",
+          "subheading": "",
+          "accentColor": "#2563eb",
+          "headingColor": "",
+          "headingWeight": "bold",
+          "backgroundColor": "",
+          "headingFontSize": 0,
+          "subheadingColor": "",
+          "subheadingOpacity": 70,
+          "subheadingFontSize": 0
+        }
+      },
+      {
+        "type": "CTABanner",
+        "props": {
+          "id": "CTABanner-9b1e2586-ecd8-449f-a260-ff939c48d502",
+          "actions": [
+            {
+              "type": "Button",
+              "props": {
+                "id": "Button-1e2db7ec-b812-4e0d-8fbd-fb3ba5a29622",
+                "url": "/pricing",
+                "icon": "none",
+                "size": "lg",
+                "label": "Commencer",
+                "shadow": "none",
+                "rounded": "full",
+                "variant": "outline",
+                "fullWidth": false,
+                "marginTop": 27,
+                "textColor": "",
+                "marginLeft": 0,
+                "marginRight": 0,
+                "iconPosition": "right",
+                "marginBottom": 0,
+                "openInNewTab": false,
+                "customPaddingX": 22,
+                "customPaddingY": 9,
+                "hoverTextColor": "",
+                "backgroundColor": "#0930f6",
+                "hoverBackgroundColor": ""
+              }
+            }
+          ],
+          "heading": "Prêt à prendre les rênes de votre activité de location saisonnière ?",
+          "paddingY": "lg",
+          "alignment": "center",
+          "textColor": "#ffffff",
+          "description": "",
+          "showActions": "show",
+          "backgroundColor": "#2563eb",
+          "headingFontSize": 38
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-78242606-7348-4ce0-81c7-5d13b5f4569d",
+          "columns": [
+            {
+              "links": [
+                {
+                  "href": "/about",
+                  "label": "À propos",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/contact",
+                  "label": "Contact",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Tarifs",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Carrières",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Entreprise"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentation",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Ressources"
+            }
+          ],
+          "tagline": "MyAllocator vous aide à développer plus rapidement, à évoluer plus facilement et à offrir sans difficulté des expériences Web modernes.",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": false,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#ffffff",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Politique de confidentialité",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Contrat client",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#ffffff",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. Tous droits réservés.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#ffffff",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#696969",
+          "bottomBarBorderColor": "#d4d4d4",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

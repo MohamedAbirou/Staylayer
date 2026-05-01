@@ -1,0 +1,1324 @@
+{
+  "slug": "statistics-kpis-vacation-rentals",
+  "locale": "en",
+  "title": "Statistics & KPIs For Vacation Rentals",
+  "seoTitle": "Vacation Rental Analytics & AI Dynamic Pricing, Boost Revenue 20 %",
+  "seoDescription": "Unlock 20 % higher earnings with MyAllocator’s vacation-rental analytics and AI-driven dynamic pricing. Track occupancy, revenue, and booking trends in one dashboard, free 14-day trial, no card required.",
+  "seoKeywords": "vacation rental analytics, vacation rental KPIs, dynamic pricing for vacation rentals, vacation rental revenue management, occupancy rate tracking, ADR analysis, RevPAR insights, booking trend analysis, seasonality patterns, cancellation trends, vacation rental performance metrics",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Statistics & KPIs For Vacation Rentals",
+        "seoTitle": "Vacation Rental Analytics & AI Dynamic Pricing, Boost Revenue 20 %",
+        "fontFamily": "Inter",
+        "seoKeywords": "vacation rental analytics, vacation rental KPIs, dynamic pricing for vacation rentals, vacation rental revenue management, occupancy rate tracking, ADR analysis, RevPAR insights, booking trend analysis, seasonality patterns, cancellation trends, vacation rental performance metrics",
+        "seoDescription": "Unlock 20 % higher earnings with MyAllocator’s vacation-rental analytics and AI-driven dynamic pricing. Track occupancy, revenue, and booking trends in one dashboard, free 14-day trial, no card required.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Statistics & KPIs For Vacation Rentals"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-f5b17a6d-4cd0-4471-b9fe-71865bbb5b17",
+          "links": [
+            {
+              "href": "/",
+              "label": "Platform",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Website Builder",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Channel Manager (Vacation Rental)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Guest Communications",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Booking Engine",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Reservation System",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Dynamic Pricing",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Statistics & KPIs",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Features"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Resources",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Ambassador",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guest Guide",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Account Access",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Pricing",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Annual Report",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contact Us",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Explore"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "About",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Careers",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Bed & Breakfast",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Boutique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Guest House",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Vacation Apartments",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Company"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Get Started Today",
+          "logoHref": "/",
+          "logoText": "Your Brand",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 32,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#FFFFFF",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "#FFFFFF",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#FFFFFF",
+          "ctaBackgroundColor": "#FFFFFF",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "Section",
+        "props": {
+          "id": "Section-b60d4e32-9497-4e6d-badd-6224e4c7d199",
+          "content": [
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-da309dba-8528-4a60-bd75-02bc9b05b260",
+                "size": "2xl",
+                "text": "Turn Your Rental Data into Revenue",
+                "color": "",
+                "level": "h2",
+                "weight": "semibold",
+                "maxWidth": "none",
+                "paddingY": "sm",
+                "alignment": "center",
+                "animation": "none",
+                "letterSpacing": "tight",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-adde2b31-dce1-4f9e-98a6-20917e0e386e",
+                "size": "xl",
+                "text": "MyAllocator puts every booking statistic at your fingertips and turns raw numbers into profit-driving insights. Hosts who switch see an average revenue lift of 20 percent.\n",
+                "color": "#334155",
+                "weight": "medium",
+                "opacity": "100",
+                "maxWidth": "lg",
+                "paddingY": "sm",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradient": true,
+          "maxWidth": "xl",
+          "paddingX": "none",
+          "paddingY": "3xl",
+          "animation": "none",
+          "borderTop": false,
+          "fullWidth": false,
+          "gradientTo": "#FFFFFF",
+          "borderBottom": false,
+          "gradientFrom": "#f7f9fc",
+          "animationDelay": "none",
+          "overlayOpacity": 50,
+          "backgroundColor": "",
+          "backgroundImage": "",
+          "animationDuration": "normal",
+          "gradientDirection": "to-b"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-37f07aa7-d558-4d69-b02e-e7d1252e94a3",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-48b6caee-55fd-4092-8f9a-74736f484f02",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-146b5dfd-6673-4a56-ada0-095c119518d9",
+          "size": "xl",
+          "text": "Why MyAllocator?",
+          "color": "",
+          "level": "h2",
+          "weight": "normal",
+          "maxWidth": "none",
+          "paddingY": "none",
+          "alignment": "center",
+          "animation": "none",
+          "lineHeight": "tight",
+          "letterSpacing": "tight",
+          "textTransform": "none",
+          "animationDelay": "none",
+          "animationDuration": "normal"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-9c451253-b6df-450e-8b09-8917d9675b24",
+          "size": "lg",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "DataTable",
+        "props": {
+          "id": "DataTable-499275d5-f72d-4b7b-8641-5d74b372782b",
+          "rows": [
+            {
+              "cells": [
+                {
+                  "value": "Designed for vacation apartments, boutique hotels, guest houses, and glamping sites.",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Adaptive algorithms adjust nightly rates in real time for Max RevPAR."
+                }
+              ],
+              "isHighlighted": false
+            }
+          ],
+          "shadow": true,
+          "columns": [
+            {
+              "bold": false,
+              "align": "center",
+              "width": "50%",
+              "header": "Built for hosts"
+            },
+            {
+              "bold": false,
+              "align": "center",
+              "width": "50%",
+              "header": "Proven revenue boost"
+            }
+          ],
+          "rounded": true,
+          "bordered": true,
+          "fontSize": 16,
+          "maxWidth": "md",
+          "footerText": "",
+          "showFooter": false,
+          "bodyTextColor": "#1f2937",
+          "footerBgColor": "#f9fafb",
+          "headerBgColor": "#f9fafb",
+          "rowOddBgColor": "#ffffff",
+          "rowEvenBgColor": "#f9fafb",
+          "showCheckmarks": false,
+          "footerTextColor": "#374151",
+          "headerTextColor": "#374151",
+          "highlightBgColor": "#eff6ff",
+          "highlightTextColor": "#1e40af"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-92d932b4-5a2b-42b7-9a6e-d5fe04420b11",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-6a7a42fc-ceb5-4fd7-944f-574d9f0e09fa",
+          "body": "",
+          "heading": "Unified Dashboard",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "/images/crm/overview.png",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-4988c53e-1fbe-4b3e-a412-41ae6ed07f67",
+                "size": "md",
+                "text": "Get a bird’s-eye view of bookings from Airbnb, Booking.com, Vrbo, and direct channels in one clean interface.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "relaxed",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "List",
+              "props": {
+                "id": "List-4acfc6e3-1066-46ca-9ad3-ecc660be717b",
+                "color": "",
+                "items": [
+                  { "icon": "", "text": "Instant occupancy snapshots" },
+                  { "icon": "", "text": "Real-time revenue tracking" },
+                  { "icon": "", "text": "Channel-by-channel performance" }
+                ],
+                "variant": "unordered",
+                "fontSize": 16,
+                "paddingX": 0,
+                "paddingY": 0,
+                "marginTop": 11,
+                "fontWeight": "normal",
+                "globalIcon": "",
+                "accentColor": "#FFFFFF",
+                "itemSpacing": 1,
+                "marginBottom": 0
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 0,
+          "sectionTitle": "",
+          "headingWeight": "medium",
+          "imageOverflow": false,
+          "imagePosition": "left",
+          "titleFontSize": 0,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "bold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-b3c0e3f7-7b9f-4ce0-99c3-5411b2c7a335",
+          "body": "",
+          "heading": "Deep-Dive Analytics",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "/images/deep-dive-analytics.jpg",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-a3b80b1e-23b0-4124-9406-b268bffbbead",
+                "size": "md",
+                "text": "Drill into the metrics that matter:\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "relaxed",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "List",
+              "props": {
+                "id": "List-24d237f7-a682-4324-99d4-ef5f3807bc5e",
+                "color": "",
+                "items": [
+                  { "icon": "", "text": "Occupancy rate, ADR, RevPAR" },
+                  {
+                    "icon": "",
+                    "text": "Lead time and booking window analysis"
+                  },
+                  { "icon": "", "text": "Cancellation trends" },
+                  { "icon": "", "text": "Seasonality patterns" }
+                ],
+                "variant": "unordered",
+                "fontSize": 16,
+                "paddingX": 0,
+                "paddingY": 0,
+                "marginTop": 11,
+                "fontWeight": "normal",
+                "globalIcon": "",
+                "accentColor": "#FFFFFF",
+                "itemSpacing": 1,
+                "marginBottom": 11
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-e904097b-9a59-4392-9799-872ffd42a285",
+                "size": "md",
+                "text": "Smart filters let you pivot by date range, property, or channel in seconds.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "relaxed",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 0,
+          "sectionTitle": "",
+          "headingWeight": "medium",
+          "imageOverflow": false,
+          "imagePosition": "right",
+          "titleFontSize": 0,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "bold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-7e6f69a3-6249-460b-8e1e-8b5362d5143c",
+          "body": "",
+          "heading": "AI Dynamic Pricing",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "/images/dynamic-pricing-2.png",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-87782b62-694c-4386-b1ba-d753cdde49a1",
+                "size": "md",
+                "text": "Activate MyAllocator's Dynamic Pricing to sync optimized rates back to every connected channel automatically.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "relaxed",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "List",
+              "props": {
+                "id": "List-568a3fd1-d327-479d-a485-9d2a73990ff8",
+                "color": "",
+                "items": [
+                  {
+                    "icon": "",
+                    "text": "Machine-learning forecasts update up to 4× daily"
+                  },
+                  {
+                    "icon": "",
+                    "text": "Detects local demand spikes and events"
+                  },
+                  {
+                    "icon": "",
+                    "text": "Keeps your listings competitively priced while protecting minimum rates"
+                  }
+                ],
+                "variant": "unordered",
+                "fontSize": 16,
+                "paddingX": 0,
+                "paddingY": 0,
+                "marginTop": 11,
+                "fontWeight": "normal",
+                "globalIcon": "",
+                "accentColor": "#FFFFFF",
+                "itemSpacing": 1,
+                "marginBottom": 0
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 0,
+          "sectionTitle": "",
+          "headingWeight": "medium",
+          "imageOverflow": false,
+          "imagePosition": "left",
+          "titleFontSize": 0,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "bold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-0e87ed73-e63e-42d5-b1e7-43fe5fd09d99",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-d0b50e7c-363e-4779-86d4-287385fcd293",
+          "size": "xl",
+          "text": "One-Click Reports",
+          "color": "",
+          "level": "h2",
+          "weight": "normal",
+          "maxWidth": "none",
+          "paddingY": "none",
+          "alignment": "center",
+          "animation": "none",
+          "lineHeight": "none",
+          "letterSpacing": "wide",
+          "textTransform": "none",
+          "animationDelay": "none",
+          "animationDuration": "normal"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-9e9b617d-850a-421b-9799-129909e046d0",
+          "size": "sm",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-e183164b-ac26-4d76-880d-2ef0d1a09481",
+          "size": "md",
+          "text": "Export PDF, Excel, or CSV files for accountants, owners, and investors. Schedule recurring email reports to save even more time.\n\n",
+          "color": "#3d3d3d",
+          "weight": "normal",
+          "opacity": "100",
+          "maxWidth": "md",
+          "paddingY": "none",
+          "alignment": "center",
+          "animation": "none",
+          "lineHeight": "tight",
+          "animationDelay": "none",
+          "animationDuration": "normal"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-a1c4d289-5663-49cc-aa4d-5abeafca266e",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-ae64674f-1662-4869-bc29-5533e7bb4d99",
+          "size": "xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-aac54ab2-a6ee-4463-85ec-6b1340b23ff5",
+          "size": "xl",
+          "text": "Trusted by Professional Hosts",
+          "level": "h2",
+          "weight": "normal",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-843e654a-bb9e-4e70-9df2-8fbad1c7ce1c",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-97b7d3ac-995b-417e-87a2-c309bbb605b5",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-08b4d5e4-9c55-43e4-bce0-12b2caa5f41b",
+                "gap": "md",
+                "columns": "3",
+                "content": [
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-5b598db6-321b-4153-beec-ed1cd5d8cecb",
+                      "quote": "“MyAllocator is the only channel manager that nailed dynamic pricing without extra fees.”\n",
+                      "author": ", Hasan, 12 units",
+                      "shadow": "xl",
+                      "authorFontSize": 14
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-c5f97064-878e-4c22-aec2-612157c53ce5",
+                      "quote": "“Four years in and it still feels effortless. My six properties run themselves.”\n",
+                      "author": "Rebecca, Superhost",
+                      "shadow": "xl",
+                      "authorFontSize": 14
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-d3279ee6-ee56-4e84-a5ed-688cc51f0e93",
+                      "quote": "“Automated the manual tasks that burned hours each week, and it’s affordable.”\n",
+                      "author": ", Stefano, Property Manager",
+                      "shadow": "xl",
+                      "withBorder": true,
+                      "authorFontSize": 14
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "lg",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-f05f80c3-da2a-4395-89b0-37c462305251",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-d421aab9-c5aa-46ec-8aef-c1f3632bc2ab",
+          "size": "lg",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-a540352c-e659-4f73-aae3-63c08b9155d6",
+          "size": "xl",
+          "text": "Fits Every Property Type",
+          "level": "h2",
+          "weight": "normal",
+          "alignment": "center",
+          "letterSpacing": "wide"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-f07d9e5d-27c8-4f6f-b6fa-589b676faf14",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-fda33c12-48b4-4a39-ad27-5239c72d56c7",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-753b3f61-462e-4b8e-a60c-db84a76b5a6f",
+                "gap": "md",
+                "columns": "2",
+                "content": [
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-e7dda81e-9fe9-4e84-95be-41a7d4e1cc53",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-7aaffbbd-af35-48ca-a064-814afcff58d4",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Vacation apartments & holiday homes"
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-7a85455b-65ef-4eb2-8675-e8b4e7861c26",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-4a44d4b7-c84b-40d3-913f-b89df278126c",
+                            "color": "",
+                            "items": [
+                              { "icon": "", "text": "Boutique hotels & B&Bs" }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 0,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-7447b539-ba10-485c-affd-4ec7d548a64e",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-33e0102d-e27a-42e0-a319-2f0eee80e7c9",
+                            "color": "",
+                            "items": [{ "icon": "", "text": "Guest houses" }],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-7b15ecdc-41ae-4942-a7b8-34572b8a2e02",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-aa3e4176-a9ef-4e42-9f92-04f5a6a4a6e9",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Camping, glamping, farm stays"
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-9000d242-aabc-4211-84c9-b5caf3e6ea35",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-2f59d06f-fc68-492c-8d9d-16aba426b9a0",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Large multi-unit portfolios"
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "md",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "lg",
+          "paddingX": "lg",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-c60f7856-a100-4f98-bb84-a3ce907fa07a",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-97d8c34a-63fc-4a79-85b4-9133f5afebcf",
+          "size": "md",
+          "text": "Centralize reservations, automate guest communications, and showcase the unique charm of your stay.\n",
+          "color": "",
+          "weight": "medium",
+          "opacity": "100",
+          "maxWidth": "sm",
+          "paddingY": "none",
+          "alignment": "center",
+          "animation": "none",
+          "lineHeight": "normal",
+          "animationDelay": "none",
+          "animationDuration": "normal"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-cbd889a6-6e08-4384-8d4c-b7605b679ff7",
+          "size": "xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-d475e1b6-4399-4053-a3c9-03bc8280519d",
+          "size": "xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "FAQ",
+        "props": {
+          "id": "FAQ-899b68ea-103d-4c79-8d98-0ce5705a64cc",
+          "items": [
+            {
+              "answer": "Key performance indicators (KPIs) reveal booking trends over time. By tracking occupancy, ADR, and RevPAR, you’ll make data-backed decisions on pricing, marketing, and property upgrades.",
+              "question": "How Can Statistics Improve My Vacation-Rental Business?"
+            },
+            {
+              "answer": "Start with occupancy rate, average daily rate, total revenue, length of stay, and cancellation rate. MyAllocator tracks them all automatically.",
+              "question": "Which KPIs Should Hosts Monitor?"
+            },
+            {
+              "answer": "Divide booked nights by available nights, then multiply by 100. Example: 287 booked nights ÷ 365 available nights × 100 = 78.6 % occupancy.",
+              "question": "How Do I Calculate Occupancy Rate?"
+            },
+            {
+              "answer": "Yes. MyAllocator’s channel widgets break down bookings, nights, and revenue per platform. View data as bar, pie, or column charts.",
+              "question": "Can I Compare Airbnb Vs. Booking.Com Performance? "
+            }
+          ],
+          "columns": "1",
+          "heading": "Frequently asked questions",
+          "maxWidth": "md",
+          "subheading": "",
+          "headingWeight": "normal",
+          "headingFontSize": 28,
+          "headingPosition": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-92ecd287-f588-4620-8ca8-554618fc8f34",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "CTABanner",
+        "props": {
+          "id": "CTABanner-154d6637-c951-41ae-86b3-6521c473f49b",
+          "actions": [
+            {
+              "type": "Button",
+              "props": {
+                "id": "Button-14327009-1e6e-4a36-89ca-f93f49c606b4",
+                "url": "/pricing",
+                "icon": "none",
+                "size": "lg",
+                "label": "Get Started",
+                "shadow": "none",
+                "rounded": "full",
+                "variant": "outline",
+                "fullWidth": false,
+                "marginTop": 27,
+                "textColor": "",
+                "marginLeft": 0,
+                "marginRight": 0,
+                "iconPosition": "right",
+                "marginBottom": 0,
+                "openInNewTab": false,
+                "customPaddingX": 22,
+                "customPaddingY": 9,
+                "hoverTextColor": "",
+                "backgroundColor": "#0930f6",
+                "hoverBackgroundColor": ""
+              }
+            }
+          ],
+          "heading": "Ready to Take Control of Your Vacation Rental Business?",
+          "rounded": "none",
+          "paddingY": "lg",
+          "alignment": "center",
+          "textColor": "#FFFFFF",
+          "description": "",
+          "showActions": "show",
+          "headingColor": "",
+          "headingWeight": "light",
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 38,
+          "descriptionColor": "",
+          "descriptionOpacity": 90,
+          "descriptionFontSize": 0,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-10061382-3da2-499b-a561-6c1ad2801cfa",
+          "columns": [
+            {
+              "links": [
+                { "href": "/about", "label": "About", "openInNewTab": false },
+                {
+                  "href": "/contact",
+                  "label": "Contact",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Pricing",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Careers",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Company"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentation",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Resources"
+            }
+          ],
+          "tagline": "MyAllocator helps you build faster, scale better, and deliver modern web experiences with ease.",
+          "logoHref": "/",
+          "logoText": "Your Brand",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": false,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#FFFFFF",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Privacy Policy",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Customer Agreement",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#FFFFFF",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. All rights reserved.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#FFFFFF",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#696969",
+          "bottomBarBorderColor": "#d4d4d4",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

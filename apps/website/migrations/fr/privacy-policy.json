@@ -1,0 +1,502 @@
+{
+  "slug": "privacy-policy",
+  "locale": "fr",
+  "title": "Politique de confidentialité",
+  "seoTitle": "Politique de confidentialité",
+  "seoDescription": "MyAllocator s'engage à protéger votre vie privée. La présente politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos données lorsque vous visitez notre site web.",
+  "seoKeywords": "politique de confidentialité, protection des données, confidentialité sur MyAllocator, informations personnelles",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Politique de confidentialité",
+        "seoTitle": "Politique de confidentialité",
+        "fontFamily": "Inter",
+        "seoKeywords": "politique de confidentialité, protection des données, confidentialité sur MyAllocator, informations personnelles",
+        "seoDescription": "MyAllocator s'engage à protéger votre vie privée. La présente politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos données lorsque vous visitez notre site web.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Politique de confidentialité"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-92e85ad2-2942-4055-bcef-330b6c56c307",
+          "links": [
+            {
+              "href": "/",
+              "label": "Plateforme",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Créateur de sites web",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Gestionnaire de canaux (location saisonnière)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Communications avec les clients",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Moteur de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Système de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Tarification dynamique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Statistiques et indicateurs clés de performance",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Caractéristiques"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Ressources",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Ambassadeur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guide du visiteur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Accès au compte",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Tarifs",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Rapport annuel",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contactez-nous",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Découvrir"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "À propos",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Carrières",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Chambres d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Boutique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Maison d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Appartements de vacances",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Entreprise"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Commencez dès aujourd'hui",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 33,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#FFFFFF",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "#FFFFFF",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#FFFFFF",
+          "ctaBackgroundColor": "#FFFFFF",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "Section",
+        "props": {
+          "id": "Section-5d0dacc6-dfcb-43d0-8187-cbc00a007889",
+          "content": [
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-e680b7f0-a6b6-4d8e-b5a8-b88eac66b610",
+                "size": "lg",
+                "text": "Politique de confidentialité",
+                "color": "",
+                "level": "h2",
+                "weight": "bold",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "tight",
+                "letterSpacing": "normal",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-b55c5b7d-e47b-41cc-9991-a01a4b6a8a93",
+                "size": "sm",
+                "text": "**Date d'entrée en vigueur :** 23 février 2024\n",
+                "color": "#45556c",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "md",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "tight",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Card",
+              "props": {
+                "id": "Card-7350f738-6f92-481e-8adc-8c4b901c1605",
+                "shadow": "sm",
+                "content": [
+                  {
+                    "type": "Paragraph",
+                    "props": {
+                      "id": "Paragraph-d42021f8-4b64-4735-ac99-d45609be7b9c",
+                      "size": "sm",
+                      "text": "SUR CETTE PAGE",
+                      "color": "#45556c",
+                      "weight": "medium",
+                      "opacity": "100",
+                      "maxWidth": "none",
+                      "paddingY": "none",
+                      "alignment": "left",
+                      "animation": "none",
+                      "lineHeight": "tight",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  },
+                  {
+                    "type": "RichText",
+                    "props": {
+                      "id": "RichText-2ed1dfc2-010a-4a6a-98f0-d732b8dac9a8",
+                      "size": "md",
+                      "color": "",
+                      "content": "<style>\n  .privacy-link {\n    display: inline-block;\n    border-radius: 6px;\n    padding: 5px 10px;\n    color: #334155;\n    text-decoration: none;\n    transition: all 0.2s ease;\n    font-size: 0.875rem;\n  }\n  \n  .privacy-link:hover {\n    color: #0f172a;\n    text-decoration: underline;\n  }\n</style>\n\n<ul style=\"margin-top: 8px; \n           display: grid; \n           font-size: 0.875rem; \n           grid-template-columns: repeat(2, 1fr); \n           list-style: none; \n           padding: 0; \n           margin-bottom: 0;\">\n  \n  <li><a href=\"#overview\" class=\"privacy-link\">Aperçu</a></li>\n  <li><a href=\"#collection\" class=\"privacy-link\">Collecte de vos informations</a></li>\n  <li><a href=\"#use\" class=\"privacy-link\">Utilisation de vos informations</a></li>\n  <li><a href=\"#disclosure\" class=\"privacy-link\">Divulgation de vos informations</a></li>\n  <li><a href=\"#tracking\" class=\"privacy-link\">Technologies de suivi</a></li>\n  <li><a href=\"#third-party-websites\" class=\"privacy-link\">Sites Web tiers</a></li>\n  <li><a href=\"#security\" class=\"privacy-link\">Sécurité de vos informations</a></li>\n  <li><a href=\"#children\" class=\"privacy-link\">Politique relative aux enfants</a></li>\n  <li><a href=\"#dnt\" class=\"privacy-link\">Ne pas suivre</a></li>\n  <li><a href=\"#options\" class=\"privacy-link\">Options concernant vos informations</a></li>\n  <li><a href=\"#emails\" class=\"privacy-link\">E-mails et communications</a></li>\n</ul>",
+                      "maxWidth": "none",
+                      "paddingY": "none",
+                      "alignment": "left"
+                    }
+                  }
+                ],
+                "padding": "sm",
+                "rounded": "lg",
+                "bordered": true,
+                "gradient": false,
+                "imageAlt": "",
+                "imageUrl": "",
+                "gradientTo": "#8b5cf6",
+                "gradientFrom": "#3b82f6",
+                "scaleOnHover": false,
+                "imagePosition": "top",
+                "contentSpacing": 16,
+                "backgroundColor": "#ffffff",
+                "contentAlignment": "left",
+                "gradientDirection": "to-br"
+              }
+            }
+          ],
+          "gradient": true,
+          "maxWidth": "md",
+          "paddingX": "xl",
+          "paddingY": "md",
+          "animation": "none",
+          "borderTop": false,
+          "fullWidth": false,
+          "gradientTo": "#FFFFFF",
+          "borderBottom": false,
+          "gradientFrom": "#f8fafc",
+          "animationDelay": "none",
+          "overlayOpacity": 50,
+          "backgroundColor": "",
+          "backgroundImage": "",
+          "animationDuration": "normal",
+          "gradientDirection": "to-b"
+        }
+      },
+      {
+        "type": "Divider",
+        "props": {
+          "id": "Divider-83611fb6-3e3a-4e3d-a020-ec440742235c",
+          "color": "#e2e8f0",
+          "style": "solid",
+          "width": "full",
+          "thickness": 1
+        }
+      },
+      {
+        "type": "RichText",
+        "props": {
+          "id": "RichText-8ff92549-dda8-4249-9839-1746a0189dd6",
+          "content": "<div style=\"max-width: 48rem; margin: 0 auto; padding: 0 1.5rem;\">\n\n  <!-- Aperçu -->\n  <section id=\"overview\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Présentation\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>MyAllocator (« nous », « notre », « nos ») s'engage à protéger votre vie privée. La présente Politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations lorsque vous visitez notre site web <a href=\"https://myallocator.com\" style=\"color: #334155; text-decoration: underline;\">https://myallocator.com</a>, y compris tout autre support, canal médiatique, site Web mobile ou application mobile qui y est lié ou connecté (collectivement, le « Site »). Veuillez lire attentivement la présente politique de confidentialité. Si vous n'acceptez pas les conditions de la présente politique de confidentialité, veuillez ne pas accéder au Site.</p>\n      \n      <p style=\"margin-top: 1.25rem;\">Nous nous réservons le droit d'apporter des modifications à la présente politique de confidentialité à tout moment et pour quelque raison que ce soit. Nous vous informerons de toute modification en mettant à jour la « Date d'entrée en vigueur » de la présente politique de confidentialité. Nous vous encourageons à consulter régulièrement la présente politique de confidentialité afin de vous tenir informé des mises à jour. Vous serez réputé avoir accepté les modifications apportées à toute politique de confidentialité révisée si vous continuez à utiliser le Site après la date de publication de ladite politique révisée.</p>\n    </div>\n  </section>\n\n  <!-- Collecte de vos informations -->\n  <section id=\"collection\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Collecte de vos informations\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>Nous pouvons collecter des informations vous concernant de différentes manières. Les informations que nous pouvons collecter sur le Site comprennent :</p>\n      \n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Données personnelles</h3>\n        <p>Les informations permettant de vous identifier, telles que votre nom, votre adresse de livraison, votre adresse e-mail et votre numéro de téléphone, ainsi que des informations démographiques, telles que votre âge, votre sexe, votre ville d'origine et vos centres d'intérêt, que vous nous communiquez volontairement lorsque vous vous inscrivez sur le Site ou lorsque vous choisissez de participer à diverses activités liées au Site, telles que les chats en ligne et les forums de discussion. Vous n'êtes nullement tenu de nous fournir des informations personnelles de quelque nature que ce soit ; toutefois, votre refus de le faire peut vous empêcher d'utiliser certaines fonctionnalités du Site.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Données dérivées</h3>\n        <p>Informations que nos serveurs collectent automatiquement lorsque vous accédez au Site, telles que votre adresse IP, le type de navigateur, le système d'exploitation, les heures d'accès et les pages que vous avez consultées immédiatement avant et après avoir accédé au Site.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Données financières</h3>\n        <p>Informations financières, telles que les données relatives à votre mode de paiement (par exemple, numéro de carte de crédit valide, marque de la carte, date d'expiration) que nous pouvons collecter lorsque vous effectuez un achat, passez une commande, effectuez un retour, un échange ou demandez des informations sur nos services via le Site. Nous ne conservons que très peu, voire aucune, des informations financières que nous collectons. Dans le cas contraire, toutes les informations financières sont stockées par notre prestataire de paiement, et nous vous encourageons à consulter sa politique de confidentialité et à le contacter directement pour obtenir des réponses à vos questions.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Données relatives aux appareils mobiles</h3>\n        <p>Informations sur l'appareil, telles que l'identifiant, le modèle et le fabricant de votre appareil mobile, ainsi que des informations sur la localisation de votre appareil, si vous accédez au Site depuis un appareil mobile.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Données de tiers</h3>\n        <p>Informations provenant de tiers, telles que des informations personnelles ou des amis sur les réseaux sociaux, si vous connectez votre compte à ce tiers et autorisez le Site à accéder à ces informations.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Données issues de concours, de jeux-concours et d'enquêtes</h3>\n        <p>Informations personnelles et autres que vous pouvez fournir lorsque vous participez à des concours ou à des jeux-concours et/ou lorsque vous répondez à des enquêtes.</p>\n      </div>\n    </div>\n  </section>\n\n  <!-- Utilisation de vos informations -->\n  <section id=\"use\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Utilisation de vos informations\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>Disposer d'informations précises vous concernant nous permet de vous offrir une expérience fluide, efficace et personnalisée. Plus précisément, nous pouvons utiliser les informations collectées à votre sujet via le Site pour :</p>\n      \n      <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 1rem; line-height: 1.75;\">\n        <li>Créer et gérer votre compte.</li>\n        <li>Traiter vos transactions et vous envoyer les informations associées, notamment les confirmations d'achat et les factures.</li>\n        <li>Gérer et répondre à vos demandes et requêtes.</li>\n        <li>Organiser des tirages au sort, des promotions et des concours.</li>\n        <li>Vous envoyer des publicités ciblées, des newsletters et d'autres informations concernant les promotions et le Site.</li>\n        <li>Surveiller et analyser l'utilisation et les tendances afin d'améliorer votre expérience sur le Site.</li>\n        <li>Personnaliser et améliorer le Site, notamment pour fournir ou recommander des fonctionnalités, du contenu, des connexions sociales, des recommandations et des publicités.</li>\n        <li>Mener d'autres activités commerciales si nécessaire.</li>\n        <li>Prévenir les transactions frauduleuses, surveiller les vols et protéger contre les activités criminelles.</li>\n        <li>Appliquer nos conditions générales et nos politiques.</li>\n        <li>Respecter nos obligations légales.</li>\n      </ul>\n    </div>\n  </section>\n\n  <!-- Divulgation de vos informations -->\n  <section id=\"disclosure\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Divulgation de vos informations\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>Nous pouvons partager les informations que nous avons recueillies à votre sujet dans certaines situations. Vos informations peuvent être divulguées comme suit :</p>\n      \n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">En vertu de la loi ou pour protéger des droits</h3>\n        <p>Si nous estimons que la divulgation d'informations vous concernant est nécessaire pour répondre à une procédure judiciaire, pour enquêter sur des violations potentielles de nos politiques ou y remédier, ou pour protéger les droits, la propriété et la sécurité d'autrui, nous pouvons partager vos informations dans la mesure où cela est autorisé ou requis par toute loi, règle ou réglementation applicable. Cela inclut l'échange d'informations avec d'autres entités à des fins de protection contre la fraude et de réduction du risque de crédit.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Transferts d'activité</h3>\n        <p>Nous pouvons partager ou transférer vos informations dans le cadre de, ou au cours des négociations relatives à, toute fusion, vente d'actifs de la société, financement ou acquisition de tout ou partie de notre activité par une autre société.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Prestataires de services tiers</h3>\n        <p>Nous pouvons partager vos informations avec des tiers qui fournissent des services pour nous ou en notre nom, notamment le traitement des paiements, l'analyse des données, l'envoi d'e-mails, les services d'hébergement, le service client et l'assistance marketing.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Communications marketing</h3>\n        <p>Avec votre consentement, ou en vous offrant la possibilité de retirer ce consentement, nous pouvons partager vos informations avec des tiers à des fins de marketing, dans la mesure où la loi l'autorise.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Interactions avec d'autres utilisateurs</h3>\n        <p>Si vous interagissez avec d'autres utilisateurs du Site, ces derniers peuvent voir votre nom, votre photo de profil et la description de votre activité, notamment l'envoi d'invitations à d'autres utilisateurs, les discussions avec d'autres utilisateurs, les mentions « J'aime » sur des publications et le suivi de blogs.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Publications en ligne</h3>\n        <p>Lorsque vous publiez des commentaires, des contributions ou tout autre contenu sur le Site, vos publications peuvent être consultées par tous les utilisateurs et peuvent être diffusées publiquement en dehors du Site de manière permanente.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Annonceurs tiers</h3>\n        <p>Nous pouvons faire appel à des agences publicitaires tierces pour diffuser des publicités lorsque vous visitez le Site. Ces agences peuvent utiliser les informations relatives à vos visites sur le Site et d'autres sites web, contenues dans les cookies, afin de vous proposer des publicités sur des biens et services susceptibles de vous intéresser.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Sociétés affiliées</h3>\n        <p>Nous pouvons partager vos informations avec nos sociétés affiliées, auquel cas nous exigerons de ces dernières qu'elles respectent la présente Politique de confidentialité. Les sociétés affiliées comprennent notre société mère et toutes les filiales, les partenaires de coentreprise ou toute autre société que nous contrôlons ou qui est sous contrôle commun avec nous.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Partenaires commerciaux</h3>\n        <p>Nous pouvons partager vos informations avec nos partenaires commerciaux afin de vous proposer certains produits, services ou promotions.</p>\n      </div>\n    </div>\n  </section>\n\n  <!-- Technologies de suivi -->\n  <section id=\"tracking\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Technologies de suivi\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      \n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Cookies et balises Web</h3>\n        <p>Nous pouvons utiliser des cookies, des balises Web, des pixels de suivi et d'autres technologies de suivi sur le Site afin de personnaliser le Site et d'améliorer votre expérience. Lorsque vous accédez au Site, vos informations personnelles ne sont pas collectées par le biais de ces technologies de suivi. La plupart des navigateurs sont configurés pour accepter les cookies par défaut. Vous pouvez supprimer ou refuser les cookies, mais sachez qu'une telle action pourrait affecter la disponibilité et le fonctionnement du Site. Vous ne pouvez pas refuser les balises Web. Cependant, vous pouvez les rendre inopérantes en refusant tous les cookies ou en modifiant les paramètres de votre navigateur Web afin d'être averti chaque fois qu'un cookie est proposé, ce qui vous permet d'accepter ou de refuser les cookies au cas par cas.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Publicité sur Internet</h3>\n        <p>De plus, nous pouvons utiliser des logiciels tiers pour diffuser des publicités sur le Site, mettre en œuvre des campagnes de marketing par e-mail et gérer d'autres initiatives de marketing interactif. Ces logiciels tiers peuvent utiliser des cookies ou des technologies de suivi similaires pour aider à gérer et optimiser votre expérience en ligne avec nous. Pour plus d'informations sur la désactivation des publicités ciblées par centres d'intérêt, consultez l'outil de désactivation de la Network Advertising Initiative ou l'outil de désactivation de la Digital Advertising Alliance.</p>\n      </div>\n\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Analyse du site web</h3>\n        <p>Nous pouvons également nous associer à certains fournisseurs tiers, tels que Google Analytics, afin d'autoriser l'utilisation de technologies de suivi et de services de remarketing sur le Site par le biais de cookies propriétaires et de cookies tiers, notamment pour analyser et suivre l'utilisation du Site par les utilisateurs, déterminer la popularité de certains contenus et mieux comprendre l'activité en ligne. En accédant au Site, vous consentez à la collecte et à l'utilisation de vos informations par ces fournisseurs tiers. Nous vous encourageons à consulter leur politique de confidentialité et à les contacter directement pour obtenir des réponses à vos questions. Nous ne transférons pas d'informations personnelles à ces fournisseurs tiers. Toutefois, si vous ne souhaitez pas que des informations soient collectées et utilisées par des technologies de suivi, vous pouvez vous rendre sur le site du fournisseur tiers ou utiliser l'outil de désactivation de la Network Advertising Initiative ou celui de la Digital Advertising Alliance.</p>\n      </div>\n    </div>\n  </section>\n\n  <!-- Sites Web tiers -->\n  <section id=\"third-party-websites\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Sites Web tiers\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>Le Site peut contenir des liens vers des sites web et des applications tiers susceptibles de vous intéresser, y compris des publicités et des services externes, qui ne sont pas affiliés à nous. Une fois que vous avez utilisé ces liens pour quitter le Site, toute information que vous fournissez à ces tiers n'est plus couverte par la présente Politique de confidentialité, et nous ne pouvons garantir la sécurité et la confidentialité de vos informations. Avant de visiter et de fournir des informations à des sites web tiers, vous devez vous informer des politiques et pratiques de confidentialité (le cas échéant) du tiers responsable de ce site web, et prendre les mesures nécessaires, à votre discrétion, pour protéger la confidentialité de vos informations. Nous ne sommes pas responsables du contenu ni des pratiques et politiques de confidentialité et de sécurité de tiers, y compris d'autres sites, services ou applications pouvant être liés vers ou depuis le Site.</p>\n    </div>\n  </section>\n\n  <!-- Sécurité de vos informations -->\n  <section id=\"security\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Sécurité de vos informations\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>Nous utilisons des mesures de sécurité administratives, techniques et physiques pour protéger vos informations personnelles. Bien que nous ayons pris des mesures raisonnables pour sécuriser les informations personnelles que vous nous fournissez, veuillez noter que, malgré nos efforts, aucune mesure de sécurité n'est parfaite ou infaillible, et qu'aucune méthode de transmission de données ne peut être garantie contre toute interception ou autre type d'utilisation abusive. Toute information divulguée en ligne est susceptible d'être interceptée et détournée par des tiers non autorisés. Par conséquent, nous ne pouvons garantir une sécurité totale si vous fournissez des informations personnelles.</p>\n    </div>\n  </section>\n\n  <!-- Politique relative aux enfants -->\n  <section id=\"children\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Politique relative aux enfants\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>Nous ne sollicitons pas sciemment d'informations auprès d'enfants de moins de 13 ans et ne leur proposons pas de produits ou services. Si nous apprenons que nous avons collecté des informations personnelles auprès d'un enfant de moins de 13 ans sans vérification du consentement parental, nous supprimerons ces informations dès que possible. Si vous avez connaissance de données que nous avons collectées auprès d'enfants de moins de 13 ans, veuillez nous contacter en utilisant les coordonnées fournies ci-dessous.</p>\n    </div>\n  </section>\n\n  <!-- Ne pas suivre -->\n  <section id=\"dnt\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Commandes des fonctionnalités « Do-Not-Track »\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>La plupart des navigateurs Web et certains systèmes d'exploitation mobiles intègrent une fonctionnalité ou un paramètre « Do-Not-Track » (« DNT ») que vous pouvez activer pour signaler votre préférence en matière de confidentialité et indiquer que vous ne souhaitez pas que les données relatives à vos activités de navigation en ligne soient surveillées et collectées. Aucune norme technologique uniforme permettant de reconnaître et de mettre en œuvre les signaux DNT n’a encore été finalisée. Par conséquent, nous ne répondons pas actuellement aux signaux DNT des navigateurs ni à tout autre mécanisme qui communique automatiquement votre choix de ne pas être suivi en ligne. Si une norme relative au suivi en ligne que nous devrons respecter est adoptée à l’avenir, nous vous informerons de cette pratique dans une version révisée de la présente Politique de confidentialité.</p>\n    </div>\n  </section>\n\n  <!-- Options concernant vos informations -->\n  <section id=\"options\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      Options concernant vos informations\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <div style=\"margin-top: 1.5rem;\">\n        <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">Informations sur le compte</h3>\n        <p>Vous pouvez à tout moment consulter ou modifier les informations de votre compte, ou résilier votre compte en :</p>\n        <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 0.75rem; line-height: 1.75;\">\n          <li>Vous connectant à vos paramètres de compte et en mettant à jour votre compte.</li>\n          <li>Nous contactant à l'aide des coordonnées fournies ci-dessous.</li>\n        </ul>\n        <p style=\"margin-top: 1rem;\">À votre demande de résiliation de votre compte, nous désactiverons ou supprimerons votre compte et vos informations de nos bases de données actives. Toutefois, certaines informations peuvent être conservées dans nos fichiers afin de prévenir la fraude, de résoudre des problèmes, de faciliter toute enquête, d'appliquer nos Conditions d'utilisation et/ou de nous conformer aux exigences légales.</p>\n      </div>\n    </div>\n  </section>\n\n  <!-- E-mails et communications -->\n  <section id=\"emails\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n    <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">\n      E-mails et communications\n    </h2>\n    <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n      <p>Si vous ne souhaitez plus recevoir de courrier, d'e-mails ou d'autres communications de notre part, vous pouvez vous désabonner en :</p>\n      <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 0.75rem; line-height: 1.75;\">\n        <li>Indiquant vos préférences au moment de la création de votre compte sur le Site.</li>\n        <li>Vous connectant à vos paramètres de compte et mettant à jour vos préférences.</li>\n        <li>En nous contactant à l'aide des coordonnées fournies ci-dessous.</li>\n      </ul>\n      <p style=\"margin-top: 1.25rem;\">Si vous ne souhaitez plus recevoir de courrier, d'e-mails ou d'autres communications de la part de tiers, il vous appartient de contacter directement ces tiers.</p>\n    </div>\n  </section>\n\n</div>",
+          "alignment": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-51f7cc2c-b438-47dd-8fb6-4fcec5a2ef76",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-e4202cb5-f574-405d-ac07-735db8de5c9f",
+          "columns": [
+            {
+              "links": [
+                {
+                  "href": "/about",
+                  "label": "À propos",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/contact",
+                  "label": "Contact",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Tarifs",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Carrières",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Entreprise"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com",
+                  "label": "Documentation",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Ressources"
+            }
+          ],
+          "tagline": "MyAllocator vous aide à développer plus rapidement, à évoluer plus facilement et à offrir sans difficulté des expériences Web modernes.",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": true,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#f8fafc",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Politique de confidentialité",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Contrat client",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#FFFFFF",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. Tous droits réservés.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#f8fafc",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#696969",
+          "bottomBarBorderColor": "#d4d4d4",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

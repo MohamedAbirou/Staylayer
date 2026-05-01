@@ -1,0 +1,460 @@
+{
+  "slug": "contact",
+  "locale": "es",
+  "title": "Contáctanos",
+  "seoTitle": "Póngase en contacto con MyAllocator, software para alquileres vacacionales y fijación dinámica de precios",
+  "seoDescription": "¿Estás listo para sacar más partido a cada reserva? Los anfitriones de MyAllocator afirman haber aumentado sus ingresos hasta un 20 % tras pasarse a nuestra plataforma integral de alquiler vacacional y a nuestro motor de precios dinámicos basado en inteligencia artificial. Si tienes alguna pregunta, estaremos encantados de atenderte.",
+  "seoKeywords": "contacto, MyAllocator, alquiler vacacional, software, precios dinámicos",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Contáctanos",
+        "seoTitle": "Póngase en contacto con MyAllocator, software para alquileres vacacionales y fijación dinámica de precios",
+        "fontFamily": "Inter",
+        "seoKeywords": "contacto, MyAllocator, alquiler vacacional, software, precios dinámicos",
+        "seoDescription": "¿Estás listo para sacar más partido a cada reserva? Los anfitriones de MyAllocator afirman haber aumentado sus ingresos hasta un 20 % tras pasarse a nuestra plataforma integral de alquiler vacacional y a nuestro motor de precios dinámicos basado en inteligencia artificial. Si tienes alguna pregunta, estaremos encantados de atenderte.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Contáctanos"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-f5b17a6d-4cd0-4471-b9fe-71865bbb5b17",
+          "links": [
+            {
+              "href": "/",
+              "label": "Plataforma",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Creador de sitios web",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Gestor de canales (alquileres vacacionales)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Comunicaciones con los huéspedes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Motor de reservas",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Sistema de reservas",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Precios dinámicos",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Estadísticas e indicadores clave de rendimiento",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Características"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Recursos",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Embajador",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guía para visitantes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Acceso a la cuenta",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Precios",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Informe anual",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contáctanos",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Explora"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "Acerca de",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Empleo",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Alojamiento y desayuno",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Tienda",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Casa de huéspedes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Apartamentos vacacionales",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Empresa"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Empieza hoy mismo",
+          "logoHref": "/",
+          "logoText": "Tu marca",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logotipo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 33,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#FFFFFF",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#FFFFFF",
+          "ctaBackgroundColor": "#FFFFFF",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "Section",
+        "props": {
+          "id": "Section-9b5506ee-1c7d-4ea7-b4b6-45a5d218bec6",
+          "content": [
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-f7718e5d-8d42-4d57-838c-8e4f2c2aa5fd",
+                "size": "2xl",
+                "text": "Póngase en contacto con MyAllocator,",
+                "color": "#FFFFFF",
+                "level": "h2",
+                "weight": "bold",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "tight",
+                "letterSpacing": "tight",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Spacer",
+              "props": {
+                "id": "Spacer-6cf857c4-72fb-4fa6-a669-89ee85cfeb9f",
+                "size": "xl",
+                "backgroundColor": ""
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-a4a41a05-70f4-4545-92c4-dcd40b2f5cb3",
+                "size": "xl",
+                "text": "¿Estás listo para ganar más con cada reserva? **Los anfitriones de MyAllocator** afirman haber aumentado sus ingresos hasta un 20 %** tras pasarse a nuestra plataforma integral de alquiler vacacional y a nuestro motor de precios dinámicos basado en inteligencia artificial. Si tienes alguna pregunta, estaremos encantados de atenderte.\n\n",
+                "color": "#FFFFFF",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "md",
+                "paddingY": "none",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradient": false,
+          "maxWidth": "xl",
+          "paddingX": "lg",
+          "paddingY": "md",
+          "animation": "none",
+          "borderTop": false,
+          "fullWidth": false,
+          "gradientTo": "#8b5cf6",
+          "borderBottom": false,
+          "gradientFrom": "#3b82f6",
+          "animationDelay": "none",
+          "overlayOpacity": 0,
+          "backgroundColor": "",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "animationDuration": "normal",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "ContactSection",
+        "props": {
+          "id": "ContactSection-c0ntact-0001-0000-0000-000000000001",
+          "heading": "Conectemos",
+          "badgeText": "Respuestas rápidas y amables",
+          "emailNote": "Nuestro objetivo es responder en el plazo de un día laborable.",
+          "emailLabel": "contact@myallocator.com",
+          "bulletItems": [
+            {
+              "text": "Guía de incorporación y configuración"
+            },
+            {
+              "text": "Guías detalladas de las funciones"
+            },
+            {
+              "text": "Oportunidades de colaboración"
+            },
+            {
+              "text": "Asistencia general"
+            }
+          ],
+          "description": "¿Tienes alguna pregunta sobre MyAllocator o necesitas ayuda con tu cuenta? Rellena el formulario y nuestro equipo se pondrá en contacto contigo lo antes posible.",
+          "emailAddress": "contact@myallocator.com",
+          "headingColor": "#1d4ed8",
+          "backgroundColor": "#ffffff",
+          "descriptionColor": "#334155"
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-10061382-3da2-499b-a561-6c1ad2801cfa",
+          "columns": [
+            {
+              "links": [
+                {
+                  "href": "/about",
+                  "label": "Acerca de",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/contact-us",
+                  "label": "Contacto",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Precios",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Empleo",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Empresa"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentación",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Recursos"
+            }
+          ],
+          "tagline": "MyAllocator te ayuda a desarrollar más rápido, escalar mejor y ofrecer experiencias web modernas con facilidad.",
+          "logoHref": "/",
+          "logoText": "Tu marca",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": true,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#F8FAFC",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Política de privacidad",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Acuerdo con el cliente",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#FFFFFF",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logotipo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. Todos los derechos reservados.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#F8FAFC",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#6b6b6b",
+          "bottomBarBorderColor": "#d1d1d1",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

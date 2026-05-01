@@ -1,0 +1,985 @@
+{
+  "slug": "farm-stays",
+  "locale": "en",
+  "title": "Farm Stay Management Software",
+  "seoTitle": "MyAllocator Farm Stay Management Software | Cabins, Cottages & Rural Retreats",
+  "seoDescription": "Manage your farm stay, cabin, or rural retreat with MyAllocator’s all-in-one software. Automate bookings, guest messaging, dynamic pricing, and team management. Boost revenue, prevent double-bookings, and deliver memorable guest experiences with tools built for rural vacation rentals.",
+  "seoKeywords": "farm stay software, rural vacation rental management, cabin booking system, cottage channel manager, automated guest messaging, dynamic pricing, team portal, country retreat software, property management, direct booking engine, hospitality automation",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": " Farm Stay Management Software",
+        "seoTitle": "MyAllocator Farm Stay Management Software | Cabins, Cottages & Rural Retreats",
+        "fontFamily": "Inter",
+        "seoKeywords": "farm stay software, rural vacation rental management, cabin booking system, cottage channel manager, automated guest messaging, dynamic pricing, team portal, country retreat software, property management, direct booking engine, hospitality automation",
+        "seoDescription": "Manage your farm stay, cabin, or rural retreat with MyAllocator’s all-in-one software. Automate bookings, guest messaging, dynamic pricing, and team management. Boost revenue, prevent double-bookings, and deliver memorable guest experiences with tools built for rural vacation rentals.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Farm Stay Management Software"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-f5b17a6d-4cd0-4471-b9fe-71865bbb5b17",
+          "links": [
+            {
+              "href": "/",
+              "label": "Platform",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Website Builder",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Channel Manager (Vacation Rental)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Guest Communications",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Booking Engine",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Reservation System",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Dynamic Pricing",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Statistics & KPIs",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Features"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Resources",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Ambassador",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guest Guide",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Account Access",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Pricing",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Annual Report",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contact Us",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Explore"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "About",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Careers",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Bed & Breakfast",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Boutique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Guest House",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Vacation Apartments",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Company"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Get Started Today",
+          "logoHref": "/",
+          "logoText": "Your Brand",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 33,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#FFFFFF",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#FFFFFF",
+          "ctaBackgroundColor": "#FFFFFF",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "Section",
+        "props": {
+          "id": "Section-3581a985-45f6-413b-a4b8-027a3577f77b",
+          "content": [
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-4ca75a4c-73e0-481e-a222-fd344fdfead7",
+                "size": "2xl",
+                "text": "MyAllocator , Farm Stay Management Software for Cabins, Cottages & Country Retreats",
+                "color": "",
+                "level": "h2",
+                "weight": "medium",
+                "maxWidth": "none",
+                "paddingY": "sm",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "tight",
+                "letterSpacing": "tight",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-da5fbdc3-894f-4a32-a692-f8a23a32e2d2",
+                "size": "xl",
+                "text": "Run every aspect of your rural vacation rental business in one place and boost revenue by an average of 20 percent.\n",
+                "color": "#334155",
+                "weight": "medium",
+                "opacity": "100",
+                "maxWidth": "xl",
+                "paddingY": "sm",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradient": true,
+          "maxWidth": "xl",
+          "paddingX": "none",
+          "paddingY": "3xl",
+          "animation": "none",
+          "borderTop": false,
+          "fullWidth": false,
+          "gradientTo": "#FFFFFF",
+          "borderBottom": false,
+          "gradientFrom": "#f7f9fc",
+          "animationDelay": "none",
+          "overlayOpacity": 50,
+          "backgroundColor": "",
+          "backgroundImage": "",
+          "animationDuration": "normal",
+          "gradientDirection": "to-b"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-6550cf60-6e27-4a67-aa9e-bae7e3da6722",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-02ce48c4-ccb1-4f76-beeb-5a0bff672ba3",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-d67ff3e4-45df-4073-b9bb-dee4776fec6d",
+          "size": "xl",
+          "text": "Why Hosts Switch to MyAllocator",
+          "level": "h2",
+          "weight": "normal",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-a1b2c3d4-0001-0000-0000-000000000005",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "DataTable",
+        "props": {
+          "id": "DataTable-7edadbc1-c241-4e8e-ba7e-93b6be017251",
+          "rows": [
+            {
+              "cells": [
+                { "value": "Juggling calendars across multiple OTAs" },
+                {
+                  "value": "Unified channel manager , no double-bookings, ever"
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Listings that blend into the crowd" },
+                { "value": "Eye-catching, brand-consistent pages that convert" }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Few repeat guests" },
+                { "value": "Automated guest journeys that drive loyalty" }
+              ],
+              "isHighlighted": false
+            }
+          ],
+          "shadow": true,
+          "columns": [
+            {
+              "bold": false,
+              "align": "center",
+              "width": "50%",
+              "header": "Before MyAllocator"
+            },
+            {
+              "bold": true,
+              "align": "center",
+              "width": "50%",
+              "header": "After MyAllocator"
+            }
+          ],
+          "rounded": true,
+          "bordered": true,
+          "fontSize": 17,
+          "maxWidth": "lg",
+          "rowEvenBgColor": "#FFFFFF"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-a1b2c3d4-0001-0000-0000-000000000006",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-410683fe-64d5-4272-8b7d-2e0a573b4b38",
+          "body": "",
+          "heading": "For Individual Farm Owners",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "https://placehold.co/960x720/e2e8f0/64748b?text=Feature+Image",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-f08fa73c-033c-4f4a-8fd9-3f81e3917c93",
+                "size": "md",
+                "text": "Streamline reservations, payments, and guest communication so you can focus on welcoming visitors and tending the land.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 910,
+          "sectionTitle": "Built for Growing Farm-Stay Businesses",
+          "headingWeight": "normal",
+          "imageOverflow": false,
+          "imagePosition": "right",
+          "titleFontSize": 34,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "semibold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-f5df0644-8f40-4b29-b732-b1177e915d23",
+          "body": "",
+          "heading": "For Property Managers",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "https://placehold.co/960x720/e2e8f0/64748b?text=Feature+Image",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-5119eef2-9d11-4698-9119-d88fb53a2f3c",
+                "size": "md",
+                "text": "Centralize multi-property operations, apply smart pricing, and promote authentic rural experiences at scale.\n\n\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 910,
+          "sectionTitle": "",
+          "headingWeight": "normal",
+          "imageOverflow": false,
+          "imagePosition": "left",
+          "titleFontSize": 0,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "bold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-94de3ea4-df5f-40bf-83b6-0f5248116afb",
+          "body": "",
+          "heading": "Dynamic Pricing Engine",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "/images/dynamic-pricing-1.png",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-8fb49f63-0489-438f-b6ad-5f32397119ee",
+                "size": "md",
+                "text": "Maximize nightly rates with AI-driven pricing that adapts to demand and local events.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 910,
+          "sectionTitle": "All-in-One Tool Kit",
+          "headingWeight": "normal",
+          "imageOverflow": false,
+          "imagePosition": "right",
+          "titleFontSize": 34,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "semibold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-5a6de3b8-6cab-42ae-a564-c065e528fd64",
+          "body": "",
+          "heading": "Booking Engine & Website Builder",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "/images/website-builder.png",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-32553e7e-ad2c-46ed-8fe2-34380a380e6e",
+                "size": "md",
+                "text": "Capture direct reservations, own your guest data, and rank higher in search with a fast, mobile-first website.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 910,
+          "sectionTitle": "",
+          "headingWeight": "normal",
+          "imageOverflow": false,
+          "imagePosition": "left",
+          "titleFontSize": 0,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "bold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-3f2769d6-3755-47e5-adb7-b9974c18d3e4",
+          "body": "",
+          "heading": "Automated Guest Messaging",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "/images/automated-guest-messaging-2.png",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-c2903296-a44d-4f9d-8772-68e0b395fc0a",
+                "size": "md",
+                "text": "Schedule personalized emails and texts, from pre-arrival directions to post-stay review requests, at exactly the right moment.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 910,
+          "sectionTitle": "",
+          "headingWeight": "normal",
+          "imageOverflow": false,
+          "imagePosition": "right",
+          "titleFontSize": 0,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "bold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-cb76c390-adef-466a-af87-dad68fee55d7",
+          "body": "",
+          "heading": "Team & Owner Portal",
+          "gradient": false,
+          "imageAlt": "Feature illustration",
+          "imageUrl": "/images/crm/users.png",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-eba058b5-366a-43de-af0a-624d345fd8e8",
+                "size": "md",
+                "text": "Give staff, cleaners, and co-owners role-based access, keeping everyone aligned and accountable.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 910,
+          "sectionTitle": "",
+          "headingWeight": "normal",
+          "imageOverflow": false,
+          "imagePosition": "left",
+          "titleFontSize": 0,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "bold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-8b4b7385-0320-4865-afb1-a1034dd1ccb5",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-d9bdb71c-6ab6-4c78-8795-554d7e68c69c",
+          "size": "xl",
+          "text": "Trusted by Rural Hosts Worldwide",
+          "level": "h2",
+          "weight": "normal",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-373150ab-1d03-4e72-9ea3-1dbcb4cdcef3",
+          "size": "lg",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-d49e348f-3fed-4e14-834c-cfcd97b11029",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-8d94a55f-b083-44f5-a6e5-9f72f7b4822f",
+                "gap": "md",
+                "columns": "3",
+                "content": [
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-f0ffd4ac-c529-440b-884f-5f86d685932d",
+                      "quote": "“MyAllocator is the most complete channel manager I’ve tried. Every feature works as advertised, with no hidden fees.”\n",
+                      "author": ", Hasan, Maple Grove Farm",
+                      "shadow": "xl",
+                      "rounded": "xl",
+                      "textColor": "",
+                      "quoteColor": "",
+                      "withBorder": true,
+                      "accentColor": "#e2e8f0",
+                      "authorColor": "",
+                      "quoteFontSize": 0,
+                      "authorFontSize": 0,
+                      "backgroundColor": "#ffffff"
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-ebe65ec0-a94f-49d5-9ff0-69a3b8ecd230",
+                      "quote": "“After four years and six listings, I still love how easy MyAllocator is to set up and use as my primary booking platform.”\n",
+                      "author": ", Rebecca, Green Pastures Cottages",
+                      "shadow": "xl",
+                      "rounded": "xl",
+                      "textColor": "",
+                      "quoteColor": "",
+                      "withBorder": true,
+                      "accentColor": "#e2e8f0",
+                      "authorColor": "",
+                      "quoteFontSize": 0,
+                      "authorFontSize": 0,
+                      "backgroundColor": "#ffffff"
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-6f711701-2272-4847-9ed2-dd11d229fb49",
+                      "quote": "“Tasks that used to take hours are now automated, and the price is still affordable.”\n",
+                      "author": ", Stefano, Tuscan Hillside Retreats",
+                      "shadow": "xl",
+                      "rounded": "xl",
+                      "textColor": "",
+                      "quoteColor": "",
+                      "withBorder": true,
+                      "accentColor": "#e2e8f0",
+                      "authorColor": "",
+                      "quoteFontSize": 0,
+                      "authorFontSize": 0,
+                      "backgroundColor": "#ffffff"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-15734141-72ed-4a83-8898-4bb15503b4a2",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "CTABanner",
+        "props": {
+          "id": "CTABanner-ee7a203e-7848-4f34-ba89-191405a38e23",
+          "actions": [
+            {
+              "type": "Button",
+              "props": {
+                "id": "Button-37d540fc-9716-491d-bc03-ba5ecd42c450",
+                "url": "/pricing",
+                "icon": "none",
+                "size": "lg",
+                "label": "Get Started",
+                "shadow": "none",
+                "rounded": "full",
+                "variant": "outline",
+                "fullWidth": false,
+                "marginTop": 27,
+                "textColor": "",
+                "marginLeft": 0,
+                "marginRight": 0,
+                "iconPosition": "right",
+                "marginBottom": 0,
+                "openInNewTab": false,
+                "customPaddingX": 22,
+                "customPaddingY": 9,
+                "hoverTextColor": "",
+                "backgroundColor": "#0930f6",
+                "hoverBackgroundColor": ""
+              }
+            }
+          ],
+          "heading": "Ready to Take Control of Your Vacation Rental Business?",
+          "rounded": "none",
+          "paddingY": "lg",
+          "alignment": "center",
+          "textColor": "#FFFFFF",
+          "description": "",
+          "showActions": "show",
+          "headingColor": "",
+          "headingWeight": "light",
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 38,
+          "descriptionColor": "",
+          "descriptionOpacity": 90,
+          "descriptionFontSize": 0,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-10061382-3da2-499b-a561-6c1ad2801cfa",
+          "columns": [
+            {
+              "links": [
+                { "href": "/about", "label": "About", "openInNewTab": false },
+                {
+                  "href": "/contact-us",
+                  "label": "Contact",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Pricing",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Careers",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Company"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentation",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Resources"
+            }
+          ],
+          "tagline": "MyAllocator helps you build faster, scale better, and deliver modern web experiences with ease.",
+          "logoHref": "/",
+          "logoText": "Your Brand",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": false,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#F8FAFC",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Privacy Policy",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Customer Agreement",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#FFFFFF",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. All rights reserved.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#F8FAFC",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#6b6b6b",
+          "bottomBarBorderColor": "#d1d1d1",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

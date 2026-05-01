@@ -1,0 +1,640 @@
+{
+  "slug": "annual-report",
+  "locale": "fr",
+  "title": "MyAllocator Rapport annuel 2025",
+  "seoTitle": "MyAllocator Rapport sur la location saisonnière 2025 | Conseils éprouvés pour augmenter vos réservations",
+  "seoDescription": "Téléchargez le rapport 2025 d'MyAllocator sur la location saisonnière pour découvrir une analyse actualisée du marché, des techniques de tarification dynamique et des stratégies détaillées proposées par des hôtes performants afin d'augmenter vos revenus issus de la location à court terme.",
+  "seoKeywords": "rapport sur la location saisonnière, rapport annuel, MyAllocator 2025, tarification dynamique, conseils de réservation",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "MyAllocator Rapport annuel 2025",
+        "seoTitle": "MyAllocator Rapport sur la location saisonnière 2025 | Conseils éprouvés pour augmenter vos réservations",
+        "fontFamily": "Inter",
+        "seoKeywords": "rapport sur la location saisonnière, rapport annuel, MyAllocator 2025, tarification dynamique, conseils de réservation",
+        "seoDescription": "Téléchargez le rapport 2025 d'MyAllocator sur la location saisonnière pour découvrir une analyse actualisée du marché, des techniques de tarification dynamique et des stratégies détaillées proposées par des hôtes performants afin d'augmenter vos revenus issus de la location à court terme.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "MyAllocator Rapport annuel 2025"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-annualreport-0001-0000-0000-000000000001",
+          "links": [
+            {
+              "href": "/",
+              "label": "Plateforme",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Créateur de sites web",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Gestionnaire de canaux (location saisonnière)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Communications avec les clients",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Moteur de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Système de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Tarification dynamique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Statistiques et indicateurs clés de performance",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Caractéristiques"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Ressources",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Ambassadeur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guide du visiteur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Accès au compte",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Tarifs",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Rapport annuel",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contactez-nous",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Découvrir"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "À propos",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Carrières",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Chambres d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Boutique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Maison d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Appartements de vacances",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Entreprise"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Commencez dès aujourd'hui",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 33,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#FFFFFF",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#FFFFFF",
+          "ctaBackgroundColor": "#FFFFFF",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "Hero",
+        "props": {
+          "id": "Hero-annualreport-0001-0000-0000-000000000001",
+          "heading": "MyAllocator Rapport annuel 2025",
+          "subheading": "Des informations exploitables, des tendances fondées sur des données et des guides pratiques éprouvés sur le terrain pour aider chaque hôte à gagner davantage l'année prochaine.",
+          "alignment": "center",
+          "minHeight": "md",
+          "backgroundColor": "#0f172a",
+          "backgroundImage": "",
+          "overlayOpacity": 0,
+          "textColor": "#ffffff",
+          "showActions": "hide",
+          "headingWeight": "bold"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0001-0000-0000-000000000001",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-annualreport-0001-0000-0000-000000000001",
+          "text": "Pourquoi télécharger ce rapport ?",
+          "level": "h2",
+          "size": "xl",
+          "weight": "bold",
+          "alignment": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0002-0000-0000-000000000001",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-annualreport-0001-0000-0000-000000000001",
+          "text": "Si vous souhaitez améliorer votre classement sur Airbnb, Booking.com et Vrbo, remplir davantage de nuitées et optimiser vos tarifs à la nuitée, le rapport annuel «MyAllocator» est la feuille de route qu’il vous faut. Nous avons analysé des milliers d’annonces et interrogé nos meilleurs hôtes afin de mettre en lumière les stratégies éprouvées qui ont permis d’augmenter les revenus de **20 %** en moyenne en 2024. Vous y découvrirez précisément comment :",
+          "size": "md",
+          "alignment": "left",
+          "maxWidth": "xl"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0003-0000-0000-000000000001",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "StepList",
+        "props": {
+          "id": "StepList-annualreport-0001-0000-0000-000000000001",
+          "items": [
+            {
+              "title": "Optimisez le texte et les photos de votre annonce pour obtenir un meilleur taux de clics."
+            },
+            {
+              "title": "Mettez en place la tarification dynamique d'MyAllocator pour tirer parti des pics de demande sans laisser passer la moindre opportunité de chiffre d'affaires."
+            },
+            {
+              "title": "Personnalisez la communication avec vos clients pour obtenir des avis cinq étoiles et fidéliser votre clientèle."
+            },
+            {
+              "title": "Découvrez les grandes tendances du voyage pour 2025 : le « bleisure », les séjours permettant de travailler de n'importe où et les équipements respectueux de l'environnement."
+            }
+          ],
+          "layout": "vertical",
+          "showConnector": false
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0004-0000-0000-000000000001",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-annualreport-0002-0000-0000-000000000001",
+          "text": "Contenu",
+          "level": "h2",
+          "size": "xl",
+          "weight": "bold",
+          "alignment": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0005-0000-0000-000000000001",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "StepList",
+        "props": {
+          "id": "StepList-annualreport-0002-0000-0000-000000000001",
+          "items": [
+            {
+              "title": "Analyse de marché : les grandes tendances du secteur mondial de la location à court terme."
+            },
+            {
+              "title": "Points clés à retenir pour 2024 : les réussites et les écueils dont vous pouvez tirer parti dès maintenant."
+            },
+            {
+              "title": "Études de cas Top-Host : les canaux qu'ils privilégient, les piles technologiques auxquelles ils font confiance et les processus visant à optimiser l'expérience client."
+            },
+            {
+              "title": "Prévisions des tendances pour 2025 : comportement des consommateurs, délais de réservation et élasticité-prix."
+            },
+            {
+              "title": "Boîte à outils des meilleures pratiques : listes de contrôle, modèles d'e-mails et règles de tarification prêts à être intégrés à vos processus."
+            }
+          ],
+          "layout": "vertical",
+          "showConnector": false
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0006-0000-0000-000000000001",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-annualreport-0003-0000-0000-000000000001",
+          "text": "Six façons dont ce rapport stimule la croissance",
+          "level": "h2",
+          "size": "xl",
+          "weight": "bold",
+          "alignment": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0007-0000-0000-000000000001",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "StepList",
+        "props": {
+          "id": "StepList-annualreport-0003-0000-0000-000000000001",
+          "items": [
+            {
+              "title": "Tirez les leçons des réussites et des erreurs de 2024."
+            },
+            {
+              "title": "Comparez-vous aux animateurs les mieux rémunérés d'MyAllocator."
+            },
+            {
+              "title": "Adoptez des stratégies d'optimisation qui améliorent votre visibilité dans les moteurs de recherche."
+            },
+            {
+              "title": "Anticipez les grandes tendances de 2025 avant vos concurrents."
+            },
+            {
+              "title": "Misez sur des chiffres concrets, sans fioritures, avec uniquement des projections claires du retour sur investissement."
+            },
+            {
+              "title": "Élaborez un plan d'action sur mesure pour votre portefeuille immobilier."
+            }
+          ],
+          "layout": "vertical",
+          "showConnector": true
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0008-0000-0000-000000000001",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-annualreport-0004-0000-0000-000000000001",
+          "text": "Demandez votre exemplaire",
+          "level": "h2",
+          "size": "xl",
+          "weight": "bold",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0009-0000-0000-000000000001",
+          "size": "sm",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-annualreport-0002-0000-0000-000000000001",
+          "text": "Remplissez le court formulaire ci-dessous pour recevoir le fichier PDF immédiatement.",
+          "size": "md",
+          "alignment": "center",
+          "maxWidth": "md"
+        }
+      },
+      {
+        "type": "AnnualReportSection",
+        "props": {
+          "id": "AnnualReportSection-0001-0000-0000-000000000001",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0010-0000-0000-000000000001",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-annualreport-0005-0000-0000-000000000001",
+          "text": "À propos d'MyAllocator",
+          "level": "h2",
+          "size": "xl",
+          "weight": "bold",
+          "alignment": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0011-0000-0000-000000000001",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-annualreport-0003-0000-0000-000000000001",
+          "text": "MyAllocator est un logiciel tout-en-un dédié à la location saisonnière qui combine un gestionnaire de canaux, un moteur de tarification dynamique, une plateforme de messagerie pour les clients et un tableau de bord analytique. Des milliers d'hôtes à travers le monde font confiance à MyAllocator pour simplifier leurs opérations et développer leur activité de manière rentable.",
+          "size": "md",
+          "alignment": "left",
+          "maxWidth": "xl"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-annualreport-0012-0000-0000-000000000001",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-annualreport-0001-0000-0000-000000000001",
+          "columns": [
+            {
+              "links": [
+                {
+                  "href": "/about",
+                  "label": "À propos",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/contact-us",
+                  "label": "Contact",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Tarifs",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Carrières",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Entreprise"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentation",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Ressources"
+            }
+          ],
+          "tagline": "MyAllocator vous aide à développer plus rapidement, à évoluer plus facilement et à offrir sans difficulté des expériences Web modernes.",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": true,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#F8FAFC",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Politique de confidentialité",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Contrat client",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#FFFFFF",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. Tous droits réservés.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#F8FAFC",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#6b6b6b",
+          "bottomBarBorderColor": "#d1d1d1",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

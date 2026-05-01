@@ -1,0 +1,1175 @@
+{
+  "slug": "automatic-guest-communications-vacation-rentals",
+  "locale": "fr",
+  "title": "Communications automatiques avec les clients pour les locations de vacances",
+  "seoTitle": "Système automatisé de messagerie pour les clients et gestionnaire de canaux pour les locations de vacances | MyAllocator",
+  "seoDescription": "Augmentez le chiffre d'affaires de votre location de vacances jusqu'à 20 % grâce à la plateforme tout-en-un d'MyAllocator. Automatisez la communication avec vos clients, gérez vos réservations provenant d'Airbnb, Booking.com et bien d'autres sites, et profitez d'une tarification dynamique, d'une boîte de réception centralisée et d'outils performants destinés aux hôtes, aux gestionnaires immobiliers et aux hôtels de charme.",
+  "seoKeywords": "logiciel de location saisonnière, automatisation des messages aux clients, gestionnaire de canaux, tarification dynamique, intégration d'Airbnb, intégration d'Booking.com, gestion immobilière, boîte de réception centralisée, communication automatisée avec les clients, logiciel pour hôtels de charme",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Communications automatiques avec les clients pour les locations de vacances",
+        "seoTitle": "Communications automatiques avec les clients pour les locations de vacances",
+        "fontFamily": "Inter",
+        "seoKeywords": "",
+        "seoDescription": "",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Communications automatiques avec les clients pour les locations de vacances"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-f5b17a6d-4cd0-4471-b9fe-71865bbb5b17",
+          "links": [
+            {
+              "href": "/",
+              "label": "Plateforme",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Créateur de sites web",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Gestionnaire de canaux (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Gestionnaire de canaux (location saisonnière)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Communications avec les clients",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Moteur de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Système de réservation",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Tarification dynamique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Statistiques et indicateurs clés de performance",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Caractéristiques"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Ressources",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Ambassadeur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guide du visiteur",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Accès au compte",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Tarifs",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Rapport annuel",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contactez-nous",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Découvrir"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "À propos",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Carrières",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Chambres d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Boutique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Maison d'hôtes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Appartements de vacances",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Entreprise"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Commencez dès aujourd'hui",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 33,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#FFFFFF",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "#FFFFFF",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#FFFFFF",
+          "ctaBackgroundColor": "#FFFFFF",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "Section",
+        "props": {
+          "id": "Section-b60d4e32-9497-4e6d-badd-6224e4c7d199",
+          "content": [
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-da309dba-8528-4a60-bd75-02bc9b05b260",
+                "size": "2xl",
+                "text": "Tirez le meilleur parti de [chaque réservation]{#2563eb} grâce à l'MyAllocator",
+                "color": "",
+                "level": "h2",
+                "weight": "semibold",
+                "maxWidth": "none",
+                "paddingY": "sm",
+                "alignment": "center",
+                "animation": "none",
+                "letterSpacing": "tight",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-adde2b31-dce1-4f9e-98a6-20917e0e386e",
+                "size": "xl",
+                "text": "Générez jusqu'à [**20 % de revenus supplémentaires**]{#2563eb} et faites le bonheur de vos clients grâce à cette plateforme tout-en-un dédiée à la location saisonnière, conçue pour les hôtes, les gestionnaires immobiliers et les hôteliers de charme. MyAllocator combine une [**tarification dynamique**]{#2563eb} intelligente, la [**messagerie automatisée avec les clients**]{#2563eb} et un puissant [**gestionnaire de canaux**]{#2563eb} afin que vous puissiez vous concentrer sur l'accueil et non sur les tâches administratives.\n",
+                "color": "#334155",
+                "weight": "medium",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "sm",
+                "alignment": "center",
+                "animation": "none",
+                "lineHeight": "loose",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradient": true,
+          "maxWidth": "xl",
+          "paddingX": "none",
+          "paddingY": "3xl",
+          "animation": "none",
+          "borderTop": false,
+          "fullWidth": false,
+          "gradientTo": "#FFFFFF",
+          "borderBottom": false,
+          "gradientFrom": "#f7f9fc",
+          "animationDelay": "none",
+          "overlayOpacity": 50,
+          "backgroundColor": "",
+          "backgroundImage": "",
+          "animationDuration": "normal",
+          "gradientDirection": "to-b"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-37f07aa7-d558-4d69-b02e-e7d1252e94a3",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "TextWithImage",
+        "props": {
+          "id": "TextWithImage-9c33bc6c-ea31-4ade-9011-4534407e1908",
+          "body": "",
+          "heading": "Une tarification dynamique qui porte ses fruits",
+          "gradient": false,
+          "imageAlt": "Illustration principale",
+          "imageUrl": "/images/dynamic-pricing-1.png",
+          "paddingY": "lg",
+          "textColor": "#ffffff",
+          "gradientTo": "#7c3aed",
+          "panelStyle": "translucent",
+          "richContent": [
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-c545006e-63d6-4d08-8b20-c279b15762fc",
+                "size": "md",
+                "text": "Notre moteur basé sur les données ajuste vos tarifs à la nuitée en temps réel, ce qui vous aide à répondre à la demande et à ne pas passer à côté de revenus potentiels. De nombreux utilisateurs constatent une augmentation de 20 % de leurs revenus dès le premier mois.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "normal",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-e77ea523-a733-4fc4-aeda-d22bbeeca7bc",
+                "size": "xs",
+                "text": "Une communication avec les clients axée sur l'humain",
+                "color": "",
+                "level": "h2",
+                "weight": "normal",
+                "maxWidth": "none",
+                "paddingY": "md",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "tight",
+                "letterSpacing": "tight",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Card",
+              "props": {
+                "id": "Card-231a16a4-65b0-496e-9e2f-a3ac4ff21674",
+                "shadow": "none",
+                "content": [
+                  {
+                    "type": "Paragraph",
+                    "props": {
+                      "id": "Paragraph-d26482fe-fd5d-45c9-91dd-3671a7c2624c",
+                      "size": "md",
+                      "text": "Boîte de réception centrale – Répondez à tous vos messages provenant de Airbnb, Booking.com, Vrbo et des réservations directes depuis un seul et même endroit.\n",
+                      "color": "",
+                      "weight": "normal",
+                      "opacity": "100",
+                      "maxWidth": "none",
+                      "paddingY": "none",
+                      "alignment": "left",
+                      "animation": "none",
+                      "lineHeight": "snug",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  }
+                ],
+                "padding": "md",
+                "rounded": "lg",
+                "bordered": false,
+                "gradient": false,
+                "imageAlt": "",
+                "imageUrl": "",
+                "gradientTo": "",
+                "gradientFrom": "",
+                "imagePosition": "top",
+                "contentSpacing": 16,
+                "backgroundColor": "#FFFFFF20",
+                "contentAlignment": "left",
+                "gradientDirection": "to-br"
+              }
+            },
+            {
+              "type": "Spacer",
+              "props": {
+                "id": "Spacer-aef16426-3d32-4835-876c-7b8d208367f3",
+                "size": "xs",
+                "backgroundColor": ""
+              }
+            },
+            {
+              "type": "Card",
+              "props": {
+                "id": "Card-4b183074-514f-4489-b1d4-fcfe3da47b8e",
+                "shadow": "none",
+                "content": [
+                  {
+                    "type": "Paragraph",
+                    "props": {
+                      "id": "Paragraph-7d68c46e-be28-4d54-925b-2fdba4e4b4e7",
+                      "size": "md",
+                      "text": "Modèles de messages – Commencez avec des modèles éprouvés et rédigés par des professionnels, ou créez votre propre style.\n",
+                      "color": "",
+                      "weight": "normal",
+                      "opacity": "100",
+                      "maxWidth": "none",
+                      "paddingY": "none",
+                      "alignment": "left",
+                      "animation": "none",
+                      "lineHeight": "snug",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  }
+                ],
+                "padding": "md",
+                "rounded": "lg",
+                "bordered": false,
+                "gradient": false,
+                "imageAlt": "",
+                "imageUrl": "",
+                "gradientTo": "",
+                "gradientFrom": "",
+                "imagePosition": "top",
+                "contentSpacing": 16,
+                "backgroundColor": "#FFFFFF20",
+                "contentAlignment": "left",
+                "gradientDirection": "to-br"
+              }
+            },
+            {
+              "type": "Spacer",
+              "props": {
+                "id": "Spacer-2c4e0c70-852e-4736-9e76-675e2a62567d",
+                "size": "xs",
+                "backgroundColor": ""
+              }
+            },
+            {
+              "type": "Card",
+              "props": {
+                "id": "Card-3d69a9b6-7c56-4ce6-af5c-57f19d95ca6c",
+                "shadow": "none",
+                "content": [
+                  {
+                    "type": "Paragraph",
+                    "props": {
+                      "id": "Paragraph-5164869e-6b82-4813-a788-50021e25ad04",
+                      "size": "md",
+                      "text": "Messages programmés – Envoyez automatiquement des instructions d'arrivée, des rappels de départ et des offres de vente incitative au moment idéal.\n",
+                      "color": "",
+                      "weight": "normal",
+                      "opacity": "100",
+                      "maxWidth": "none",
+                      "paddingY": "none",
+                      "alignment": "left",
+                      "animation": "none",
+                      "lineHeight": "snug",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  }
+                ],
+                "padding": "md",
+                "rounded": "lg",
+                "bordered": false,
+                "gradient": false,
+                "imageAlt": "",
+                "imageUrl": "",
+                "gradientTo": "",
+                "gradientFrom": "",
+                "imagePosition": "top",
+                "contentSpacing": 16,
+                "backgroundColor": "#FFFFFF20",
+                "contentAlignment": "left",
+                "gradientDirection": "to-br"
+              }
+            },
+            {
+              "type": "Spacer",
+              "props": {
+                "id": "Spacer-8688889b-77df-4d75-a762-57d8be017b79",
+                "size": "xs",
+                "backgroundColor": ""
+              }
+            },
+            {
+              "type": "Card",
+              "props": {
+                "id": "Card-d88803be-912e-499f-919b-fba336c66507",
+                "shadow": "none",
+                "content": [
+                  {
+                    "type": "Paragraph",
+                    "props": {
+                      "id": "Paragraph-bbec0576-39ff-407f-a8dd-cf48a77b5597",
+                      "size": "md",
+                      "text": "Formulaire d'enregistrement en ligne – Recueillez les pièces d'identité, les heures d'arrivée et les demandes particulières en quelques minutes, sans paperasse ni tracas.\n",
+                      "color": "",
+                      "weight": "normal",
+                      "opacity": "100",
+                      "maxWidth": "none",
+                      "paddingY": "none",
+                      "alignment": "left",
+                      "animation": "none",
+                      "lineHeight": "snug",
+                      "animationDelay": "none",
+                      "animationDuration": "normal"
+                    }
+                  }
+                ],
+                "padding": "md",
+                "rounded": "lg",
+                "bordered": false,
+                "gradient": false,
+                "imageAlt": "",
+                "imageUrl": "",
+                "gradientTo": "",
+                "gradientFrom": "",
+                "imagePosition": "top",
+                "contentSpacing": 16,
+                "backgroundColor": "#FFFFFF20",
+                "contentAlignment": "left",
+                "gradientDirection": "to-br"
+              }
+            },
+            {
+              "type": "Spacer",
+              "props": {
+                "id": "Spacer-2cdbd036-c7b6-4498-91e4-483cf4a42886",
+                "size": "md",
+                "backgroundColor": ""
+              }
+            },
+            {
+              "type": "Heading",
+              "props": {
+                "id": "Heading-ff72ed97-0b9e-4feb-9b30-aab3bf9ae021",
+                "size": "xs",
+                "text": "Confiance et transparence intégrées",
+                "color": "",
+                "level": "h2",
+                "weight": "normal",
+                "maxWidth": "none",
+                "paddingY": "md",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "tight",
+                "letterSpacing": "tight",
+                "textTransform": "none",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            },
+            {
+              "type": "Paragraph",
+              "props": {
+                "id": "Paragraph-1c38e48f-767e-4658-8d32-6db8de069f91",
+                "size": "md",
+                "text": "MyAllocator est conforme au RGPD et aux principales exigences des OTA, garantissant ainsi la sécurité des données de vos clients et préservant votre réputation.\n",
+                "color": "",
+                "weight": "normal",
+                "opacity": "100",
+                "maxWidth": "none",
+                "paddingY": "none",
+                "alignment": "left",
+                "animation": "none",
+                "lineHeight": "snug",
+                "animationDelay": "none",
+                "animationDuration": "normal"
+              }
+            }
+          ],
+          "gradientFrom": "#2563eb",
+          "headingColor": "",
+          "imageWidthPx": 0,
+          "sectionTitle": "Pourquoi les hébergeurs choisissent-ils MyAllocator ?",
+          "headingWeight": "normal",
+          "imageOverflow": true,
+          "imagePosition": "right",
+          "titleFontSize": 37,
+          "titleMaxWidth": 0,
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 36,
+          "titleFontWeight": "semibold",
+          "gradientDirection": "to-br",
+          "imageBrowserFrame": false,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-0e87ed73-e63e-42d5-b1e7-43fe5fd09d99",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-a540352c-e659-4f73-aae3-63c08b9155d6",
+          "size": "xl",
+          "text": "Adapté à chaque type de bien immobilier",
+          "level": "h2",
+          "weight": "normal",
+          "alignment": "center",
+          "letterSpacing": "wide"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-f07d9e5d-27c8-4f6f-b6fa-589b676faf14",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-fda33c12-48b4-4a39-ad27-5239c72d56c7",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-753b3f61-462e-4b8e-a60c-db84a76b5a6f",
+                "gap": "md",
+                "columns": "2",
+                "content": [
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-e7dda81e-9fe9-4e84-95be-41a7d4e1cc53",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-7aaffbbd-af35-48ca-a064-814afcff58d4",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Appartements et maisons de vacances"
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "lg",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-7a85455b-65ef-4eb2-8675-e8b4e7861c26",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-4a44d4b7-c84b-40d3-913f-b89df278126c",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Hôtels de charme et micro-hôtels"
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "lg",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 0,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-7447b539-ba10-485c-affd-4ec7d548a64e",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-33e0102d-e27a-42e0-a319-2f0eee80e7c9",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Chambres d'hôtes et maisons d'hôtes"
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "lg",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  },
+                  {
+                    "type": "Card",
+                    "props": {
+                      "id": "Card-7b15ecdc-41ae-4942-a7b8-34572b8a2e02",
+                      "shadow": "md",
+                      "content": [
+                        {
+                          "type": "List",
+                          "props": {
+                            "id": "List-aa3e4176-a9ef-4e42-9f92-04f5a6a4a6e9",
+                            "color": "",
+                            "items": [
+                              {
+                                "icon": "",
+                                "text": "Camping, glamping et séjours à la ferme"
+                              }
+                            ],
+                            "variant": "check",
+                            "fontSize": 18,
+                            "paddingX": 0,
+                            "paddingY": 0,
+                            "marginTop": 0,
+                            "globalIcon": "",
+                            "accentColor": "#2563eb",
+                            "itemSpacing": 10,
+                            "marginBottom": 0
+                          }
+                        }
+                      ],
+                      "padding": "lg",
+                      "rounded": "lg",
+                      "bordered": false,
+                      "gradient": false,
+                      "imageAlt": "",
+                      "imageUrl": "",
+                      "gradientTo": "#8b5cf6",
+                      "gradientFrom": "#3b82f6",
+                      "imagePosition": "top",
+                      "contentSpacing": 16,
+                      "backgroundColor": "#ffffff",
+                      "contentAlignment": "left",
+                      "gradientDirection": "to-br"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "lg",
+          "paddingX": "lg",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-c60f7856-a100-4f98-bb84-a3ce907fa07a",
+          "size": "lg",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-97d8c34a-63fc-4a79-85b4-9133f5afebcf",
+          "size": "lg",
+          "text": "Que vous gériez un seul appartement ou un portefeuille international, MyAllocator centralise les réservations, suit les performances et améliore la satisfaction des clients.\n",
+          "color": "",
+          "weight": "light",
+          "opacity": "100",
+          "maxWidth": "sm",
+          "paddingY": "none",
+          "alignment": "center",
+          "animation": "none",
+          "lineHeight": "normal",
+          "animationDelay": "none",
+          "animationDuration": "normal"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-32c5b07d-7761-486b-a742-418484a2d07d",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-cbd889a6-6e08-4384-8d4c-b7605b679ff7",
+          "size": "lg",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-aac54ab2-a6ee-4463-85ec-6b1340b23ff5",
+          "size": "xl",
+          "text": "Ce qu'en disent les hôtes",
+          "level": "h2",
+          "weight": "normal",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-843e654a-bb9e-4e70-9df2-8fbad1c7ce1c",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Container",
+        "props": {
+          "id": "Container-97b7d3ac-995b-417e-87a2-c309bbb605b5",
+          "content": [
+            {
+              "type": "Grid",
+              "props": {
+                "id": "Grid-08b4d5e4-9c55-43e4-bce0-12b2caa5f41b",
+                "gap": "md",
+                "columns": "3",
+                "content": [
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-5b598db6-321b-4153-beec-ed1cd5d8cecb",
+                      "quote": "« MyAllocator est de loin le meilleur gestionnaire de canaux que j'ai essayé. Pas de frais cachés, juste des fonctionnalités qui fonctionnent. »\n",
+                      "author": "– Hasan, 12 annonces",
+                      "shadow": "xl"
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-c5f97064-878e-4c22-aec2-612157c53ce5",
+                      "quote": "« Je gère six établissements avec MyAllocator depuis quatre ans. La mise en place a été simple, et le moteur de réservation sur mon site web fonctionne à merveille. »\n",
+                      "author": "– Rebecca",
+                      "shadow": "xl"
+                    }
+                  },
+                  {
+                    "type": "QuoteCard",
+                    "props": {
+                      "id": "QuoteCard-d3279ee6-ee56-4e84-a5ed-688cc51f0e93",
+                      "quote": "« Les messages automatisés et la tarification intelligente m'ont permis de gagner plusieurs heures par semaine et d'augmenter mon chiffre d'affaires. »\n",
+                      "author": "– Stefano",
+                      "shadow": "xl",
+                      "withBorder": true
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "rounded": "none",
+          "gradient": false,
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "gradientTo": "#8b5cf6",
+          "gradientFrom": "#3b82f6",
+          "backgroundColor": "",
+          "gradientDirection": "to-br"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-d475e1b6-4399-4053-a3c9-03bc8280519d",
+          "size": "xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "FAQ",
+        "props": {
+          "id": "FAQ-899b68ea-103d-4c79-8d98-0ce5705a64cc",
+          "items": [
+            {
+              "answer": "Connectez vos annonces en une seule fois. La boîte de réception centrale d'MyAllocator vous permet de consulter et de répondre aux messages provenant de Airbnb, Booking.com et aux messages de réservation directe sans avoir à changer d'onglet.",
+              "question": "Comment puis-je communiquer avec les clients sur plusieurs sites de réservation ?"
+            },
+            {
+              "answer": "Oui. Créez des flux de travail automatisés qui se déclenchent à l'arrivée, en cours de séjour ou au moment du départ. Les clients reçoivent les informations dont ils ont besoin exactement au bon moment.",
+              "question": "Puis-je automatiser la communication avec les clients ?"
+            },
+            {
+              "answer": "Toutes les fonctionnalités de communication avec les clients sont incluses dans chaque formule. Les tarifs commencent à 9 $ par mois.",
+              "question": "Combien coûte l'MyAllocator ?"
+            },
+            {
+              "answer": "Tout à fait. Une fois que vous aurez associé vos comptes Airbnb et Booking.com, tous les messages et toutes les réservations s'afficheront en temps réel sur votre tableau de bord MyAllocator.",
+              "question": "MyAllocator. est-il compatible avec Airbnb et Booking.com ?"
+            }
+          ],
+          "columns": "1",
+          "heading": "Foire aux questions",
+          "maxWidth": "md",
+          "subheading": "",
+          "headingWeight": "normal",
+          "headingFontSize": 28,
+          "headingPosition": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-92ecd287-f588-4620-8ca8-554618fc8f34",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "CTABanner",
+        "props": {
+          "id": "CTABanner-154d6637-c951-41ae-86b3-6521c473f49b",
+          "actions": [
+            {
+              "type": "Button",
+              "props": {
+                "id": "Button-14327009-1e6e-4a36-89ca-f93f49c606b4",
+                "url": "/pricing",
+                "icon": "none",
+                "size": "lg",
+                "label": "Commencer",
+                "shadow": "none",
+                "rounded": "full",
+                "variant": "outline",
+                "fullWidth": false,
+                "marginTop": 27,
+                "textColor": "",
+                "marginLeft": 0,
+                "marginRight": 0,
+                "iconPosition": "right",
+                "marginBottom": 0,
+                "openInNewTab": false,
+                "customPaddingX": 22,
+                "customPaddingY": 9,
+                "hoverTextColor": "",
+                "backgroundColor": "#0930f6",
+                "hoverBackgroundColor": ""
+              }
+            }
+          ],
+          "heading": "Prêt à prendre les rênes de votre activité de location saisonnière ?",
+          "rounded": "none",
+          "paddingY": "lg",
+          "alignment": "center",
+          "textColor": "#FFFFFF",
+          "description": "",
+          "showActions": "show",
+          "headingColor": "",
+          "headingWeight": "light",
+          "backgroundColor": "#2563eb",
+          "backgroundImage": "/background-call-to-action.6a5a5672.jpg",
+          "headingFontSize": 38,
+          "descriptionColor": "",
+          "descriptionOpacity": 90,
+          "descriptionFontSize": 0,
+          "backgroundImageOpacity": 80
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-10061382-3da2-499b-a561-6c1ad2801cfa",
+          "columns": [
+            {
+              "links": [
+                {
+                  "href": "/about",
+                  "label": "À propos",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/contact",
+                  "label": "Contact",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Tarifs",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Carrières",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Entreprise"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentation",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Ressources"
+            }
+          ],
+          "tagline": "MyAllocator vous aide à développer plus rapidement, à évoluer plus facilement et à offrir sans difficulté des expériences Web modernes.",
+          "logoHref": "/",
+          "logoText": "Votre marque",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": false,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#FFFFFF",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Politique de confidentialité",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Contrat client",
+              "openInNewTab": true
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#FFFFFF",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. Tous droits réservés.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#FFFFFF",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#696969",
+          "bottomBarBorderColor": "#d4d4d4",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,388 @@
+// apps/api/src/prisma/schema.prisma
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────
+
+enum Role {
+    EDITOR
+    ADMIN
+    SUPER_ADMIN
+}
+
+enum TenantStatus {
+    ACTIVE
+    SUSPENDED
+    ARCHIVED
+}
+
+enum TenantMembershipRole {
+    OWNER
+    ADMIN
+    EDITOR
+    BILLING
+}
+
+enum SiteStatus {
+    DRAFT
+    ACTIVE
+    SUSPENDED
+    ARCHIVED
+}
+
+enum SiteType {
+    VACATION_RENTAL
+    BOUTIQUE_HOTEL
+    BNB
+    GLAMPING
+    GUEST_HOUSE
+}
+
+enum SubscriptionStatus {
+    TRIALING
+    ACTIVE
+    PAST_DUE
+    CANCELED
+    INACTIVE
+}
+
+enum DeploymentStatus {
+    PENDING
+    CREATING_PROJECT
+    SYNCING_ENV
+    DEPLOYING
+    LIVE
+    FAILED
+    RETRYING
+}
+
+enum DomainStatus {
+    PENDING
+    DNS_REQUIRED
+    VERIFYING
+    ACTIVE
+    FAILED
+}
+
+enum FormType {
+    CONTACT
+    INQUIRY
+    AVAILABILITY_REQUEST
+    GROUP_STAY
+}
+
+enum FormSubmissionStatus {
+    RECEIVED
+    REVIEWED
+    SPAM
+    ARCHIVED
+}
+
+// ─── User ──────────────────────────────────────────────────
+
+model User {
+    id           String @id @default(cuid())
+    email        String @unique
+    passwordHash String @map("password_hash")
+    /// Legacy global operator role kept for current auth surfaces.
+    /// Customer workspace access must resolve through TenantMembership.
+    role         Role   @default(EDITOR)
+
+    // Brute-force protection
+    failedAttempts Int       @default(0) @map("failed_attempts")
+    lockedUntil    DateTime? @map("locked_until")
+
+    memberships TenantMembership[]
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    @@map("users")
+}
+
+// ─── Tenant ────────────────────────────────────────────────
+
+model Tenant {
+    id     String       @id @default(cuid())
+    slug   String       @unique
+    name   String
+    status TenantStatus @default(ACTIVE)
+
+    memberships   TenantMembership[]
+    sites         Site[]
+    subscriptions Subscription[]
+    auditLogs     AuditLog[]
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    @@index([status])
+    @@map("tenants")
+}
+
+// ─── Tenant Membership ─────────────────────────────────────
+
+model TenantMembership {
+    id        String               @id @default(cuid())
+    tenantId  String               @map("tenant_id")
+    userId    String               @map("user_id")
+    role      TenantMembershipRole
+    isDefault Boolean              @default(false) @map("is_default")
+    createdAt DateTime             @default(now()) @map("created_at")
+
+    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([tenantId, userId])
+    @@index([userId])
+    @@index([tenantId, role])
+    @@index([userId, isDefault])
+    @@map("tenant_memberships")
+}
+
+// ─── Site ──────────────────────────────────────────────────
+
+model Site {
+    id             String     @id @default(cuid())
+    tenantId       String     @map("tenant_id")
+    name           String
+    slug           String
+    status         SiteStatus @default(DRAFT)
+    templateKey    String?    @map("template_key")
+    primaryLocale  String     @default("en") @map("primary_locale")
+    enabledLocales String[]   @default(["en"]) @map("enabled_locales")
+    siteType       SiteType   @default(VACATION_RENTAL) @map("site_type")
+    createdAt      DateTime   @default(now()) @map("created_at")
+    updatedAt      DateTime   @updatedAt @map("updated_at")
+
+    tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    pages           Page[]
+    settings        SiteSettings?
+    deployments     Deployment[]
+    domains         Domain[]
+    formSubmissions FormSubmission[]
+    auditLogs       AuditLog[]
+
+    @@unique([tenantId, slug])
+    @@index([tenantId])
+    @@index([status])
+    @@index([tenantId, status])
+    @@map("sites")
+}
+
+// ─── Page ──────────────────────────────────────────────────
+
+model Page {
+    id        String  @id @default(cuid())
+    /// Every page belongs to exactly one customer site.
+    siteId    String  @map("site_id")
+    slug      String
+    locale    String  @default("en")
+    title     String
+    puckData  Json    @map("puck_data")
+    published Boolean @default(false)
+
+    seoTitle       String? @map("seo_title")
+    seoDescription String? @map("seo_description")
+    seoKeywords    String? @map("seo_keywords")
+
+    // Soft delete
+    deletedAt DateTime? @map("deleted_at")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    site     Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    versions PageVersion[]
+
+    @@unique([siteId, slug, locale])
+    @@index([siteId])
+    @@index([siteId, slug])
+    @@index([siteId, locale])
+    @@index([siteId, published])
+    @@index([siteId, published, locale])
+    @@index([siteId, deletedAt])
+    @@map("pages")
+}
+
+// ─── Page Version ──────────────────────────────────────────
+
+model PageVersion {
+    id       String   @id @default(cuid())
+    pageId   String   @map("page_id")
+    puckData Json     @map("puck_data")
+    savedBy  String   @map("saved_by")
+    note     String?
+    savedAt  DateTime @default(now()) @map("saved_at")
+
+    page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+    @@index([pageId])
+    @@index([pageId, savedAt])
+    @@map("page_versions")
+}
+
+// ─── Site Settings ─────────────────────────────────────────
+
+model SiteSettings {
+    id     String @id @default(cuid())
+    siteId String @unique @map("site_id")
+
+    // General
+    siteName                   String @default("MyAllocator CMS") @map("site_name")
+    siteSubtitle               String @default("") @map("site_subtitle")
+    supportEmail               String @default("") @map("support_email")
+    publicPhone                String @default("") @map("public_phone")
+    whatsAppUrl                String @default("") @map("whatsapp_url")
+    address                    String @default("") @map("address")
+    region                     String @default("") @map("region")
+    primaryCtaLabel            String @default("Send inquiry") @map("primary_cta_label")
+    defaultInquiryRoutingEmail String @default("") @map("default_inquiry_routing_email")
+    logoUrl                    String @default("") @map("logo_url")
+    faviconUrl                 String @default("") @map("favicon_url")
+
+    // SEO Defaults
+    seoTitleTemplate   String  @default("%s | MyAllocator") @map("seo_title_template")
+    seoDefaultDesc     String  @default("") @map("seo_default_desc")
+    seoOgImage         String  @default("") @map("seo_og_image")
+    seoIndexingEnabled Boolean @default(true) @map("seo_indexing_enabled")
+    googleSiteVerify   String  @default("") @map("google_site_verify")
+
+    // Analytics
+    gaTrackingId   String @default("") @map("ga_tracking_id")
+    gtmContainerId String @default("") @map("gtm_container_id")
+    clarityId      String @default("") @map("clarity_id")
+
+    // Social
+    twitterHandle String @default("") @map("twitter_handle")
+    linkedinUrl   String @default("") @map("linkedin_url")
+    facebookUrl   String @default("") @map("facebook_url")
+
+    // Localization
+    defaultLocale String   @default("en") @map("default_locale")
+    activeLocales String[] @default(["en", "es", "fr", "de"]) @map("active_locales")
+
+    updatedAt DateTime @updatedAt @map("updated_at")
+    updatedBy String?  @map("updated_by")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@map("site_settings")
+}
+
+// ─── Subscription ──────────────────────────────────────────
+
+model Subscription {
+    id                     String             @id @default(cuid())
+    tenantId               String             @map("tenant_id")
+    provider               String
+    providerCustomerId     String?            @map("provider_customer_id")
+    providerSubscriptionId String?            @unique @map("provider_subscription_id")
+    planKey                String             @map("plan_key")
+    status                 SubscriptionStatus @default(INACTIVE)
+    currentPeriodStart     DateTime?          @map("current_period_start")
+    currentPeriodEnd       DateTime?          @map("current_period_end")
+    cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
+    limitsSnapshot         Json?              @map("limits_snapshot")
+    createdAt              DateTime           @default(now()) @map("created_at")
+    updatedAt              DateTime           @updatedAt @map("updated_at")
+
+    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+    @@index([tenantId])
+    @@index([status])
+    @@map("subscriptions")
+}
+
+// ─── Deployment ────────────────────────────────────────────
+
+model Deployment {
+    id                String           @id @default(cuid())
+    siteId            String           @map("site_id")
+    status            DeploymentStatus @default(PENDING)
+    provider          String?
+    providerProjectId String?          @map("provider_project_id")
+    providerDeployId  String?          @map("provider_deploy_id")
+    url               String?
+    metadata          Json?
+    errorMessage      String?          @map("error_message")
+    createdAt         DateTime         @default(now()) @map("created_at")
+    updatedAt         DateTime         @updatedAt @map("updated_at")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@index([siteId])
+    @@index([siteId, status])
+    @@index([siteId, createdAt])
+    @@map("deployments")
+}
+
+// ─── Domain ────────────────────────────────────────────────
+
+model Domain {
+    id         String       @id @default(cuid())
+    siteId     String       @map("site_id")
+    host       String       @unique
+    status     DomainStatus @default(PENDING)
+    isPrimary  Boolean      @default(false) @map("is_primary")
+    verifiedAt DateTime?    @map("verified_at")
+    createdAt  DateTime     @default(now()) @map("created_at")
+    updatedAt  DateTime     @updatedAt @map("updated_at")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@index([siteId])
+    @@index([siteId, status])
+    @@map("domains")
+}
+
+// ─── Form Submission ───────────────────────────────────────
+
+model FormSubmission {
+    id        String               @id @default(cuid())
+    siteId    String               @map("site_id")
+    formType  FormType             @map("form_type")
+    pageSlug  String?              @map("page_slug")
+    locale    String               @default("en")
+    payload   Json
+    spamScore Float?               @map("spam_score")
+    status    FormSubmissionStatus @default(RECEIVED)
+    createdAt DateTime             @default(now()) @map("created_at")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@index([siteId])
+    @@index([siteId, formType])
+    @@index([siteId, status])
+    @@index([siteId, createdAt])
+    @@map("form_submissions")
+}
+
+// ─── Audit Log ─────────────────────────────────────────────
+
+model AuditLog {
+    id          String   @id @default(cuid())
+    tenantId    String   @map("tenant_id")
+    siteId      String?  @map("site_id")
+    actorUserId String?  @map("actor_user_id")
+    action      String
+    targetType  String?  @map("target_type")
+    targetId    String?  @map("target_id")
+    metadata    Json?
+    createdAt   DateTime @default(now()) @map("created_at")
+
+    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    site   Site?  @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+    @@index([tenantId])
+    @@index([tenantId, createdAt])
+    @@index([siteId, createdAt])
+    @@map("audit_logs")
+}

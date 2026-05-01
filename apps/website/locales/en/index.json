@@ -1,0 +1,132 @@
+{
+  "seo": {
+    "home": {
+      "title": "MyAllocator — All-in-One Vacation Rental Software",
+      "description": "MyAllocator is the all-in-one vacation-rental management platform: channel manager, dynamic pricing, booking engine, guest communications, and more.",
+      "keywords": "vacation rental software, channel manager, dynamic pricing, property management, booking engine, MyAllocator"
+    },
+    "pricing": {
+      "title": "Pricing — MyAllocator",
+      "description": "Simple, transparent pricing for vacation-rental managers. One plan, everything included. Start your free trial today.",
+      "keywords": "pricing, vacation rental software price, MyAllocator cost, free trial, property management pricing"
+    }
+  },
+  "home": {
+    "hero": {
+      "headingPrefix": "Everything you need to ",
+      "highlight": "manage smarter",
+      "subheading": "MyAllocator is the all-in-one vacation-rental management software that helps hosts and property managers earn more, work less, and delight guests.",
+      "otaKicker": "Trusted by property managers connected to"
+    },
+    "sections": {
+      "tools": {
+        "title": "Powerful Tools for Every Host",
+        "subtitle": "From a single Airbnb to a multi-property portfolio, MyAllocator gives you enterprise-grade features without the enterprise price tag.",
+        "features": {
+          "bookingEngine": {
+            "title": "Booking Engine",
+            "bullets": [
+              "Commission-free direct bookings",
+              "Branded booking widget for your website",
+              "Real-time availability & instant confirmation",
+              "Multi-currency & multi-language support"
+            ]
+          },
+          "guestCommunication": {
+            "title": "Guest Communication",
+            "bullets": [
+              "Automated pre-arrival & checkout messages",
+              "Unified inbox for all channels",
+              "Templates with smart placeholders",
+              "Review request automation"
+            ]
+          },
+          "teamManagement": {
+            "title": "Team Management",
+            "bullets": [
+              "Role-based access for your team",
+              "Cleaning & maintenance task assignment",
+              "Staff calendar with real-time updates",
+              "Performance tracking & reports"
+            ]
+          },
+          "websiteBuilder": {
+            "title": "Website Builder",
+            "bullets": [
+              "Beautiful, mobile-optimized templates",
+              "Built-in SEO tools",
+              "Integrated booking widget",
+              "Custom domain support"
+            ]
+          }
+        }
+      },
+      "builtFor": {
+        "title": "Built for Hosts Who Want More",
+        "body": "Whether you manage a cozy mountain cabin or a fleet of beachfront villas, MyAllocator adapts to your workflow — not the other way around."
+      },
+      "stories": {
+        "title": "What Our Hosts Say",
+        "quote": {
+          "text": "Since switching to MyAllocator, our revenue increased by 32 % and the time we spend on admin dropped by half. The dynamic-pricing engine alone has been a game-changer.",
+          "author": "Sofia R., Property Manager — Costa del Sol"
+        }
+      },
+      "integrations": {
+        "title": "Seamless Integrations",
+        "body": "MyAllocator connects to over 100 booking channels, payment gateways, and smart-home devices — so you can run your business from a single dashboard."
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "items": [
+          {
+            "question": "What is MyAllocator?",
+            "answer": "MyAllocator is an all-in-one vacation-rental management platform that includes a channel manager, booking engine, dynamic pricing, guest communications, website builder, and more."
+          },
+          {
+            "question": "Is there a free trial?",
+            "answer": "Yes! You can start a free trial with no credit card required. Explore every feature and see the results for yourself before committing."
+          },
+          {
+            "question": "Which channels does MyAllocator support?",
+            "answer": "We support over 100 channels including Airbnb, Booking.com, Vrbo, Expedia, Google Vacation Rentals, and many more niche OTAs."
+          },
+          {
+            "question": "How does dynamic pricing work?",
+            "answer": "Our algorithm analyses market demand, local events, competitor rates, and seasonality to automatically adjust your rates in real time — maximizing revenue while keeping occupancy high."
+          },
+          {
+            "question": "Can I manage multiple properties?",
+            "answer": "Absolutely. MyAllocator is designed to scale from a single listing to hundreds of properties, with bulk editing, team roles, and portfolio-level reporting."
+          }
+        ]
+      }
+    }
+  },
+  "pricing": {
+    "faq": {
+      "items": [
+        {
+          "question": "What is included in the plan?",
+          "answer": "Everything: channel manager, booking engine, dynamic pricing, guest communications, website builder, reporting, and unlimited team members."
+        },
+        {
+          "question": "Are there any hidden fees?",
+          "answer": "No. The price you see is the price you pay. There are no setup fees, no per-booking commissions, and no surprise charges."
+        },
+        {
+          "question": "Can I cancel at any time?",
+          "answer": "Yes. There are no long-term contracts. You can cancel your subscription at any time directly from your account settings."
+        },
+        {
+          "question": "Do you offer a discount for annual billing?",
+          "answer": "Yes — paying annually saves you up to 20 % compared with monthly billing."
+        }
+      ]
+    }
+  },
+  "cta": {
+    "heading": "Ready to Grow Your Rental Business?",
+    "secondary": "Start your free trial today — no credit card required."
+  }
+}

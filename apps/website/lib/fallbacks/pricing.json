@@ -1,0 +1,825 @@
+{
+  "slug": "pricing",
+  "locale": "en",
+  "title": "Pricing",
+  "seoTitle": "Pricing & Plans - Vacation Rental Software, Channel Manager & PMS | MyAllocator",
+  "seoDescription": "Compare MyAllocator's vacation-rental software plans. All-in-one channel manager, PMS, and dynamic pricing tools — 0% commission, no hidden fees. Increase revenue by up to 20%.",
+  "seoKeywords": "vacation rental software pricing, channel manager pricing, PMS pricing, vacation rental management cost, STR software plans, MyAllocator pricing",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Pricing",
+        "seoTitle": "Pricing & Plans - Vacation Rental Software, Channel Manager & PMS",
+        "fontFamily": "Inter",
+        "seoKeywords": "vacation rental software pricing, channel manager pricing, PMS pricing, vacation rental management cost, STR software plans, MyAllocator pricing",
+        "seoDescription": " Compare MyAllocator’s vacation-rental software plans. All-in-one channel manager, PMS, and dynamic pricing tools. Increase revenue by up to 20 %.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Pricing"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-aaad984a-ede7-425e-a91a-09901019c119",
+          "links": [
+            {
+              "href": "/",
+              "label": "Platform",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Website Builder",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Channel Manager (Vacation Rental)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Guest Communications",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Booking Engine",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Reservation System",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Dynamic Pricing",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Statistics & KPIs",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Features"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Resources",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Ambassador",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guest Guide",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Account Access",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Pricing",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Annual Report",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contact Us",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Explore"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "About",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Careers",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Bed & Breakfast",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Boutique",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Guest House",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Vacation Apartments",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Company"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Get Started Today",
+          "logoHref": "/",
+          "logoText": "Your Brand",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 32,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#ffffff",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#ffffff",
+          "ctaBackgroundColor": "#ffffff",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "PricingOnePlan",
+        "props": {
+          "id": "PricingOnePlan-e3d83f23-de23-4c08-8a64-db8168af0960",
+          "price": "$99",
+          "ctaUrl": "https://admin.myallocator.com/join",
+          "period": "per month",
+          "heading": "One simple plan",
+          "ctaLabel": "Subscribe now",
+          "features": [
+            { "text": "All features included" },
+            { "text": "No commission" },
+            { "text": "Chat support" },
+            { "text": "Quick setup" }
+          ],
+          "animation": "none",
+          "badgeText": "All access plan",
+          "showBadge": true,
+          "accordions": [
+            {
+              "body": "The plan covers property management, channel syncing, automated messaging, invoicing, housekeeping, and reporting. You can add and manage as many properties as you need. Support is available through email and chat.",
+              "title": "What is included"
+            }
+          ],
+          "blobColor1": "#67e8f9",
+          "blobColor2": "#e879f9",
+          "priceColor": "",
+          "subheading": "Clear and predictable pricing. No tiers to compare. No hidden fees. You get the full suite from day one.",
+          "ctaTextColor": "#ffffff",
+          "featuresNote": "Everything from automation to analytics is included with your subscription.",
+          "headingColor": "",
+          "badgeDotColor": "#34d399",
+          "cardBadgeText": "Best value",
+          "headingWeight": "semibold",
+          "priceFontSize": 0,
+          "showAccordion": true,
+          "showCardBadge": true,
+          "animationDelay": "none",
+          "cardBadgeColor": "#34d399",
+          "cardBorderColor": "#e2e8f0",
+          "ctaOpenInNewTab": false,
+          "headingFontSize": 0,
+          "subheadingColor": "",
+          "priceDescription": "Full feature access for a flat monthly rate. Cancel any time.",
+          "animationDuration": "normal",
+          "ctaBackgroundColor": "#0f172a",
+          "featureAccentColor": "#10b981",
+          "subheadingFontSize": 0,
+          "cardBackgroundColor": "#ffffff",
+          "showDecorationBlobs": true,
+          "sectionBackgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-ddb056ed-16e4-4aac-8937-e11f4a08a373",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-a0cf3dc3-49fe-4dd5-99e8-ba7029db8e00",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Heading",
+        "props": {
+          "id": "Heading-9408087d-c4a5-478b-b6da-afa21c89ca15",
+          "size": "xl",
+          "text": "One plan. Full vacation rental software.",
+          "level": "h2",
+          "weight": "medium",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-cd2d17cb-0b85-4cc6-9182-0eed455f8c08",
+          "size": "sm",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Paragraph",
+        "props": {
+          "id": "Paragraph-417157f0-9fdf-4e0e-96dd-0a44ba8019d7",
+          "size": "lg",
+          "text": "Channel manager, property management, direct booking site, and simple revenue tools in one clear plan. No tiers. No guesswork. Just what you need to run smarter and earn more.",
+          "maxWidth": "lg",
+          "alignment": "center"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-902c0952-5489-4c37-84a6-ad55a1686e68",
+          "size": "md",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "DataTable",
+        "props": {
+          "id": "DataTable-9a49e8fc-6f09-4842-821d-db06598baad9",
+          "rows": [
+            {
+              "cells": [
+                {
+                  "value": "Multi channel calendar sync",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Airbnb, Booking com, Vrbo, Expedia, and your direct site all stay aligned. No double bookings.",
+                  "featureIncluded": false
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Direct booking website", "featureIncluded": true },
+                {
+                  "value": "Fast site with your brand and your domain. Real time rates and availability. No commissions."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Dynamic pricing", "featureIncluded": true },
+                {
+                  "value": "Rates react to demand, season, local events, and lead time. Better occupancy. Better revenue."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Automated guest messaging",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Welcome notes, check in guides, door codes, and review requests go out on time."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Secure payments", "featureIncluded": true },
+                {
+                  "value": "Cards and bank transfers with fraud checks and instant receipts."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Guest ID checks", "featureIncluded": true },
+                {
+                  "value": "Light touch identity steps that cut risk and protect the home."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "House rules and guidebook",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "WiFi, parking, and appliance tips in a clean mobile view."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Taxes and fees", "featureIncluded": true },
+                {
+                  "value": "City tax, cleaning fees, pet fees, extra guest rules set once and applied every time."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Owner statements", "featureIncluded": true },
+                {
+                  "value": "Clear monthly statements with splits and notes for expenses."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Owner payouts", "featureIncluded": true },
+                { "value": "Simple payout runs that match your bank schedule." }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Revenue and occupancy reports",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "See average rate, booking window, length of stay, and channel mix."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Bulk rate updates", "featureIncluded": true },
+                {
+                  "value": "Change a season or a group of homes in one pass and push everywhere."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Gap filler", "featureIncluded": true },
+                {
+                  "value": "Nudge short stays to fill awkward gaps without hurting clean time."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Channel specific pricing",
+                  "featureIncluded": true
+                },
+                {
+                  "value": "Fine tune rates per marketplace and keep your direct edge."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "User roles", "featureIncluded": true },
+                {
+                  "value": "Give managers, cleaners, and owners the right access. Nothing more."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Photo manager", "featureIncluded": true },
+                {
+                  "value": "Keep a fresh gallery that loads fast and converts better."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Channel coverage", "featureIncluded": true },
+                {
+                  "value": "Airbnb, Booking com, Vrbo, Expedia, Google Vacation Rentals, and more."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Availability rules", "featureIncluded": true },
+                {
+                  "value": "Min nights, max nights, lead time, and turn day rules that fit your ops."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Hold windows", "featureIncluded": true },
+                {
+                  "value": "Give your team breathing room before and after high value stays."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Owner portal", "featureIncluded": true },
+                {
+                  "value": "Owners can see bookings, payouts, and notes without support tickets."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Task comments", "featureIncluded": true },
+                { "value": "Short updates with photos so nothing gets lost." }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Reporting exports", "featureIncluded": true },
+                {
+                  "value": "Send clean CSV files to your accountant in a click."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "API access", "featureIncluded": true },
+                {
+                  "value": "Connect the tools you love and build light automations."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                { "value": "Email templates", "featureIncluded": true },
+                {
+                  "value": "Plain language messages that guests actually read."
+                }
+              ],
+              "isHighlighted": false
+            },
+            {
+              "cells": [
+                {
+                  "value": "Support from real people",
+                  "featureIncluded": true
+                },
+                { "value": "Quick answers from folks who know hosting." }
+              ],
+              "isHighlighted": false
+            }
+          ],
+          "shadow": true,
+          "columns": [
+            {
+              "bold": true,
+              "align": "left",
+              "width": "30%",
+              "header": "Feature"
+            },
+            {
+              "bold": false,
+              "align": "left",
+              "width": "",
+              "header": "What you get"
+            }
+          ],
+          "rounded": true,
+          "bordered": true,
+          "maxWidth": "xl",
+          "footerRows": [{ "bold": true, "cells": [{ "value": "" }] }],
+          "footerText": "Built for hosts and managers who want less busy work and more direct bookings.  \nWorks across major channels, supports smart pricing, and keeps operations tight from inquiry to payout.",
+          "showFooter": true,
+          "showCheckmarks": true
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-cd99a132-b06e-4f5b-b970-c25b60806420",
+          "size": "2xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "FAQ",
+        "props": {
+          "id": "FAQ-3087d1e6-55b9-4b37-a5f8-8e633537a37d",
+          "items": [
+            {
+              "answer": "None. MyAllocator charges 0% commission per booking. You keep 100% of your rental income.",
+              "question": "Are there hidden fees?"
+            },
+            {
+              "answer": "No installation required. MyAllocator is 100% cloud-based. Access your property management system from any device.",
+              "question": "Do I need to install software?"
+            },
+            {
+              "answer": "Absolutely. Our PMS supports custom domains for your MyAllocator-powered direct booking website.",
+              "question": "Can I connect my own domain?"
+            },
+            {
+              "answer": "Managing 20+ rentals or operating as a property management company? Contact our sales team for a custom enterprise plan and dedicated onboarding specialist.",
+              "question": "What about large portfolios?"
+            },
+            {
+              "answer": "Yes. Send automated check-in instructions, review requests, and upsell offers without lifting a finger.",
+              "question": "Does MyAllocator support automated guest communication?"
+            },
+            {
+              "answer": "Our dynamic pricing, multi-channel distribution, and marketing tools are designed to help hosts increase occupancy rates and maximize revenue.",
+              "question": "Can MyAllocator help me increase occupancy?"
+            }
+          ],
+          "columns": "1",
+          "heading": "Frequently asked questions",
+          "textColor": "",
+          "subheading": "",
+          "accentColor": "#2563eb",
+          "headingColor": "",
+          "headingWeight": "bold",
+          "backgroundColor": "",
+          "headingFontSize": 0,
+          "subheadingColor": "",
+          "subheadingOpacity": 70,
+          "subheadingFontSize": 0
+        }
+      },
+      {
+        "type": "CTABanner",
+        "props": {
+          "id": "CTABanner-9b1e2586-ecd8-449f-a260-ff939c48d502",
+          "actions": [
+            {
+              "type": "Button",
+              "props": {
+                "id": "Button-1e2db7ec-b812-4e0d-8fbd-fb3ba5a29622",
+                "url": "/pricing",
+                "icon": "none",
+                "size": "lg",
+                "label": "Get Started",
+                "shadow": "none",
+                "rounded": "full",
+                "variant": "outline",
+                "fullWidth": false,
+                "marginTop": 27,
+                "textColor": "",
+                "marginLeft": 0,
+                "marginRight": 0,
+                "iconPosition": "right",
+                "marginBottom": 0,
+                "openInNewTab": false,
+                "customPaddingX": 22,
+                "customPaddingY": 9,
+                "hoverTextColor": "",
+                "backgroundColor": "#0930f6",
+                "hoverBackgroundColor": ""
+              }
+            }
+          ],
+          "heading": "Ready to Take Control of Your Vacation Rental Business?",
+          "paddingY": "lg",
+          "alignment": "center",
+          "textColor": "#ffffff",
+          "description": "",
+          "showActions": "show",
+          "backgroundColor": "#2563eb",
+          "headingFontSize": 38
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-78242606-7348-4ce0-81c7-5d13b5f4569d",
+          "columns": [
+            {
+              "links": [
+                { "href": "/about", "label": "About", "openInNewTab": false },
+                {
+                  "href": "/contact",
+                  "label": "Contact",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Pricing",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Careers",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Company"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com/",
+                  "label": "Documentation",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Resources"
+            }
+          ],
+          "tagline": "MyAllocator helps you build faster, scale better, and deliver modern web experiences with ease.",
+          "logoHref": "/",
+          "logoText": "Your Brand",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": false,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#ffffff",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Privacy Policy",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Customer Agreement",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#ffffff",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. All rights reserved.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#ffffff",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#696969",
+          "bottomBarBorderColor": "#d4d4d4",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

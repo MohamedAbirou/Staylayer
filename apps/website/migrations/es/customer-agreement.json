@@ -1,0 +1,381 @@
+{
+  "slug": "customer-agreement",
+  "locale": "es",
+  "title": "Acuerdo con el cliente",
+  "seoTitle": "Acuerdo con el cliente",
+  "seoDescription": "MyAllocator se compromete a proteger sus derechos. El presente Acuerdo describe las condiciones de nuestros servicios y nuestra relación con usted.",
+  "seoKeywords": "contrato con el cliente, condiciones del servicio, condiciones de MyAllocator, contrato de SaaS",
+  "puckData": {
+    "root": {
+      "props": {
+        "title": "Acuerdo con el cliente",
+        "seoTitle": "Acuerdo con el cliente",
+        "fontFamily": "Inter",
+        "seoKeywords": "contrato con el cliente, condiciones del servicio, condiciones de MyAllocator, contrato de SaaS",
+        "seoDescription": "MyAllocator se compromete a proteger sus derechos. El presente Acuerdo describe las condiciones de nuestros servicios y nuestra relación con usted.",
+        "backgroundColor": "#ffffff"
+      },
+      "title": "Acuerdo con el cliente"
+    },
+    "zones": {},
+    "content": [
+      {
+        "type": "Navbar",
+        "props": {
+          "id": "Navbar-92e85ad2-2942-4055-bcef-330b6c56c307",
+          "links": [
+            {
+              "href": "/",
+              "label": "Plataforma",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/website-builder-vacation-rentals",
+                      "icon": "MatrialIconsWeb",
+                      "label": "Creador de sitios web",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-airbnb",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Airbnb)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-booking-com",
+                      "icon": "MatrialIconsSyncAlt",
+                      "label": "Channel Manager (Booking.com)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/channel-manager-vacation-rental",
+                      "icon": "MatrialIconsHome",
+                      "label": "Gestor de canales (alquileres vacacionales)",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/automatic-guest-communications-vacation-rentals",
+                      "icon": "MatrialIconsContact",
+                      "label": "Comunicaciones con los huéspedes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/booking-system-engine-vacation-rental",
+                      "icon": "MatrialIconsCalenderMonth",
+                      "label": "Motor de reservas",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/reservation-system-pms-vacation-rental",
+                      "icon": "MatrialIconsEvenetAvailable",
+                      "label": "Sistema de reservas",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/dynamic-pricing",
+                      "icon": "MatrialIconsTrendingUp",
+                      "label": "Precios dinámicos",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/statistics-kpis-vacation-rentals",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "Estadísticas e indicadores clave de rendimiento",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Características"
+                }
+              ]
+            },
+            {
+              "href": "/resources",
+              "label": "Recursos",
+              "hasDropdown": true,
+              "dropdownType": "columns",
+              "openInNewTab": false,
+              "dropdownSections": [
+                {
+                  "links": [
+                    {
+                      "href": "/ambassador",
+                      "icon": "MatrialIconsGroup",
+                      "label": "Embajador",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-guide-for-vacation-rentals",
+                      "icon": "MatrialIconsMenuBook",
+                      "label": "Guía para visitantes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/account-access",
+                      "icon": "MatrialIconsLogin",
+                      "label": "Acceso a la cuenta",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/pricing",
+                      "icon": "MatrialIconsAttachMoney",
+                      "label": "Precios",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/annual-report",
+                      "icon": "MatrialIconsBarChart",
+                      "label": "MyAllocator Informe anual",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/contact-us",
+                      "icon": "MatrialIconsContact",
+                      "label": "Contáctanos",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Explora"
+                },
+                {
+                  "links": [
+                    {
+                      "href": "/about",
+                      "icon": "MatrialIconsInfo",
+                      "label": "Acerca de",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/careers",
+                      "icon": "MatrialIconsWork",
+                      "label": "Empleo",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/bedbreakfast",
+                      "icon": "MatrialIconsHotel",
+                      "label": "Alojamiento y desayuno",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/boutique",
+                      "icon": "MatrialIconsStoreFront",
+                      "label": "Tienda",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/guest-house",
+                      "icon": "MatrialIconsHome",
+                      "label": "Casa de huéspedes",
+                      "description": "",
+                      "subSections": []
+                    },
+                    {
+                      "href": "/vacation-apartments-and-homes",
+                      "icon": "MatrialIconsApartment",
+                      "label": "Apartamentos vacacionales",
+                      "description": "",
+                      "subSections": []
+                    }
+                  ],
+                  "title": "Empresa"
+                }
+              ]
+            }
+          ],
+          "style": "blur",
+          "shadow": "none",
+          "ctaHref": "/pricing",
+          "linkGap": 8,
+          "ctaLabel": "Empieza hoy mismo",
+          "logoHref": "/",
+          "logoText": "Tu marca",
+          "logoType": "image",
+          "maxWidth": "2xl",
+          "paddingX": "md",
+          "paddingY": "none",
+          "textColor": "#111827",
+          "ctaVariant": "outline",
+          "ctaFontSize": 16,
+          "ctaPaddingX": 11,
+          "ctaPaddingY": 8,
+          "linkOpacity": 80,
+          "linksCtaGap": 8,
+          "backdropBlur": 10,
+          "borderBottom": false,
+          "ctaTextColor": "#465469",
+          "dividerColor": "",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logotipo",
+          "logoImageUrl": "/images/logo.png",
+          "logoLinksGap": 33,
+          "navbarHeight": 64,
+          "positionType": "sticky",
+          "linkTextColor": "#111827",
+          "ctaBorderColor": "#314158",
+          "linkFontWeight": "medium",
+          "linksAlignment": "left",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "backgroundColor": "#FFFFFF",
+          "ctaBorderRadius": "sm",
+          "ctaOpenInNewTab": false,
+          "logoImageHeight": 18,
+          "mobileMenuStyle": "fullscreen-right",
+          "logoImageBgColor": "#FFFFFF",
+          "logoImagePadding": 0,
+          "backgroundOpacity": 53,
+          "borderBottomColor": "",
+          "borderBottomWidth": 1,
+          "ctaHoverTextColor": "#FFFFFF",
+          "ctaBackgroundColor": "#FFFFFF",
+          "ctaHoverBorderColor": "#314158",
+          "logoImageBorderRadius": "none",
+          "ctaHoverBackgroundColor": "#314158"
+        }
+      },
+      {
+        "type": "RichText",
+        "props": {
+          "id": "RichText-18ea9cf4-91c7-438e-ad23-c3190d04df9d",
+          "size": "md",
+          "color": "",
+          "content": "<div style=\"margin: 0; padding: 0; width: 100%;\"\">\n\n  <!-- CABECERA -->\n  <header style=\"border-bottom: 1px solid #e2e8f0; padding-top: 5rem; background: linear-gradient(to bottom, #f8fafc, #ffffff); width: 100%;\">\n    <div style=\"max-width: 48rem; margin: 0 auto; padding: 0 1.5rem 3rem;\">\n      <div style=\"display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem;\">\n        <div>\n          <h1 style=\"font-size: 1.875rem; font-weight: 700; letter-spacing: -0.025em; color: #0f172a;\">  Acuerdo con el cliente de\n            MyAllocator\n          </h1>\n          <p style=\"margin-top: 0.5rem; font-size: 0.875rem; color: #64748b;\">\n            <strong>Fecha de entrada en vigor:</strong> 28 de febrero de 2024\n          </p>\n        </div>\n      </div>\n\n      <!-- Índice -->\n      <nav aria-label=\"Índice\" style=\"margin-top: 2rem;\">\n        <div style=\"background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);\">\n          <p style=\"font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.75rem;\">\n            En esta página\n          </p>\n          <ul style=\"margin-top: 0.5rem; display: grid; gap: 4px; font-size: 0.875rem; grid-template-columns: repeat(2, 1fr); list-style: none; padding: 0;\">\n            <li><a href=\"#introduction\" class=\"privacy-link\">1. Introducción</a></li>\n            <li><a href=\"#definitions\" class=\"privacy-link\">2. Definiciones</a></li>\n            <li><a href=\"#account-registration\" class=\"privacy-link\">3. Registro de cuenta</a></li>\n            <li><a href=\"#subscription-fees\" class=\"privacy-link\">4. Suscripción y tarifas</a></li>\n            <li><a href=\"#customer-data\" class=\"privacy-link\">5. Datos del cliente y privacidad</a></li>\n            <li><a href=\"#acceptable-use\" class=\"privacy-link\">6. Obligaciones del usuario y uso aceptable</a></li>\n            <li><a href=\"#third-party\" class=\"privacy-link\">7. Servicios de terceros e integraciones</a></li>\n            <li><a href=\"#ip-rights\" class=\"privacy-link\">8. Derechos de propiedad intelectual</a></li>\n            <li><a href=\"#confidentiality\" class=\"privacy-link\">9. Confidencialidad</a></li>\n            <li><a href=\"#warranties\" class=\"privacy-link\">10. Garantías y exenciones de responsabilidad</a></li>\n            <li><a href=\"#limitation\" class=\"privacy-link\">11. Limitación de responsabilidad</a></li>\n            <li><a href=\"#indemnification\" class=\"privacy-link\">12. Indemnización</a></li>\n            <li><a href=\"#term-termination\" class=\"privacy-link\">13. Vigencia y rescisión</a></li>\n            <li><a href=\"#changes\" class=\"privacy-link\">14. Modificaciones del presente Acuerdo</a></li>\n            <li><a href=\"#governing-law\" class=\"privacy-link\">15. Legislación aplicable y jurisdicción</a></li>\n            <li><a href=\"#misc\" class=\"privacy-link\">16. Varios</a></li>\n            <li><a href=\"#contact\" class=\"privacy-link\">17. Información de contacto</a></li>\n            <li><a href=\"#security-privacy\" class=\"privacy-link\">18. Prácticas de seguridad y privacidad de los datos</a></li>\n          </ul>\n        </div>\n      </nav>\n    </div>\n  </header>\n\n  <!-- CONTENIDO PRINCIPAL -->\n  <main style=\"background: #ffffff; padding: 3rem 1.5rem;\">\n\n<div style=\"max-width: 48rem; margin: 0 auto;\">\n    \n    <!-- 1. Introducción -->\n    <section id=\"introduction\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; peso de fuente: 600; espaciado entre letras: -0.025em; color: #0f172a; margen inferior: 1rem;\">1. Introducción</h2>\n      <div style=\"color: #334155; altura de línea: 1.7; tamaño de fuente: 1.05rem;\">\n        <p>Bienvenido a <strong>MyAllocator</strong>, un servicio de software de gestión inmobiliaria propiedad de y operado por <em>Alphatel FZ LLC</em> («nosotros», «nuestro» o «nos»). Esta empresa opera bajo la licencia comercial de <em>Alphatel FZ LLC</em>. El presente Acuerdo con el cliente («Acuerdo») rige el uso que usted haga de nuestro servicio y describe los términos y condiciones de su relación con nosotros. Al utilizar <strong>MyAllocator</strong>, usted («usted», «su» o «Cliente») acepta estos términos en su totalidad. El presente Acuerdo, junto con nuestra <a href=\"/privacy-policy\" style=\"color: #334155; text-decoration: underline;\">Política de privacidad</a> y cualquier otro acuerdo o documento incorporado aquí por referencia, constituye el acuerdo completo entre usted y <strong>MyAllocator</strong>.</p>\n      </div>\n    </section>\n\n    <!-- 2. Definiciones -->\n    <section id=\"definitions\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">2. Definiciones</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>A los efectos del presente Acuerdo, se aplican las siguientes definiciones:</p>\n        <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 1rem; line-height: 1.75;\">\n          <li><strong>«Servicio»</strong>: Se refiere al servicio SaaS prestado por <strong>MyAllocator</strong> y a cualquier aplicación móvil, sitio web o servicio asociado.</li>\n          <li><strong>«Software»</strong>: Se refiere a la aplicación basada en web alojada en <strong>MyAllocator</strong> y a sus aplicaciones móviles relacionadas.</li>\n          <li><strong>«Usuario»</strong>: Se refiere a cualquier persona física o jurídica que acceda al Servicio, ya sea de forma directa o indirecta, autorizada o no autorizada.</li>\n          <li><strong>««Datos del cliente»</strong>: Se refiere a cualquier información, contenido o datos cargados, almacenados, transmitidos o puestos a disposición de cualquier otra forma a través del Servicio por el Cliente o en su nombre.</li>\n          <li><strong>«Plan de suscripción»</strong>: Se refiere a la estructura de precios y las características asociadas a la cuenta de un cliente.</li>\n          <li><strong>«Servicios de terceros»</strong>: Se refiere a los servicios, software, aplicaciones u otros recursos proporcionados por terceros que puedan integrarse en <strong>MyAllocator</strong> o a los que se pueda acceder a través de ellos.</li>\n        </ul>\n      </div>\n    </section>\n\n    <!-- 3. Registro de cuenta -->\n    <section id=\"account-registration\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">3. Registro de cuenta</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>Para utilizar nuestro Servicio, debe crear una cuenta. Al crear una cuenta, usted acepta:</p>\n        <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 1rem; line-height: 1.75;\">\n          <li>Proporcionar información de registro precisa, completa y actualizada, tal y como le solicitemos.</li>\n          <li>Mantener la confidencialidad de las credenciales de su cuenta, incluidos su nombre de usuario y contraseña.</li>\n          <li>Asumir la responsabilidad de todas las actividades que se realicen con su cuenta.</li>\n          <li>Notificarnos inmediatamente cualquier uso no autorizado de su cuenta o cualquier otra violación de la seguridad.</li>\n        </ul>\n        <p style=\"margin-top: 1.25rem;\">Si se registra en nombre de una empresa u otra entidad jurídica, declara que tiene la autoridad para vincular a dicha entidad al presente Acuerdo. El incumplimiento de estas obligaciones puede dar lugar a la suspensión o cancelación de su cuenta.</p>\n      </div>\n    </section>\n\n    <!-- 4. Suscripción y tarifas -->\n    <section id=\"subscription-fees\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">4. Suscripción y tarifas</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">4.1. Planes de suscripción</h3>\n          <p>Ofrecemos varios planes de suscripción para satisfacer las diversas necesidades de los clientes. Cada plan puede tener diferentes características y precios. Usted acepta pagar todas las tarifas aplicables de acuerdo con el plan de suscripción seleccionado en el momento del registro. Puede encontrar información detallada sobre nuestros planes de suscripción en nuestra <a href=\"/pricing\" style=\"color: #334155; text-decoration: underline;\">página de precios</a>.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">4.2. Condiciones de facturación y pago</h3>\n          <p>Todas las tarifas se facturan mensualmente o anualmente, dependiendo del plan de suscripción elegido. Usted nos autoriza a cobrar en su método de pago seleccionado todos los cargos incurridos en su cuenta. Si su método de pago falla o su cuenta está vencida, podemos tomar medidas tales como desactivar su acceso al Servicio, suspender o cancelar su cuenta, o emprender otras acciones legales.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">4.3. Impuestos y aranceles</h3>\n          <p>Todas las tarifas no incluyen impuestos, y usted es responsable de pagar cualquier impuesto, arancel, gravamen o cargo gubernamental similar aplicable que imponga cualquier jurisdicción. Si se nos exige recaudar impuestos en su nombre, dichos impuestos se añadirán a la facturación de su cuenta y se le facturarán a usted.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">4.4. Ajustes de tarifas</h3>\n          <p>Podemos modificar las tarifas de los planes de suscripción en cualquier momento mediante notificación previa. Cualquier cambio en las tarifas entrará en vigor al inicio de su próximo ciclo de facturación. El uso continuado del Servicio tras dichos cambios implica su aceptación de las nuevas tarifas.</p>\n        </div>\n      </div>\n    </section>\n\n    <!-- 5. Datos del cliente y privacidad -->\n    <section id=\"customer-data\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">5. Datos del cliente y privacidad</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">5.1. Propiedad de los datos del cliente</h3>\n          <p>Usted conserva la propiedad de todos los datos del cliente que envíe al Servicio. No obstante, al enviar datos del cliente al Servicio, nos concede una licencia no exclusiva, mundial y libre de regalías para utilizar, copiar, almacenar, transmitir y mostrar dichos datos del cliente únicamente en la medida necesaria para prestarle el Servicio.</p>\n        </div>\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">5.2. Seguridad de los datos</h3>\n          <p>Nos comprometemos a proteger sus datos y aplicaremos medidas comercialmente razonables para salvaguardar la confidencialidad, integridad y disponibilidad de los Datos del Cliente.</p>\n        </div>\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">5.3. Privacidad</h3>\n          <p>El uso que haga del Servicio está sujeto a nuestra Política de privacidad, que describe cómo recopilamos, utilizamos y protegemos su información personal. Al utilizar el Servicio, usted da su consentimiento para que recopilemos y utilicemos su información de acuerdo con nuestra Política de privacidad.</p>\n        </div>\n      </div>\n    </section>\n\n    <!-- 6. Obligaciones del usuario y uso aceptable -->\n    <section id=\"acceptable-use\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">6. Obligaciones del usuario y uso aceptable</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">6.1. Cumplimiento de la legislación</h3>\n          <p>Usted se compromete a utilizar el Servicio de conformidad con todas las leyes y normativas locales, nacionales e internacionales aplicables, incluidas, entre otras, las leyes de protección de datos, las leyes de propiedad intelectual y las leyes de privacidad.</p>\n        </div>\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">6.2. Conductas prohibidas</h3>\n          <p>Además de otras restricciones establecidas en el presente Acuerdo, usted se compromete a no:</p>\n          <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 0.75rem; line-height: 1.75;\">\n            <li>Falsificar su identidad o afiliaciones.</li>\n            <li>Acceder o intentar acceder a áreas no autorizadas del Servicio.</li>\n            <li>Utilizar el Servicio para transmitir virus, malware o contenido dañino.</li>\n            <li>Interferir o interrumpir el Servicio o las redes o sistemas conectados al Servicio.</li>\n            <li>Participar en cualquier actividad fraudulenta, ilegal o perjudicial para nosotros o para cualquier tercero.</li>\n          </ul>\n        </div>\n      </div>\n    </section>\n\n    <!-- 7. Servicios de terceros -->\n    <section id=\"third-party\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">7. Servicios de terceros e integraciones</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>El Servicio puede contener enlaces a Servicios de terceros o estar integrado con ellos. El uso que usted haga de los Servicios de terceros está sujeto a sus respectivos términos y condiciones, y no nos hacemos responsables de ningún contenido, producto o servicio de terceros. No respaldamos ni asumimos ninguna responsabilidad por el contenido o las prácticas de terceros.</p>\n      </div>\n    </section>\n\n    <!-- 8. Derechos de propiedad intelectual -->\n    <section id=\"ip-rights\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">8. Derechos de propiedad intelectual</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">8.1. Propiedad</h3>\n          <p>Todos los derechos de propiedad intelectual sobre el Servicio y el Software, incluidos, entre otros, todo el código fuente, las bases de datos, los diseños, los gráficos, las interfaces de usuario y las marcas comerciales, son propiedad de <strong>MyAllocator</strong> o se le han concedido bajo licencia. Usted reconoce que estos derechos están protegidos por las leyes de propiedad intelectual y otras leyes.</p>\n        </div>\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">8.2. Concesión de licencia</h3>\n          <p>Siempre que cumpla con el presente Acuerdo, le concedemos una licencia limitada, no exclusiva, intransferible y revocable para acceder y utilizar el Servicio exclusivamente para sus fines comerciales internos. Todos los derechos que no se le concedan expresamente en virtud del presente Acuerdo quedan reservados por <strong>MyAllocator</strong>.</p>\n        </div>\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">8.3. Comentarios</h3>\n          <p>Si nos envía comentarios o sugerencias sobre el Servicio, nos concede una licencia mundial, perpetua, irrevocable y libre de regalías para utilizar e incorporar dichos comentarios en nuestros productos y servicios.</p>\n        </div>\n      </div>\n    </section>\n\n    <!-- 9. Confidencialidad -->\n    <section id=\"confidentiality\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">9. Confidencialidad</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>Cada parte se compromete a mantener la confidencialidad de cualquier información privada o confidencial revelada por la otra parte en relación con el presente Acuerdo. Esta obligación de confidencialidad no se aplica a la información que sea de dominio público, desarrollada de forma independiente o revelada en cumplimiento de requisitos legales.</p>\n      </div>\n    </section>\n\n    <!-- 10. Garantías -->\n    <section id=\"warranties\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">10. Garantías y exenciones de responsabilidad</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>El Servicio se presta «tal cual» y «según disponibilidad», sin garantías de ningún tipo. No garantizamos que el Servicio sea ininterrumpido, esté libre de errores, sea seguro o esté libre de virus. Renunciamos a toda garantía, expresa o implícita, incluyendo, entre otras, las garantías implícitas de comerciabilidad, idoneidad para un fin determinado y no infracción.</p>\n      </div>\n    </section>\n\n    <!-- 11. Limitación de responsabilidad -->\n    <section id=\"limitation\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">11. Limitación de responsabilidad</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>En la medida máxima permitida por la ley, <strong>MyAllocator</strong> no será responsable de ningún daño indirecto, incidental, especial, consecuente o punitivo que surja de o en relación con este Acuerdo o con su uso del Servicio. Nuestra responsabilidad total ante usted por cualquier reclamación que surja de o esté relacionada con este Acuerdo no excederá el importe que usted nos haya pagado durante los seis meses anteriores a la reclamación.</p>\n      </div>\n    </section>\n\n    <!-- 12. Indemnización -->\n    <section id=\"indemnification\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">12. Indemnización</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>Usted acepta indemnizar, defender y eximir de responsabilidad a <strong>MyAllocator</strong>, sus filiales y sus respectivos directivos, consejeros, empleados y agentes frente a cualquier reclamación, responsabilidad, daño, pérdida o gasto, incluidos los honorarios legales, que surjan de o en relación con su uso del Servicio o su incumplimiento del presente Acuerdo.</p>\n      </div>\n    </section>\n\n    <!-- 13. Duración y rescisión -->\n    <section id=\"term-termination\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">13. Vigencia y rescisión</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">13.1. Vigencia</h3>\n          <p>El presente Acuerdo permanecerá en vigor hasta que sea rescindido por cualquiera de las partes. Cualquiera de las partes podrá rescindir el presente Acuerdo en cualquier momento y por cualquier motivo, previa notificación por escrito a la otra parte.</p>\n        </div>\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">13.2. Rescisión por causa justificada</h3>\n          <p>Podemos rescindir o suspender su acceso al Servicio de forma inmediata, sin previo aviso, por cualquier incumplimiento del presente Acuerdo o si consideramos que sus acciones pueden causarnos daños o responsabilidad legal a nosotros o a cualquier tercero.</p>\n        </div>\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">13.3. Efectos de la rescisión</h3>\n          <p>Tras la rescisión del presente Acuerdo, todos los derechos y licencias que se le hayan concedido cesarán inmediatamente, y deberá dejar de utilizar el Servicio. Cualquier disposición del presente Acuerdo que, por su naturaleza, deba sobrevivir a la rescisión, seguirá vigente, incluyendo, entre otras, las relativas a la confidencialidad, la indemnización y la limitación de responsabilidad.</p>\n        </div>\n      </div>\n    </section>\n\n    <!-- 14. Modificaciones -->\n    <section id=\"changes\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">14. Modificaciones del presente Acuerdo</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>Nos reservamos el derecho a actualizar o modificar este Acuerdo en cualquier momento. Cualquier cambio se publicará en nuestro sitio web y entrará en vigor inmediatamente tras su publicación. El uso continuado del Servicio tras dichos cambios implica su aceptación de los nuevos términos.</p>\n      </div>\n    </section>\n\n    <!-- 15. Legislación aplicable -->\n    <section id=\"governing-law\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">15. Legislación aplicable y jurisdicción</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>El presente Acuerdo se regirá e interpretará de conformidad con las leyes de <em>Su jurisdicción</em>. Cualquier controversia que surja de o esté relacionada con el presente Acuerdo estará sujeta a la jurisdicción exclusiva de los tribunales ubicados en <em>Su jurisdicción</em>. Usted acepta someterse a la jurisdicción personal de dichos tribunales.</p>\n      </div>\n    </section>\n\n    <!-- 16. Varios -->\n    <section id=\"misc\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">16. Varios</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <ul style=\"list-style-type: disc; padding-left: 1.5rem; line-height: 1.75;\">\n          <li>El presente Acuerdo constituye el acuerdo íntegro entre usted y <strong>MyAllocator</strong> en relación con el Servicio y sustituye a todos los acuerdos y entendimientos anteriores.</li>\n          <li>Si alguna disposición del presente Acuerdo resultara inválida o inaplicable, las disposiciones restantes seguirán en pleno vigor y efecto.</li>\n          <li>El hecho de no hacer cumplir alguna disposición del presente Acuerdo no se considerará una renuncia a la aplicación futura de dicha disposición.</li>\n          <li>No podrá ceder el presente Acuerdo sin nuestro consentimiento previo por escrito. Nosotros podremos ceder el presente Acuerdo sin su consentimiento en relación con una fusión, adquisición o venta de la práctica totalidad de nuestros activos.</li>\n        </ul>\n      </div>\n    </section>\n\n    <!-- 17. Contacto -->\n    <section id=\"contact\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">17. Información de contacto</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n        <p>Si tiene alguna pregunta sobre este Acuerdo, póngase en contacto con nosotros en <a href=\"mailto:support@myallocator.com\" style=\"color: #334155; text-decoration: underline;\">support@myallocator.com</a>.</p>\n      </div>\n    </section>\n\n    <!-- 18. Prácticas de seguridad y privacidad de los datos -->\n    <section id=\"security-privacy\" style=\"border-top: 1px solid #e2e8f0; padding-top: 2rem; margin-top: 3rem;\">\n      <h2 style=\"font-size: 1.75rem; font-weight: 600; letter-spacing: -0.025em; color: #0f172a; margin-bottom: 1rem;\">18. Prácticas de seguridad y privacidad de los datos</h2>\n      <div style=\"color: #334155; line-height: 1.7; font-size: 1.05rem;\">\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.1. ¿Qué datos almacenamos?</h3>\n          <p>MyAllocator solo almacena metadatos sobre su organización y las propiedades y usuarios de la misma.</p>\n          <p>Almacenamos los siguientes datos con fines de autenticación:</p>\n          <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem;\">\n            <li>Nombres de usuario y/o direcciones de correo electrónico</li>\n          </ul>\n          <p>Almacenamos los siguientes datos con fines de gestión de canales:</p>\n          <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem;\">\n            <li>Detalles de la propiedad (nombre, dirección, correo electrónico, instalaciones, imágenes, tipos de habitaciones, planes de tarifas, disponibilidad, precios y datos de restricciones)</li>\n            <li>Metadatos de la reserva (incluidos, si están disponibles: nombre del cliente, nombres de los huéspedes, dirección del cliente, datos de la tarjeta del cliente)</li>\n          </ul>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.2. Defensa en profundidad</h3>\n          <p>Como podrá comprobar en cualquier proveedor de SaaS de primera categoría, no existe una única capa que proteja los datos de los clientes, sino más bien una solución bien diseñada que tiene en cuenta todas las capas, desde las medidas de seguridad física en el centro de datos hasta los privilegios de acceso que determinan a qué datos puede acceder cada usuario individual. MyAllocator, como proveedor de conectividad, utiliza este enfoque para proteger los datos de los clientes.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.3. Procesos y políticas</h3>\n          <p>La primera capa de defensa consiste en contar con un conjunto bien definido y exhaustivo de procesos y políticas de seguridad para garantizar la seguridad de los datos de nuestros clientes y usuarios. MyAllocator aplica varias medidas de procesos y políticas que instilan la seguridad como una prioridad clave en nuestra capa más fundamental… nuestra gente.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.4. Control de cambios</h3>\n          <p>Un proceso formal de control de cambios minimiza el riesgo asociado a los cambios en los sistemas. El proceso permite el seguimiento de los cambios realizados en los sistemas y verifica que se hayan evaluado los riesgos, se hayan analizado las interdependencias y se hayan considerado y aplicado las políticas y procedimientos necesarios antes de que se autorice cualquier cambio.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.5. Formación</h3>\n          <p>Los empleados de MyAllocator autorizados a acceder a la plataforma MyAllocator reciben formación periódica para centrar la atención de los empleados en el cumplimiento de las políticas de seguridad corporativas. Por ejemplo, MyAllocator el personal de DevOps y de Servicios Profesionales que pueda manejar datos e información confidenciales de los clientes recibirá regularmente formación en materia de seguridad, auditoría, acceso y cumplimiento normativo (por ejemplo, en relación con el RGPD).</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.6. Acceso autorizado</h3>\n          <p>Además del personal autorizado que accede al área de producción, el acceso operativo se limita únicamente a un grupo restringido de empleados de operaciones de MyAllocator. El acceso se controla a través de una red físicamente separada que está aislada de la red corporativa de MyAllocator que da servicio al conjunto de empleados, lo que garantiza que solo el personal autorizado para acceder al centro de datos pueda hacerlo. Todo el personal de MyAllocator con acceso físico u operativo a los entornos de producción está sujeto a formación, y todas las actividades se registran para su auditoría.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.7. Seguridad física</h3>\n          <p>Todos los centros de datos de MyAllocator cuentan con la certificación de las principales normas de seguridad de la información, incluidas la ISO 27001 y la PCI DSS. Estos centros de datos también cuentan con sistemas redundantes N+1 de climatización y SAI. La seguridad física se ajusta a las mejores prácticas del sector e incluye:</p>\n          <ul style=\"list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem;\">\n            <li>Protocolos de tarjetas de acceso, protocolos de escaneo biométrico y vigilancia interior y exterior las 24 horas del día</li>\n            <li>Acceso limitado al personal autorizado del centro de datos; nadie puede entrar en el área de producción sin autorización previa y el acompañamiento adecuado</li>\n            <li>Todos los empleados del centro de datos se someten a exhaustivas comprobaciones de antecedentes de seguridad</li>\n          </ul>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.8. Seguridad de la infraestructura</h3>\n          <p>Entre la capa física del centro de datos y la capa de aplicaciones de la Plataforma de Conectividad Empresarial de MyAllocator se encuentra la infraestructura que sustenta nuestra solución. En toda la infraestructura, la seguridad se implementa de forma integral y coordinada para mejorar la protección y la seguridad de los datos de los clientes.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.9. Cortafuegos</h3>\n          <p>Todo el acceso de red a los hosts virtuales está protegido por un cortafuegos de múltiples capas que opera en modo «denegar todo». El acceso a Internet solo se permite en puertos abiertos explícitamente y únicamente para un subconjunto de hosts virtuales especificados. Para añadir una capa adicional de seguridad, todos los servidores de bases de datos residen detrás de un cortafuegos adicional.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.10. Redes</h3>\n          <p>Los servidores de la plataforma MyAllocator se asignan a los respectivos grupos de seguridad, caracterizados por configuraciones de seguridad específicas (a nivel de TCP/IP), complementadas con cortafuegos con estado a nivel de instancia individual. Se utilizan VLAN independientes para separar los entornos de producción, pruebas y desarrollo, así como para segregar el tráfico de los usuarios finales y el tráfico administrativo.</p>\n          <p style=\"margin-top: 1rem;\">MyAllocator emplea un modelo de seguridad de tres niveles:</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.11. Fortalecimiento de los sistemas</h3>\n          <p>Al igual que cualquier oferta de SaaS, la Plataforma de Conectividad Empresarial de MyAllocator utiliza numerosas tecnologías bien coordinadas para prestar nuestro servicio; sin embargo, puede haber muchas capacidades que no sean necesarias. De acuerdo con las mejores prácticas del sector, el equipo de DevOps de MyAllocator inspecciona minuciosamente toda la solución para identificar servicios innecesarios y eliminar o desactivar estas capacidades con el fin de reducir las vulnerabilidades ante amenazas de seguridad.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.12. Sin acceso de root</h3>\n          <p>Todo el acceso de los clientes a la plataforma de conectividad empresarial de MyAllocator se controla a través de interfaces de usuario (UI), API y/o herramientas dedicadas. El uso de cualquiera de estos métodos de acceso requiere un nombre de usuario y una contraseña con privilegios adecuados para el acceso solicitado.</p>\n          <p>Los clientes no tienen acceso de root ni administrativo a ninguna parte de la pila tecnológica de la plataforma Enterprise Insights, y el acceso solo se permite a través de la capa de aplicación de la plataforma Enterprise Insights (UI o API).</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.13. Cierre de todos los puertos innecesarios</h3>\n          <p>Como se mencionó anteriormente en la sección Cortafuegos, cualquier puerto de cualquier servidor y/o host virtual que no sea necesario para el funcionamiento de la plataforma de conectividad empresarial MyAllocator se desactiva, lo que elimina oportunidades adicionales de intrusión externa.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.14. Parches de seguridad</h3>\n          <p>MyAllocator cuenta con políticas y procedimientos rigurosos para actualizar todos los componentes de la Plataforma de Conectividad Empresarial de MyAllocator, incluidos los sistemas operativos, los hipervisores de máquinas virtuales, el middleware, las bases de datos, etc., con los parches de seguridad de sus proveedores.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.15. Retención de datos</h3>\n          <p>Los datos de los clientes no se almacenan durante más tiempo del necesario. Necesitamos datos sobre propiedades, reservas y usuarios para ofrecer visualizaciones de datos precisas y eliminamos estos datos, ya sea a petición o tras un periodo [máximo de 30 días] desde la cancelación de la cuenta.</p>\n          <p>Los datos también se eliminan si se consideran obsoletos o ya no son válidos. Esto puede ocurrir por la eliminación de servicios conectados, la cancelación de cuentas u otros eventos originados por los proveedores de servicios conectados.</p>\n          <p>Los datos de la cuenta (nombre de usuario, contraseña, propiedades, canales y reservas) se eliminarán en un plazo de 30 días tras la cancelación de la cuenta o previa solicitud.</p>\n        </div>\n\n        <div style=\"margin-top: 1.5rem;\">\n          <h3 style=\"font-size: 1.25rem; font-weight: 500; color: #0f172a; margin-bottom: 0.5rem;\">18.16. Conclusión</h3>\n          <p>En MyAllocator, nos enorgullecemos de la vigilancia que empleamos para proteger los activos de datos de nuestros clientes, y destacamos continuamente que una organización de seguridad madura requiere una dedicación coordinada en materia de tecnología, políticas, procedimientos y personas. Esta dedicación queda subrayada por el enfoque basado en el riesgo que se expone en este documento para demostrar solidez en cada capa de seguridad, minimizando cualquier vulnerabilidad o debilidad potencial.</p>\n          <p>Queremos que nuestros clientes sepan que sus datos están suficientemente protegidos gracias a este enfoque y agradecemos la oportunidad de debatir estas prácticas y enfoques más a fondo.</p>\n        </div>\n      </div>\n    </section>\n\n    </div>\n  </main>\n</div>\n\n<style>\n  .privacy-link {\n    display: inline-block;\n    border-radius: 6px;\n    padding: 6px 10px;\n    color: #334155;\n    text-decoration: none;\n    transition: all 0.2s ease;\n  }\n  .privacy-link:hover {\n    color: #0f172a;\n    text-decoration: underline;\n  }\n</style>",
+          "maxWidth": "none",
+          "paddingY": "none",
+          "alignment": "left"
+        }
+      },
+      {
+        "type": "Spacer",
+        "props": {
+          "id": "Spacer-51f7cc2c-b438-47dd-8fb6-4fcec5a2ef76",
+          "size": "3xl",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      {
+        "type": "Footer",
+        "props": {
+          "id": "Footer-e4202cb5-f574-405d-ac07-735db8de5c9f",
+          "columns": [
+            {
+              "links": [
+                {
+                  "href": "/about",
+                  "label": "Acerca de",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/contact",
+                  "label": "Contacto",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/pricing",
+                  "label": "Precios",
+                  "openInNewTab": false
+                },
+                {
+                  "href": "/careers",
+                  "label": "Empleo",
+                  "openInNewTab": false
+                }
+              ],
+              "heading": "Empresa"
+            },
+            {
+              "links": [
+                {
+                  "href": "https://docs.myallocator.com",
+                  "label": "Documentación",
+                  "openInNewTab": true
+                }
+              ],
+              "heading": "Recursos"
+            }
+          ],
+          "tagline": "MyAllocator te ayuda a desarrollar más rápido, escalar mejor y ofrecer experiencias web modernas con facilidad.",
+          "logoHref": "/",
+          "logoText": "Tu marca",
+          "logoType": "image",
+          "maxWidth": "xl",
+          "paddingX": "xl",
+          "paddingY": "sm",
+          "borderTop": true,
+          "textColor": "#000000",
+          "accentColor": "#171717",
+          "bottomBarBg": "#f8fafc",
+          "bottomLinks": [
+            {
+              "href": "/privacy-policy",
+              "label": "Política de privacidad",
+              "openInNewTab": false
+            },
+            {
+              "href": "/customer-agreement",
+              "label": "Acuerdo con el cliente",
+              "openInNewTab": false
+            }
+          ],
+          "linkOpacity": 70,
+          "socialLinks": [],
+          "dividerColor": "#FFFFFF",
+          "linkFontSize": 14,
+          "logoFontSize": 20,
+          "logoImageAlt": "Logotipo",
+          "logoImageUrl": "/images/logo.png",
+          "columnsLayout": "2",
+          "copyrightText": "© 2026 MyAllocator. Todos los derechos reservados.",
+          "showBottomBar": true,
+          "socialIconGap": 12,
+          "borderTopColor": "",
+          "borderTopWidth": 1,
+          "linkHoverColor": "",
+          "logoFontWeight": "bold",
+          "logoImageWidth": 0,
+          "socialIconSize": 20,
+          "taglineOpacity": 80,
+          "backgroundColor": "#f8fafc",
+          "logoColumnWidth": "50%",
+          "logoImageHeight": 36,
+          "taglineFontSize": 17,
+          "taglineMaxWidth": 450,
+          "bottomBarOpacity": 100,
+          "linkHoverOpacity": 100,
+          "bottomBarFontSize": 14,
+          "socialIconOpacity": 60,
+          "bottomBarTextColor": "#696969",
+          "bottomBarBorderColor": "#d4d4d4",
+          "columnHeadingFontSize": 14,
+          "logoImageBorderRadius": "none",
+          "columnHeadingTransform": "capitalize",
+          "columnHeadingLetterSpacing": "normal"
+        }
+      }
+    ]
+  }
+}

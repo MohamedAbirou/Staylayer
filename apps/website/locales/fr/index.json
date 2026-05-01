@@ -1,0 +1,132 @@
+{
+  "seo": {
+    "home": {
+      "title": "MyAllocator — Logiciel tout-en-un pour locations de vacances",
+      "description": "MyAllocator est la plateforme de gestion de locations de vacances tout-en-un : channel manager, tarification dynamique, moteur de réservation, communication avec les voyageurs et bien plus encore.",
+      "keywords": "logiciel de location de vacances, channel manager, tarification dynamique, gestion de propriétés, moteur de réservation, MyAllocator"
+    },
+    "pricing": {
+      "title": "Tarifs — MyAllocator",
+      "description": "Des tarifs simples et transparents pour les gestionnaires de locations de vacances. Un seul forfait, tout compris. Commencez votre essai gratuit dès aujourd'hui.",
+      "keywords": "tarifs, prix du logiciel de location de vacances, coût MyAllocator, essai gratuit, tarifs gestion de propriétés"
+    }
+  },
+  "home": {
+    "hero": {
+      "headingPrefix": "Tout ce dont vous avez besoin pour ",
+      "highlight": "gérer plus intelligemment",
+      "subheading": "MyAllocator est le logiciel tout-en-un de gestion de locations de vacances qui aide les hôtes et les gestionnaires de propriétés à gagner plus, travailler moins et ravir leurs voyageurs.",
+      "otaKicker": "La solution de confiance des gestionnaires connectés à"
+    },
+    "sections": {
+      "tools": {
+        "title": "Des outils puissants pour chaque hôte",
+        "subtitle": "D'un seul appartement Airbnb à un portefeuille multi-propriétés, MyAllocator vous offre des fonctionnalités de niveau professionnel sans le prix professionnel.",
+        "features": {
+          "bookingEngine": {
+            "title": "Moteur de réservation",
+            "bullets": [
+              "Réservations directes sans commission",
+              "Widget de réservation personnalisé pour votre site web",
+              "Disponibilité en temps réel et confirmation instantanée",
+              "Support multidevise et multilingue"
+            ]
+          },
+          "guestCommunication": {
+            "title": "Communication avec les voyageurs",
+            "bullets": [
+              "Messages automatisés avant l'arrivée et au départ",
+              "Boîte de réception unifiée pour tous les canaux",
+              "Modèles avec variables intelligentes",
+              "Automatisation des demandes d'avis"
+            ]
+          },
+          "teamManagement": {
+            "title": "Gestion d'équipe",
+            "bullets": [
+              "Accès basé sur les rôles pour votre équipe",
+              "Attribution des tâches de ménage et de maintenance",
+              "Calendrier du personnel avec mises à jour en temps réel",
+              "Suivi des performances et rapports"
+            ]
+          },
+          "websiteBuilder": {
+            "title": "Créateur de sites web",
+            "bullets": [
+              "Modèles élégants optimisés pour mobile",
+              "Outils SEO intégrés",
+              "Widget de réservation intégré",
+              "Support de nom de domaine personnalisé"
+            ]
+          }
+        }
+      },
+      "builtFor": {
+        "title": "Conçu pour les hôtes qui veulent plus",
+        "body": "Que vous gériez un chalet de montagne ou une flotte de villas en bord de mer, MyAllocator s'adapte à votre méthode de travail — et non l'inverse."
+      },
+      "stories": {
+        "title": "Ce que disent nos hôtes",
+        "quote": {
+          "text": "Depuis que nous sommes passés à MyAllocator, nos revenus ont augmenté de 32 % et le temps consacré à l'administration a diminué de moitié. Le moteur de tarification dynamique à lui seul a tout changé.",
+          "author": "Sofia R., gestionnaire de propriétés — Costa del Sol"
+        }
+      },
+      "integrations": {
+        "title": "Intégrations fluides",
+        "body": "MyAllocator se connecte à plus de 100 canaux de réservation, passerelles de paiement et appareils domotiques — pour que vous puissiez gérer votre activité depuis un seul tableau de bord."
+      },
+      "faq": {
+        "title": "Questions fréquentes",
+        "items": [
+          {
+            "question": "Qu'est-ce que MyAllocator ?",
+            "answer": "MyAllocator est une plateforme tout-en-un de gestion de locations de vacances comprenant un channel manager, un moteur de réservation, la tarification dynamique, la communication avec les voyageurs, un créateur de sites web et bien plus encore."
+          },
+          {
+            "question": "Y a-t-il un essai gratuit ?",
+            "answer": "Oui ! Vous pouvez commencer un essai gratuit sans carte de crédit. Explorez toutes les fonctionnalités et constatez les résultats par vous-même avant de vous engager."
+          },
+          {
+            "question": "Quels canaux MyAllocator prend-il en charge ?",
+            "answer": "Nous prenons en charge plus de 100 canaux, dont Airbnb, Booking.com, Vrbo, Expedia, Google Vacation Rentals et de nombreuses OTA de niche."
+          },
+          {
+            "question": "Comment fonctionne la tarification dynamique ?",
+            "answer": "Notre algorithme analyse la demande du marché, les événements locaux, les tarifs des concurrents et la saisonnalité pour ajuster automatiquement vos prix en temps réel — maximisant les revenus tout en maintenant un taux d'occupation élevé."
+          },
+          {
+            "question": "Puis-je gérer plusieurs propriétés ?",
+            "answer": "Absolument. MyAllocator est conçu pour passer d'une seule annonce à des centaines de propriétés, avec édition groupée, rôles d'équipe et rapports au niveau du portefeuille."
+          }
+        ]
+      }
+    }
+  },
+  "pricing": {
+    "faq": {
+      "items": [
+        {
+          "question": "Que comprend le forfait ?",
+          "answer": "Tout : channel manager, moteur de réservation, tarification dynamique, communication avec les voyageurs, créateur de sites web, rapports et membres d'équipe illimités."
+        },
+        {
+          "question": "Y a-t-il des frais cachés ?",
+          "answer": "Non. Le prix affiché est le prix que vous payez. Aucuns frais de mise en service, aucune commission par réservation, aucune surprise."
+        },
+        {
+          "question": "Puis-je annuler à tout moment ?",
+          "answer": "Oui. Il n'y a aucun engagement à long terme. Vous pouvez annuler votre abonnement à tout moment depuis les paramètres de votre compte."
+        },
+        {
+          "question": "Proposez-vous une réduction pour la facturation annuelle ?",
+          "answer": "Oui — le paiement annuel vous fait économiser jusqu'à 20 % par rapport à la facturation mensuelle."
+        }
+      ]
+    }
+  },
+  "cta": {
+    "heading": "Prêt à développer votre activité de location ?",
+    "secondary": "Commencez votre essai gratuit dès aujourd'hui — sans carte de crédit."
+  }
+}
