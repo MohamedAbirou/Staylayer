@@ -9,11 +9,6 @@ const ContactForm = dynamic(() => import("@/components/contactForm"), {
   ssr: false,
 });
 
-const AnnualReportForm = dynamic(
-  () => import("@/components/annual-report-form"),
-  { ssr: false },
-);
-
 /**
  * ContactSection with the real live form injected.
  * Wraps the editable props (heading, description, bullets, email copy)
@@ -100,22 +95,6 @@ function ContactSectionWithRealForm(props) {
 }
 
 /**
- * AnnualReportSection with the real download form injected.
- */
-function AnnualReportSectionWithRealForm({ backgroundColor }) {
-  return (
-    <section
-      className="py-12"
-      style={{ backgroundColor: backgroundColor || "#ffffff" }}
-    >
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <AnnualReportForm />
-      </div>
-    </section>
-  );
-}
-
-/**
  * Navbar with LanguageSelector injected into the CTA area.
  * This is a render override — it receives all puck-stored props and
  * passes them straight through, adding the LanguageSelector via the
@@ -138,10 +117,6 @@ const websiteConfig = {
     ContactSection: {
       ...puckConfig.components.ContactSection,
       render: ContactSectionWithRealForm,
-    },
-    AnnualReportSection: {
-      ...puckConfig.components.AnnualReportSection,
-      render: AnnualReportSectionWithRealForm,
     },
   },
 };
