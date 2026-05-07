@@ -14,6 +14,9 @@ import {
   Sparkles,
   Rocket,
   Gauge,
+  Languages,
+  BookOpen,
+  Search,
 } from "lucide-react";
 import {
   BILLING_MEMBERSHIP_ROLES,
@@ -230,6 +233,18 @@ export function Sidebar() {
               <NavLink to="/pages" className={link} end>
                 <FileText className="h-4 w-4" />
                 Pages
+              </NavLink>
+              <NavLink to="/translation" className={link}>
+                <Languages className="h-4 w-4" />
+                Translation
+              </NavLink>
+              <NavLink to="/glossary" className={link}>
+                <BookOpen className="h-4 w-4" />
+                Glossary
+              </NavLink>
+              <NavLink to="/seo" className={link}>
+                <Search className="h-4 w-4" />
+                SEO
               </NavLink>
             </div>
           </div>

@@ -116,6 +116,97 @@ export class DeploymentsService {
     });
   }
 
+  async rollbackSiteDeployment(
+    siteId: string,
+    targetDeploymentId: string,
+  ): Promise<Deployment> {
+    const target = await this.prisma.deployment.findUnique({
+      where: { id: targetDeploymentId },
+    });
+
+    if (!target || target.siteId !== siteId) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Target deployment not found",
+      });
+    }
+
+    if (target.status !== DeploymentStatus.LIVE) {
+      throw new ConflictException({
+        code: "DEPLOYMENT_NOT_ROLLBACK_TARGET",
+        message: "Only previously-live deployments can be used as rollback targets",
+      });
+    }
+
+    if (!target.providerDeployId) {
+      throw new ConflictException({
+        code: "DEPLOYMENT_NO_PROVIDER_DEPLOY",
+        message: "Target deployment has no provider deploy reference for rollback",
+      });
+    }
+
+    const currentActive = await this.prisma.deployment.findFirst({
+      where: {
+        siteId,
+        status: { in: ACTIVE_PROVISIONING_STATUSES },
+      },
+    });
+
+    if (currentActive) {
+      throw new ConflictException({
+        code: "DEPLOYMENT_IN_PROGRESS",
+        message: "A deployment is already in progress for this site",
+      });
+    }
+
+    const site = await this.getSiteProvisioningRecord(siteId);
+    const rollbackDeployment = await this.prisma.deployment.create({
+      data: {
+        siteId,
+        status: DeploymentStatus.DEPLOYING,
+        provider: target.provider ?? this.deploymentProvider.name,
+        providerProjectId: target.providerProjectId,
+        providerDeployId: target.providerDeployId,
+        url: target.url,
+        metadata: this.mergeMetadata(null, {
+          ...this.buildInitialMetadata(site),
+          rollbackOfDeploymentId: targetDeploymentId,
+          rollbackRequestedAt: new Date().toISOString(),
+          rollbackProviderDeployId: target.providerDeployId,
+        }),
+      },
+    });
+
+    try {
+      const snapshot = await this.deploymentProvider.getDeploymentStatus({
+        providerDeployId: target.providerDeployId!,
+        projectId: target.providerProjectId,
+      });
+
+      if (snapshot.isLive) {
+        return this.updateDeployment(rollbackDeployment.id, {
+          status: DeploymentStatus.LIVE,
+          url: snapshot.url ?? target.url,
+          providerDeployId: target.providerDeployId,
+        });
+      }
+
+      return this.failDeployment(
+        rollbackDeployment.id,
+        rollbackDeployment.metadata,
+        new Error(
+          "Rollback target is no longer live at the provider. Use a fresh provision instead.",
+        ),
+      );
+    } catch (error) {
+      return this.failDeployment(
+        rollbackDeployment.id,
+        rollbackDeployment.metadata,
+        error,
+      );
+    }
+  }
+
   async retryDeployment(deploymentId: string): Promise<Deployment> {
     const failedDeployment = await this.prisma.deployment.findUnique({
       where: { id: deploymentId },

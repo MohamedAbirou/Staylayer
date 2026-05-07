@@ -314,6 +314,40 @@ export class DeploymentsController {
     );
   }
 
+  @Post(":id/rollback")
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async rollback(
+    @Param("id") id: string,
+    @Query() _query: SiteDeploymentQueryDto,
+    @Req() req: Request,
+  ) {
+    const siteId = await this.ensureAuthenticatedSiteAccess(req);
+    const deployment = await this.deploymentsService.rollbackSiteDeployment(
+      siteId,
+      id,
+    );
+    const user = req.user as AuthenticatedRequestUser | undefined;
+
+    await this.adminService.createAuditLogForSite({
+      siteId,
+      actorUserId: user?.sub ?? null,
+      action: "deployment.rollback_requested",
+      targetType: "deployment",
+      targetId: deployment.id,
+      metadata: {
+        rollbackTargetDeploymentId: id,
+      },
+    });
+
+    return serializeSiteDeployment(
+      await this.deploymentsService.resolveCustomerSiteDeployment(
+        siteId,
+        deployment,
+      ),
+    );
+  }
+
   @Post(":id/retry")
   @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
   @HttpCode(HttpStatus.OK)

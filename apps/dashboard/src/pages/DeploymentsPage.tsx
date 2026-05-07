@@ -1,19 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  RefreshCw,
-  Rocket,
-  ExternalLink,
-  AlertCircle,
-  Clock4,
-  Globe,
-  KeyRound,
-  LockKeyhole,
-  Pencil,
-  Plus,
-  ShieldAlert,
-  ShieldCheck,
-  Trash2,
-} from "lucide-react";
+import { RefreshCw, Rocket, ExternalLink, CircleAlert as AlertCircle, Clock4, Globe, KeyRound, LockKeyhole, Pencil, Plus, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import {
   BILLING_MEMBERSHIP_ROLES,
   hasActiveSite,
@@ -28,6 +14,7 @@ import {
   getDeploymentEnvironment,
   provisionDeployment,
   retryDeployment,
+  rollbackDeployment,
   type SiteDeployment,
   type SiteDeploymentEnvironmentVariable,
   upsertDeploymentEnvironmentVariable,
@@ -58,6 +45,7 @@ export default function DeploymentsPage() {
 
   const [provisionConfirmOpen, setProvisionConfirmOpen] = useState(false);
   const [retryTarget, setRetryTarget] = useState<string | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<string | null>(null);
   const [environmentFormOpen, setEnvironmentFormOpen] = useState(false);
   const [editingEnvironmentVariable, setEditingEnvironmentVariable] =
     useState<SiteDeploymentEnvironmentVariable | null>(null);
@@ -134,6 +122,23 @@ export default function DeploymentsPage() {
       retryDeployment(siteId!, deploymentId),
     onSuccess: () => {
       setRetryTarget(null);
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["deployments", siteId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["deployments-page", "domains", siteId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["dashboard-home", "latest-deployment", siteId],
+        }),
+      ]);
+    },
+  });
+
+  const rollbackMutation = useMutation({
+    mutationFn: (deploymentId: string) =>
+      rollbackDeployment(siteId!, deploymentId),
+    onSuccess: () => {
+      setRollbackTarget(null);
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ["deployments", siteId] }),
         queryClient.invalidateQueries({
@@ -720,6 +725,22 @@ export default function DeploymentsPage() {
                       Retry
                     </button>
                   ) : null}
+                  {canManageDeployments &&
+                  deployment.status === "LIVE" &&
+                  deployment.id !== deployments[0]?.id ? (
+                    <button
+                      onClick={() => setRollbackTarget(deployment.id)}
+                      disabled={rollbackMutation.isPending}
+                      className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                    >
+                      {rollbackMutation.isPending ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Clock4 className="h-3.5 w-3.5" />
+                      )}
+                      Rollback to this
+                    </button>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -745,6 +766,16 @@ export default function DeploymentsPage() {
         isPending={retryMutation.isPending}
         onConfirm={() => retryTarget && retryMutation.mutate(retryTarget)}
         onCancel={() => setRetryTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={rollbackTarget !== null}
+        title="Rollback to this deployment?"
+        message="This will revert the live site to the state of the selected previous deployment. The rollback verifies the target is still available at the provider before activating it."
+        confirmLabel="Confirm rollback"
+        isPending={rollbackMutation.isPending}
+        onConfirm={() => rollbackTarget && rollbackMutation.mutate(rollbackTarget)}
+        onCancel={() => setRollbackTarget(null)}
       />
     </div>
   );

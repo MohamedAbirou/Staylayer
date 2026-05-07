@@ -21,6 +21,9 @@ import UsagePage from "./pages/UsagePage";
 import FormsPage from "./pages/FormsPage";
 import DomainsPage from "./pages/DomainsPage";
 import DeploymentsPage from "./pages/DeploymentsPage";
+import TranslationCenterPage from "./pages/TranslationCenterPage";
+import GlossaryPage from "./pages/GlossaryPage";
+import SeoPage from "./pages/SeoPage";
 import BillingPage from "./pages/BillingPage";
 import WorkspaceStudioPage from "./pages/WorkspaceStudioPage";
 import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
@@ -145,6 +148,45 @@ export const router = createBrowserRouter([
               >
                 <ErrorBoundary>
                   <DeploymentsPage />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/translation",
+            element: (
+              <ProtectedRoute
+                membershipRoles={CONTENT_MEMBERSHIP_ROLES}
+                requireActiveSite
+              >
+                <ErrorBoundary>
+                  <TranslationCenterPage />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/glossary",
+            element: (
+              <ProtectedRoute
+                membershipRoles={CONTENT_MEMBERSHIP_ROLES}
+                requireActiveSite
+              >
+                <ErrorBoundary>
+                  <GlossaryPage />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/seo",
+            element: (
+              <ProtectedRoute
+                membershipRoles={CONTENT_MEMBERSHIP_ROLES}
+                requireActiveSite
+              >
+                <ErrorBoundary>
+                  <SeoPage />
                 </ErrorBoundary>
               </ProtectedRoute>
             ),

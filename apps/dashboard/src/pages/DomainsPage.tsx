@@ -3,19 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth/useAuth";
 import { hasActiveSite, hasMembershipRole } from "../auth/access";
 import { Link } from "react-router-dom";
-import {
-  Globe,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  Plus,
-  ExternalLink,
-  Trash2,
-  Star,
-  RefreshCw,
-  Copy,
-  Check,
-} from "lucide-react";
+import { Globe, CircleCheck as CheckCircle2, TriangleAlert as AlertTriangle, Clock, Plus, ExternalLink, Trash2, Star, RefreshCw, Copy, Check, Wand as Wand2 } from "lucide-react";
 
 import { getLatestDeployment } from "../api/deployments";
 import {
@@ -26,6 +14,7 @@ import {
   retryDomainVerification,
 } from "../api/domains";
 import type { SiteDomain, DomainStatus } from "../api/domains";
+import { DomainSetupWizard } from "../components/DomainSetupWizard";
 
 // ─── INFRASTRUCTURE ASSUMPTION (now fulfilled) ────────────────────────────────
 // Endpoints provided by apps/api/src/domains/domains.controller.ts:
@@ -86,6 +75,8 @@ export default function DomainsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [hostname, setHostname] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
+  const [wizardDomain, setWizardDomain] = useState<SiteDomain | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   const {
     data: domains = [],
@@ -176,13 +167,25 @@ export default function DomainsPage() {
           </p>
         </div>
         {canManageDomains && !showAddForm && (
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800"
-          >
-            <Plus className="h-4 w-4" />
-            Add domain
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setWizardDomain(null);
+                setShowWizard(true);
+              }}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <Wand2 className="h-4 w-4" />
+              Setup wizard
+            </button>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800"
+            >
+              <Plus className="h-4 w-4" />
+              Add domain
+            </button>
+          </div>
         )}
       </div>
 
@@ -333,6 +336,10 @@ export default function DomainsPage() {
                 onSetPrimary={() => primaryMutation.mutate(domain.id)}
                 onRemove={() => removeMutation.mutate(domain.id)}
                 onRetry={() => retryMutation.mutate(domain.id)}
+                onOpenWizard={() => {
+                  setWizardDomain(domain);
+                  setShowWizard(true);
+                }}
                 isPrimaryPending={primaryMutation.isPending}
                 isRemovePending={removeMutation.isPending}
                 isRetryPending={retryMutation.isPending}
@@ -341,6 +348,13 @@ export default function DomainsPage() {
           </div>
         )}
       </div>
+
+      {showWizard && (
+        <DomainSetupWizard
+          onClose={() => setShowWizard(false)}
+          existingDomain={wizardDomain}
+        />
+      )}
     </div>
   );
 }
@@ -386,6 +400,7 @@ function DomainRow({
   onSetPrimary,
   onRemove,
   onRetry,
+  onOpenWizard,
   isPrimaryPending,
   isRemovePending,
   isRetryPending,
@@ -395,6 +410,7 @@ function DomainRow({
   onSetPrimary: () => void;
   onRemove: () => void;
   onRetry: () => void;
+  onOpenWizard: () => void;
   isPrimaryPending: boolean;
   isRemovePending: boolean;
   isRetryPending: boolean;
@@ -498,6 +514,15 @@ function DomainRow({
         </div>
       </div>
       <div className="flex items-center gap-1">
+        {canManageDomains && status !== "ACTIVE" && (
+          <button
+            onClick={onOpenWizard}
+            title="Open setup wizard"
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
+          >
+            <Wand2 className="h-4 w-4" />
+          </button>
+        )}
         {canManageDomains && !isPrimary && (
           <button
             onClick={onSetPrimary}

@@ -16,6 +16,9 @@ import { DomainsModule } from "./domains/domains.module";
 import { FormsModule } from "./forms/forms.module";
 import { TenantWorkspaceModule } from "./tenant-workspace/tenant-workspace.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { TranslationModule } from "./translation/translation.module";
+import { SeoModule } from "./seo/seo.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 
@@ -55,6 +58,9 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     FormsModule,
     TenantWorkspaceModule,
     OnboardingModule,
+    NotificationsModule,
+    TranslationModule,
+    SeoModule,
   ],
   providers: [
     // Reactivate later if we want global throttling (currently we apply it at the controller level with @UseGuards(ThrottlerGuard) and @Throttle() decorators)

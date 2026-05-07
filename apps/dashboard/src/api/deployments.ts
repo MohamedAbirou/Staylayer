@@ -106,6 +106,18 @@ export async function retryDeployment(
   return data;
 }
 
+export async function rollbackDeployment(
+  siteId: string,
+  deploymentId: string,
+): Promise<SiteDeployment> {
+  const { data } = await client.post<SiteDeployment>(
+    `/deployments/${deploymentId}/rollback`,
+    {},
+    { params: { siteId } },
+  );
+  return data;
+}
+
 export async function getDeploymentEnvironment(
   siteId: string,
 ): Promise<SiteDeploymentEnvironmentCatalog> {

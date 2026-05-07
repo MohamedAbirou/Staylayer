@@ -190,11 +190,13 @@ model Tenant {
     name   String
     status TenantStatus @default(ACTIVE)
 
-    memberships   TenantMembership[]
-    sites         Site[]
-    subscriptions Subscription[]
-    auditLogs     AuditLog[]
-    webhookEvents BillingWebhookEvent[]
+    memberships      TenantMembership[]
+    sites            Site[]
+    subscriptions    Subscription[]
+    auditLogs        AuditLog[]
+    webhookEvents    BillingWebhookEvent[]
+    translationJobs  TranslationJob[]
+    glossaries       TranslationGlossary[]
 
     createdAt DateTime @default(now()) @map("created_at")
     updatedAt DateTime @updatedAt @map("updated_at")
@@ -252,6 +254,10 @@ model Site {
     formDeliveries                 FormDelivery[]
     alerts                         OperationalAlert[]
     auditLogs                      AuditLog[]
+    translationJobs                TranslationJob[]
+    glossaries                     TranslationGlossary[]
+    redirects                      Redirect[]
+    structuredData                 SiteStructuredData?
 
     @@unique([tenantId, slug])
     @@index([tenantId])
@@ -285,8 +291,10 @@ model Page {
     createdAt DateTime @default(now()) @map("created_at")
     updatedAt DateTime @updatedAt @map("updated_at")
 
-    site     Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    versions PageVersion[]
+    site              Site                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    versions          PageVersion[]
+    translationMeta   PageTranslationMeta?
+    sourceTranslations PageTranslationMeta[] @relation("SourceTranslations")
 
     @@unique([siteId, slug, locale])
     @@index([siteId])
@@ -759,6 +767,160 @@ model TranslationUsage {
     @@map("translation_usage")
 }
 
+// ─── URL Redirects ────────────────────────────────────────
+
+model Redirect {
+    id          String   @id @default(cuid())
+    siteId      String   @map("site_id")
+    fromPath    String   @map("from_path")
+    toPath      String   @map("to_path")
+    statusCode  Int      @default(301) @map("status_code")
+    locale      String?
+    reason      String?
+    permanent   Boolean  @default(true)
+    enabled     Boolean  @default(true)
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@unique([siteId, fromPath, locale])
+    @@index([siteId, enabled])
+    @@index([siteId, fromPath])
+    @@map("redirects")
+}
+
+// ─── SEO Structured Data ──────────────────────────────────
+
+model SiteStructuredData {
+    id              String   @id @default(cuid())
+    siteId          String   @unique @map("site_id")
+    businessType    String   @default("Hotel") @map("business_type")
+    businessName    String?  @map("business_name")
+    description     String?
+    streetAddress   String?  @map("street_address")
+    city            String?
+    region          String?
+    postalCode      String?  @map("postal_code")
+    country         String?
+    telephone       String?
+    email           String?
+    starRating      Int?     @map("star_rating")
+    priceRange      String?  @map("price_range")
+    checkInTime     String?  @map("check_in_time")
+    checkOutTime    String?  @map("check_out_time")
+    amenities       Json?
+    roomCount       Int?     @map("room_count")
+    latitude        Float?
+    longitude       Float?
+    imageUrl        String?  @map("image_url")
+    createdAt       DateTime @default(now()) @map("created_at")
+    updatedAt       DateTime @updatedAt @map("updated_at")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@map("site_structured_data")
+}
+
+// ─── Translation Jobs ─────────────────────────────────────
+
+enum TranslationJobStatus {
+    QUEUED
+    PROCESSING
+    COMPLETED
+    FAILED
+    REVIEW_REQUIRED
+    APPROVED
+}
+
+model TranslationJob {
+    id             String               @id @default(cuid())
+    tenantId       String               @map("tenant_id")
+    siteId         String               @map("site_id")
+    sourceLocale   String               @map("source_locale")
+    targetLocale   String               @map("target_locale")
+    status         TranslationJobStatus @default(QUEUED)
+    totalPages     Int                  @default(0) @map("total_pages")
+    completedPages Int                  @default(0) @map("completed_pages")
+    failedPages    Int                  @default(0) @map("failed_pages")
+    charactersUsed Int                  @default(0) @map("characters_used")
+    overwrite      Boolean              @default(false)
+    autoPublish    Boolean              @default(false) @map("auto_publish")
+    pageIds        Json?                @map("page_ids")
+    error          String?
+    startedAt      DateTime?            @map("started_at")
+    completedAt    DateTime?            @map("completed_at")
+    createdAt      DateTime             @default(now()) @map("created_at")
+    createdBy      String               @map("created_by")
+
+    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@index([tenantId, createdAt])
+    @@index([siteId, createdAt])
+    @@index([status])
+    @@map("translation_jobs")
+}
+
+// ─── Translation Glossary ─────────────────────────────────
+
+model TranslationGlossary {
+    id        String   @id @default(cuid())
+    tenantId  String   @map("tenant_id")
+    siteId    String?  @map("site_id")
+    name      String
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    tenant Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    site   Site?                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    terms  TranslationGlossaryTerm[]
+
+    @@unique([tenantId, siteId, name])
+    @@index([tenantId])
+    @@index([siteId])
+    @@map("translation_glossaries")
+}
+
+model TranslationGlossaryTerm {
+    id           String  @id @default(cuid())
+    glossaryId   String  @map("glossary_id")
+    sourceTerm   String  @map("source_term")
+    targetTerm   String  @map("target_term")
+    sourceLocale String  @map("source_locale")
+    targetLocale String  @map("target_locale")
+    caseSensitive Boolean @default(false) @map("case_sensitive")
+    createdAt    DateTime @default(now()) @map("created_at")
+
+    glossary TranslationGlossary @relation(fields: [glossaryId], references: [id], onDelete: Cascade)
+
+    @@unique([glossaryId, sourceTerm, sourceLocale, targetLocale])
+    @@index([glossaryId])
+    @@map("translation_glossary_terms")
+}
+
+// ─── Page Translation Metadata ────────────────────────────
+
+model PageTranslationMeta {
+    id                   String   @id @default(cuid())
+    pageId               String   @map("page_id")
+    sourcePageId         String   @map("source_page_id")
+    lastTranslatedAt     DateTime? @map("last_translated_at")
+    sourceContentHash    String?  @map("source_content_hash")
+    isStale              Boolean  @default(false) @map("is_stale")
+    translationJobId     String?  @map("translation_job_id")
+    createdAt            DateTime @default(now()) @map("created_at")
+    updatedAt            DateTime @updatedAt @map("updated_at")
+
+    page       Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+    sourcePage Page @relation("SourceTranslations", fields: [sourcePageId], references: [id], onDelete: Cascade)
+
+    @@unique([pageId])
+    @@index([sourcePageId])
+    @@index([isStale])
+    @@map("page_translation_meta")
+}
+
 // ─── Audit Log ─────────────────────────────────────────────
 
 model AuditLog {
@@ -779,4 +941,54 @@ model AuditLog {
     @@index([tenantId, createdAt])
     @@index([siteId, createdAt])
     @@map("audit_logs")
+}
+
+// ─── Notifications ────────────────────────────────────────────
+
+enum NotificationChannel {
+    IN_APP
+    EMAIL
+}
+
+enum NotificationCategory {
+    DEPLOYMENT
+    DOMAIN
+    BILLING
+    FORM_SUBMISSION
+    SYSTEM
+}
+
+model Notification {
+    id         String               @id @default(cuid())
+    tenantId   String               @map("tenant_id")
+    userId     String?              @map("user_id")
+    siteId     String?              @map("site_id")
+    category   NotificationCategory
+    channel    NotificationChannel  @default(IN_APP)
+    title      String
+    body       String
+    actionUrl  String?              @map("action_url")
+    readAt     DateTime?            @map("read_at")
+    metadata   Json?
+    createdAt  DateTime             @default(now()) @map("created_at")
+
+    @@index([tenantId, userId, readAt])
+    @@index([tenantId, createdAt])
+    @@index([userId, readAt])
+    @@map("notifications")
+}
+
+model NotificationPreference {
+    id         String               @id @default(cuid())
+    userId     String               @map("user_id")
+    tenantId   String               @map("tenant_id")
+    category   NotificationCategory
+    channel    NotificationChannel
+    enabled    Boolean              @default(true)
+    createdAt  DateTime             @default(now()) @map("created_at")
+    updatedAt  DateTime             @updatedAt @map("updated_at")
+
+    @@unique([userId, tenantId, category, channel])
+    @@index([userId, tenantId])
+    @@map("notification_preferences")
 }
