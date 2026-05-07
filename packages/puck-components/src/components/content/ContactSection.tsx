@@ -130,8 +130,6 @@ export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
     formKey: {
       type: "text",
       label: "Assigned Form Key",
-      helperText:
-        "Optional. If provided, the live website will resolve this section against the matching published form definition.",
     },
     heading: {
       type: "text",
