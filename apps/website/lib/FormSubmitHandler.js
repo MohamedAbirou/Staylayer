@@ -1,20 +1,20 @@
 /**
  * Contact form API service
  *
- * When NEXT_PUBLIC_CMS_API_URL and NEXT_PUBLIC_SITE_ID are set (i.e. dedicated
- * site deployment), submissions are stored centrally via the CMS API at
- * POST /public/submissions.
+ * Dedicated sites submit to same-origin Next API routes, which then forward
+ * requests server-to-server to the CMS API. That keeps customer browsers off
+ * the API origin and removes customer domains from backend CORS management.
  *
- * Falls back to Formspree for legacy / shared-domain deployments where these
- * env vars are absent.
+ * Legacy / shared-domain deployments still fall back to Formspree when no
+ * dedicated site context is present.
  */
 
-const CMS_API_URL = process.env.NEXT_PUBLIC_CMS_API_URL ?? null;
 const SITE_ID = process.env.NEXT_PUBLIC_SITE_ID ?? null;
+const INTERNAL_FORM_API_BASE = "/api/forms";
 
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/mblypnzk";
 
-export const hasCmsSubmissionEndpoint = Boolean(CMS_API_URL && SITE_ID);
+export const hasCmsSubmissionEndpoint = Boolean(SITE_ID);
 
 export const resolvePublicContactForm = async ({
   pageSlug,
@@ -25,8 +25,10 @@ export const resolvePublicContactForm = async ({
     return null;
   }
 
-  const url = new URL("/public/forms/resolve", CMS_API_URL);
-  url.searchParams.set("siteId", SITE_ID);
+  const url = new URL(
+    `${INTERNAL_FORM_API_BASE}/resolve`,
+    window.location.origin,
+  );
   if (pageSlug) {
     url.searchParams.set("pageSlug", pageSlug);
   }
@@ -61,7 +63,6 @@ export const submitContactForm = async (formData) => {
 
 async function submitViaCmsApi(formData) {
   const body = {
-    siteId: SITE_ID,
     formType: formData.formType || "CONTACT",
     pageSlug: formData.pageSlug ?? null,
     locale: formData.locale ?? "en",
@@ -85,7 +86,7 @@ async function submitViaCmsApi(formData) {
     body.message = formData.message;
   }
 
-  const response = await fetch(`${CMS_API_URL}/public/submissions`, {
+  const response = await fetch(`${INTERNAL_FORM_API_BASE}/submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
