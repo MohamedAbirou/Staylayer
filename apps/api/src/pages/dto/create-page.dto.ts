@@ -32,15 +32,32 @@ export class CreatePageDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   seoTitle?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(300)
   seoDescription?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   seoKeywords?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoOgImage?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  seoCanonical?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  seoNoindex?: boolean;
 
   @IsOptional()
   @IsBoolean()

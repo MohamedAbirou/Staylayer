@@ -34,6 +34,8 @@ Thumbs.db
 coverage/
 *.lcov
 .nyc_output/
+playwright-report/
+test-results/
 
 # ─── Prisma ────────────────────────────────────────────────
 # Generated client — always regenerated from schema, never commit

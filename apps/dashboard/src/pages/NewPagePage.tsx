@@ -3,8 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { createPage } from "../api/pages";
 import { LOCALES } from "../lib/constants";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Home,
+  Bed,
+  Utensils,
+  MapPin,
+  Image,
+  HelpCircle,
+  Mail,
+} from "lucide-react";
 import toast from "react-hot-toast";
+
+// ─── Hospitality page presets ─────────────────────────────────────────────────
+const HOSPITALITY_PRESETS = [
+  { label: "Homepage", slug: "home", icon: Home },
+  { label: "Accommodation", slug: "accommodation", icon: Bed },
+  { label: "Amenities", slug: "amenities", icon: Utensils },
+  { label: "Location", slug: "location", icon: MapPin },
+  { label: "Gallery", slug: "gallery", icon: Image },
+  { label: "FAQ", slug: "faq", icon: HelpCircle },
+  { label: "Contact & Inquiry", slug: "contact", icon: Mail },
+] as const;
 
 function slugify(text: string): string {
   return text
@@ -49,12 +70,20 @@ export default function NewPagePage() {
     setSlug(slugify(value));
   };
 
+  const applyPreset = (presetLabel: string, presetSlug: string) => {
+    setTitle(presetLabel);
+    setSlug(presetSlug);
+    setSlugTouched(true);
+  };
+
   const isValidSlug = /^[a-z0-9-]+$/.test(slug) && slug.length > 0;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!isValidSlug) {
-      setError("Slug must contain only lowercase letters, numbers, and hyphens");
+      setError(
+        "Slug must contain only lowercase letters, numbers, and hyphens",
+      );
       return;
     }
     setError("");
@@ -77,9 +106,39 @@ export default function NewPagePage() {
       </button>
 
       <div className="mx-auto max-w-lg">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">
+        <h1 className="mb-2 text-2xl font-bold text-gray-900">
           Create New Page
         </h1>
+        <p className="mb-5 text-sm text-gray-500">
+          Pick a hospitality preset to prefill the title and slug, or enter your
+          own.
+        </p>
+
+        {/* Hospitality presets */}
+        <div className="mb-6 rounded-xl border border-gray-100 bg-gray-50 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Hospitality presets
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {HOSPITALITY_PRESETS.map(
+              ({ label, slug: presetSlug, icon: Icon }) => (
+                <button
+                  key={presetSlug}
+                  type="button"
+                  onClick={() => applyPreset(label, presetSlug)}
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border-2 px-3 py-2.5 text-xs font-medium transition-all ${
+                    slug === presetSlug && title === label
+                      ? "border-blue-500 bg-white text-blue-700 shadow-sm"
+                      : "border-transparent bg-white text-gray-600 hover:border-blue-200 hover:text-blue-600"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ),
+            )}
+          </div>
+        </div>
 
         <form
           onSubmit={handleSubmit}

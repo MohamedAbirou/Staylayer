@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { getDefaultAuthenticatedPath } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -17,8 +18,8 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      await login(email, password);
-      navigate("/pages", { replace: true });
+      const session = await login(email, password);
+      navigate(getDefaultAuthenticatedPath(session), { replace: true });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data

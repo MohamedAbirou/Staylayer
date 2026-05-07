@@ -1,9 +1,9 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { BRAND_NAME, DOMAIN_NAME } from "@/lib/brand";
+import { BRAND_NAME, BRAND_URL } from "@/lib/brand";
 
 const SITE_NAME = BRAND_NAME;
-const BASE_URL = `https://${DOMAIN_NAME}`;
+const BASE_URL = BRAND_URL;
 const DEFAULT_OG_IMAGE = `${BASE_URL}/images/thumb.jpg`;
 const DEFAULT_ORG_LOGO = `${BASE_URL}/images/logo.svg`;
 const SECOND_ORG_SCHEMA_LOGO = `${BASE_URL}/images/logo.png`;
@@ -11,22 +11,7 @@ const AUTHOR_NAME = BRAND_NAME;
 const OG_TYPE = "website";
 const OG_LOCALE_MAP = { en: "en_US", es: "es_ES", fr: "fr_FR", de: "de_DE" };
 const TWITTER_CARD_TYPE = "summary_large_image";
-const YOUTUBE_SAME_AS_URL = `https://www.youtube.com/@${BRAND_NAME.toLowerCase()}`;
-const DEFAULT_TITLE_TEMPLATE = `%s | ${SITE_NAME} ™`;
-
-const ORG_CONTACT = {
-  description: `Elevate management with ${BRAND_NAME}'s dedicated suite`,
-  email: `info@${DOMAIN_NAME}`,
-  telephone: "+971-54-754-4244",
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "emirates heights business bay",
-    addressLocality: "Dubai",
-    addressCountry: "AE",
-    addressRegion: "Dubai",
-    postalCode: "00000",
-  },
-};
+const DEFAULT_TITLE_TEMPLATE = `%s | ${SITE_NAME}`;
 
 const SEOHead = ({
   pageTitle,
@@ -37,6 +22,8 @@ const SEOHead = ({
 }) => {
   const router = useRouter();
   const currentLocale = router.locale || "en";
+  const canonicalPath =
+    (router.asPath || "/").split("#")[0].split("?")[0] || "/";
 
   // Use CMS settings when available, fall back to hardcoded defaults.
   const titleTemplate = settings?.seoTitleTemplate || DEFAULT_TITLE_TEMPLATE;
@@ -45,16 +32,14 @@ const SEOHead = ({
   const resolvedPageImage =
     pageImage || settings?.seoOgImage || DEFAULT_OG_IMAGE;
   const indexingEnabled = settings?.seoIndexingEnabled !== false;
-  const absolutePageUrl = `${BASE_URL}${router.asPath}`;
+  const absolutePageUrl = new URL(canonicalPath, `${BASE_URL}/`).toString();
   const ogLocale = OG_LOCALE_MAP[currentLocale] || "en_US";
   const siteName = settings?.siteName || SITE_NAME;
 
-  // Build sameAs list enriched with social URLs from settings.
-  const sameAsUrls = [
-    YOUTUBE_SAME_AS_URL,
-    settings?.facebookUrl,
-    settings?.linkedinUrl,
-  ].filter(Boolean);
+  // Build sameAs list from social URLs configured in site settings.
+  const sameAsUrls = [settings?.facebookUrl, settings?.linkedinUrl].filter(
+    Boolean,
+  );
 
   const organizationSchema1 = {
     "@context": "https://schema.org",
@@ -64,10 +49,9 @@ const SEOHead = ({
     sameAs: [absolutePageUrl, ...sameAsUrls],
     logo: DEFAULT_ORG_LOGO,
     name: siteName,
-    description: ORG_CONTACT.description,
-    email: settings?.supportEmail || ORG_CONTACT.email,
-    telephone: ORG_CONTACT.telephone,
-    address: ORG_CONTACT.address,
+    description:
+      settings?.seoDefaultDesc || `${siteName} — hospitality and accommodation`,
+    email: settings?.supportEmail || `contact@${new URL(BASE_URL).hostname}`,
   };
 
   const websiteSchema = {
@@ -88,7 +72,7 @@ const SEOHead = ({
     name: fullPageTitle,
     url: absolutePageUrl,
     logo: SECOND_ORG_SCHEMA_LOGO,
-    sameAs: sameAsUrls.length ? sameAsUrls : [YOUTUBE_SAME_AS_URL],
+    sameAs: sameAsUrls,
   };
 
   return (

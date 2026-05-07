@@ -9,6 +9,12 @@ import { PagesModule } from "./pages/pages.module";
 import { RevalidationModule } from "./revalidation/revalidation.module";
 import { HealthModule } from "./health/health.module";
 import { SettingsModule } from "./settings/settings.module";
+import { BillingModule } from "./billing/billing.module";
+import { AdminModule } from "./admin/admin.module";
+import { DeploymentsModule } from "./deployments/deployments.module";
+import { DomainsModule } from "./domains/domains.module";
+import { FormsModule } from "./forms/forms.module";
+import { TenantWorkspaceModule } from "./tenant-workspace/tenant-workspace.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 
@@ -40,7 +46,13 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     PagesModule,
     RevalidationModule,
     HealthModule,
+    BillingModule,
+    AdminModule,
     SettingsModule,
+    DeploymentsModule,
+    DomainsModule,
+    FormsModule,
+    TenantWorkspaceModule,
   ],
   providers: [
     // Reactivate later if we want global throttling (currently we apply it at the controller level with @UseGuards(ThrottlerGuard) and @Throttle() decorators)

@@ -6,14 +6,26 @@ import {
   getPageData,
   fetchAllPublishedSlugs,
   fetchSettings,
+  isHomepageSlug,
 } from "@/lib/cmsClient";
 import { getTranslations } from "@/lib/getTranslations";
 
+function getDefaultLocale() {
+  return (process.env.PRIMARY_LOCALE || "en").trim() || "en";
+}
+
 export async function getStaticPaths({ locales }) {
   const pages = await fetchAllPublishedSlugs();
+  const enabledLocales =
+    Array.isArray(locales) && locales.length > 0
+      ? locales
+      : [getDefaultLocale()];
 
   const paths = pages
-    .filter((page) => locales.includes(page.locale))
+    .filter(
+      (page) =>
+        enabledLocales.includes(page.locale) && !isHomepageSlug(page.slug),
+    )
     .map((page) => ({
       params: { slug: page.slug.split("/") },
       locale: page.locale,
@@ -26,12 +38,23 @@ export async function getStaticPaths({ locales }) {
 }
 
 export async function getStaticProps({ params, locale }) {
+  const requestedLocale = locale || getDefaultLocale();
   const slug = Array.isArray(params.slug) ? params.slug.join("/") : params.slug;
 
+  if (isHomepageSlug(slug)) {
+    return {
+      redirect: {
+        destination:
+          requestedLocale === getDefaultLocale() ? "/" : `/${requestedLocale}`,
+        permanent: true,
+      },
+    };
+  }
+
   const [page, settings, translations] = await Promise.all([
-    getPageData(slug, locale || "en"),
+    getPageData(slug, requestedLocale),
     fetchSettings(),
-    getTranslations(locale || "en"),
+    getTranslations(requestedLocale),
   ]);
 
   if (!page) {

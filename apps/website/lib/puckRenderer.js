@@ -75,7 +75,7 @@ function ContactSectionWithRealForm(props) {
 
           {/* ── Right: real ContactForm ── */}
           <div className="md:col-span-2">
-            <ContactForm />
+            <ContactForm formKey={props.formKey || null} />
           </div>
         </div>
 

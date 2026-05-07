@@ -1,7 +1,3 @@
-import { IsString, MinLength } from "class-validator";
+import { SiteScopeQueryDto } from "../../common/dto/site-scope-query.dto";
 
-export class SiteSettingsQueryDto {
-  @IsString()
-  @MinLength(1)
-  siteId: string;
-}
+export class SiteSettingsQueryDto extends SiteScopeQueryDto {}

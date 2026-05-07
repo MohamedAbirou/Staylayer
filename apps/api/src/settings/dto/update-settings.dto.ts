@@ -1,11 +1,15 @@
 import {
+  ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEmail,
   IsIn,
   IsOptional,
   IsString,
+  IsUrl,
   MaxLength,
+  ValidateIf,
 } from "class-validator";
 import { Transform } from "class-transformer";
 
@@ -26,6 +30,21 @@ export class UpdateSettingsDto {
   @IsEmail()
   @IsOptional()
   supportEmail?: string;
+
+  @ValidateIf((_, value) => value !== "")
+  @IsEmail()
+  @IsOptional()
+  defaultInquiryRoutingEmail?: string;
+
+  @ValidateIf((_, value) => value !== "")
+  @IsUrl({ require_protocol: true })
+  @IsOptional()
+  inquiryWebhookUrl?: string;
+
+  @IsString()
+  @MaxLength(200)
+  @IsOptional()
+  inquiryWebhookSecret?: string;
 
   @IsString()
   @IsOptional()
@@ -97,6 +116,9 @@ export class UpdateSettingsDto {
 
   @IsArray()
   @IsString({ each: true })
+  @IsIn(SUPPORTED_LOCALES, { each: true })
+  @ArrayMinSize(1)
+  @ArrayUnique()
   @IsOptional()
   activeLocales?: string[];
 }

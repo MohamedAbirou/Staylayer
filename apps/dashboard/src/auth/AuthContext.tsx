@@ -1,12 +1,14 @@
 import { createContext } from "react";
-import type { User } from "../lib/constants";
+import type { AuthContextRequest, AuthSession, AuthUser } from "./types";
 
 export interface AuthState {
-  user: User | null;
+  session: AuthSession | null;
+  user: AuthUser | null;
   loading: boolean;
   getAccessToken: () => string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthSession>;
   logout: () => Promise<void>;
+  switchWorkspace: (context: AuthContextRequest) => Promise<AuthSession>;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);

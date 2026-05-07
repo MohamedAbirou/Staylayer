@@ -7,9 +7,9 @@ import PuckRenderer from "@/lib/puckRenderer";
 import { getPageData } from "@/lib/cmsClient";
 
 const pageSeo = {
-  pageTitle: `Contact ${BRAND_NAME}, Vacation Rental Software & Dynamic Pricing`,
-  pageDescription: `Ready to earn more from every booking? ${BRAND_NAME} hosts report up to 20% higher revenue after switching to our all-in-one vacation-rental platform and AI-powered dynamic pricing engine. If you have questions, we'd love to talk.`,
-  pageKeywords: `contact, ${BRAND_NAME}, vacation rental, software, dynamic pricing`,
+  pageTitle: `Contact ${BRAND_NAME}`,
+  pageDescription: `Get in touch to plan your stay, check availability, or ask about special requests. Our team is happy to help with everything you need for a memorable visit.`,
+  pageKeywords: `contact, ${BRAND_NAME}, hospitality, accommodation, plan your stay`,
 };
 
 export async function getStaticProps({ locale }) {
@@ -70,13 +70,9 @@ export default function ContactUs({ cmsPage }) {
           </h1>
 
           <p className="text-white/90 raw text-base sm:text-lg md:text-xl font-medium text-center max-w-2xl mx-auto mt-2 px-4 drop-shadow">
-            Ready to earn more from every booking?{" "}
-            <span className="font-bold text-lg! text-white raw">
-              {BRAND_NAME} hosts report up to 20% higher revenue
-            </span>{" "}
-            after switching to our all-in-one vacation-rental platform and
-            AI-powered dynamic pricing engine. If you have questions, we'd love
-            to talk.
+            Planning your visit? Our team is here to help with availability,
+            special requests, and everything in between. We&apos;d love to hear
+            from you.
           </p>
         </div>
         <section className="py-12 bg-white">
@@ -88,15 +84,15 @@ export default function ContactUs({ cmsPage }) {
                   Let's Connect
                 </h3>
                 <p className="text-slate-700 mb-2">
-                  Have a question about {BRAND_NAME} or need help with your
-                  account? Fill out the form and our team will get back to you
-                  quickly.
+                  Have a question about your upcoming stay or want to check
+                  availability? Fill out the form and our team will get back to
+                  you quickly.
                 </p>
                 <ul className="list-disc pl-5 text-slate-600 space-y-1 mb-4">
-                  <li>Onboarding & setup guidance</li>
-                  <li>Feature walkthroughs</li>
-                  <li>Partnership opportunities</li>
-                  <li>General support</li>
+                  <li>Availability &amp; booking inquiries</li>
+                  <li>Special requests &amp; occasions</li>
+                  <li>Group and long-stay rates</li>
+                  <li>General questions</li>
                 </ul>
                 <div className="mt-4">
                   <span className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium text-sm">

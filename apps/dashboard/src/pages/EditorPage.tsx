@@ -11,8 +11,9 @@ import { usePage } from "../hooks/usePage";
 import { useSavePage } from "../hooks/useSavePage";
 import { usePublishPage } from "../hooks/usePublishPage";
 import { useVersions } from "../hooks/useVersions";
+import { canPublishContent } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
-import { restoreVersion } from "../api/pages";
+import { restoreVersion, updatePage } from "../api/pages";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { formatDate } from "../lib/formatDate";
@@ -26,6 +27,11 @@ import {
   Loader2,
   RotateCcw,
   X,
+  Search,
+  EyeOff,
+  AlertCircle,
+  Image,
+  Link,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,7 +48,7 @@ export default function EditorPage() {
   const [searchParams] = useSearchParams();
   const locale = searchParams.get("locale") || "en";
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { session } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: page, isLoading, error } = usePage(slug, locale);
@@ -51,6 +57,7 @@ export default function EditorPage() {
 
   const [isDirty, setIsDirty] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
+  const [showSeoPanel, setShowSeoPanel] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [draftTime, setDraftTime] = useState<string | null>(null);
   const [showDesktopWarning, setShowDesktopWarning] = useState(false);
@@ -58,9 +65,32 @@ export default function EditorPage() {
   const [puckKey, setPuckKey] = useState(0);
   const latestDataRef = useRef<Data | null>(null);
 
+  // ─── Page-level SEO state ─────────────────────────────────
+  const [seoForm, setSeoForm] = useState({
+    seoTitle: "",
+    seoDescription: "",
+    seoKeywords: "",
+    seoOgImage: "",
+    seoCanonical: "",
+    seoNoindex: false,
+  });
+  const [seoDirty, setSeoDirty] = useState(false);
+
   const { data: versionsData } = useVersions(slug, locale, showVersions);
 
-  const canPublish = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+  const saveSeoMutation = useMutation({
+    mutationFn: (form: typeof seoForm) => updatePage(slug!, locale, form),
+    onSuccess: () => {
+      toast.success("SEO settings saved");
+      setSeoDirty(false);
+      void queryClient.invalidateQueries({ queryKey: ["page", slug, locale] });
+    },
+    onError: () => {
+      toast.error("Failed to save SEO settings");
+    },
+  });
+
+  const canPublish = canPublishContent(session);
 
   // Check for local draft on mount
   useEffect(() => {
@@ -82,6 +112,21 @@ export default function EditorPage() {
       }
     }
   }, [slug, locale, page]);
+
+  // Populate SEO form from loaded page
+  useEffect(() => {
+    if (page) {
+      setSeoForm({
+        seoTitle: page.seoTitle ?? "",
+        seoDescription: page.seoDescription ?? "",
+        seoKeywords: page.seoKeywords ?? "",
+        seoOgImage: page.seoOgImage ?? "",
+        seoCanonical: page.seoCanonical ?? "",
+        seoNoindex: page.seoNoindex ?? false,
+      });
+      setSeoDirty(false);
+    }
+  }, [page]);
 
   // Desktop-only warning
   useEffect(() => {
@@ -275,11 +320,31 @@ export default function EditorPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowVersions(!showVersions)}
+              onClick={() => {
+                setShowVersions(!showVersions);
+                setShowSeoPanel(false);
+              }}
               className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
             >
               <History className="h-4 w-4" />
               History
+            </button>
+            <button
+              onClick={() => {
+                setShowSeoPanel(!showSeoPanel);
+                setShowVersions(false);
+              }}
+              className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm cursor-pointer ${
+                showSeoPanel
+                  ? "border-blue-400 bg-blue-50 text-blue-700"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <Search className="h-4 w-4" />
+              SEO
+              {seoDirty && (
+                <span className="ml-1 h-2 w-2 rounded-full bg-amber-400" />
+              )}
             </button>
             <button
               onClick={() =>
@@ -427,6 +492,24 @@ export default function EditorPage() {
               </div>
             </div>
           )}
+
+          {/* SEO Sidebar */}
+          {showSeoPanel && (
+            <PageSeoPanel
+              slug={slug!}
+              locale={locale}
+              page={page}
+              form={seoForm}
+              dirty={seoDirty}
+              saving={saveSeoMutation.isPending}
+              onChange={(next) => {
+                setSeoForm(next);
+                setSeoDirty(true);
+              }}
+              onSave={() => saveSeoMutation.mutate(seoForm)}
+              onClose={() => setShowSeoPanel(false)}
+            />
+          )}
         </div>
       </div>
 
@@ -442,6 +525,302 @@ export default function EditorPage() {
         }}
         onCancel={() => setRestoreConfirm(null)}
       />
+    </div>
+  );
+}
+
+// ─── Page SEO Panel ──────────────────────────────────────────────────────────
+
+interface SeoFormState {
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
+  seoOgImage: string;
+  seoCanonical: string;
+  seoNoindex: boolean;
+}
+
+function PageSeoPanel({
+  slug,
+  locale,
+  page,
+  form,
+  dirty,
+  saving,
+  onChange,
+  onSave,
+  onClose,
+}: {
+  slug: string;
+  locale: string;
+  page: { title: string; seoTitle?: string };
+  form: SeoFormState;
+  dirty: boolean;
+  saving: boolean;
+  onChange: (next: SeoFormState) => void;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const effectiveTitle = form.seoTitle || page.title || slug;
+  const descLen = form.seoDescription.length;
+  const titleLen = effectiveTitle.length;
+
+  return (
+    <div className="w-96 border-l border-gray-200 bg-white shadow-lg z-20 flex flex-col max-h-screen overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3.5 shrink-0">
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-gray-500" />
+          <h3 className="text-sm font-semibold text-gray-900">Page SEO</h3>
+          {dirty && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+              Unsaved
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="rounded p-1 text-gray-400 hover:text-gray-600"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {/* SERP Preview */}
+        <div className="border-b border-gray-100 bg-gray-50 p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Search result preview
+          </p>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
+              <div className="h-4 w-4 rounded-sm bg-gray-200" />
+              <span>yourdomain.com</span>
+              <span className="text-gray-300">›</span>
+              <span>{slug}</span>
+            </div>
+            <p
+              className={`text-base font-medium leading-snug text-blue-700 line-clamp-1 ${
+                titleLen > 60 ? "text-amber-700" : ""
+              }`}
+            >
+              {effectiveTitle || "Page title"}
+            </p>
+            <p className="mt-0.5 text-sm text-gray-600 line-clamp-2 leading-relaxed">
+              {form.seoDescription || (
+                <span className="text-gray-300 italic">
+                  No description — add one below
+                </span>
+              )}
+            </p>
+          </div>
+          {titleLen > 60 && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-amber-600">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Title is {titleLen} chars — Google clips at ~60
+            </p>
+          )}
+          {descLen > 160 && (
+            <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Description is {descLen} chars — aim for under 160
+            </p>
+          )}
+          {form.seoNoindex && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600">
+              <EyeOff className="h-3.5 w-3.5" />
+              This page is set to noindex — it will not appear in search results
+            </p>
+          )}
+        </div>
+
+        {/* OG / Social card preview */}
+        {form.seoOgImage && (
+          <div className="border-b border-gray-100 bg-gray-50 p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+              Social card preview
+            </p>
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <img
+                src={form.seoOgImage}
+                alt="OG preview"
+                className="aspect-[1200/630] w-full object-cover"
+                onError={(e) =>
+                  ((e.target as HTMLImageElement).style.display = "none")
+                }
+              />
+              <div className="border-t border-gray-100 bg-gray-50 px-3 py-2">
+                <p className="text-xs font-medium text-gray-900 line-clamp-1">
+                  {effectiveTitle}
+                </p>
+                <p className="text-[11px] text-gray-500 line-clamp-1">
+                  {form.seoDescription}
+                </p>
+                <p className="mt-0.5 text-[10px] uppercase text-gray-400">
+                  yourdomain.com
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fields */}
+        <div className="space-y-5 p-4">
+          {/* SEO title */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              SEO title
+            </label>
+            <input
+              type="text"
+              value={form.seoTitle}
+              onChange={(e) => onChange({ ...form, seoTitle: e.target.value })}
+              placeholder={page.title || "Leave blank to use page title"}
+              className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-[11px] text-gray-400">
+              {titleLen}/60 chars · Overrides the page title in search results
+            </p>
+          </div>
+
+          {/* Meta description */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Meta description
+            </label>
+            <textarea
+              rows={3}
+              value={form.seoDescription}
+              onChange={(e) =>
+                onChange({ ...form, seoDescription: e.target.value })
+              }
+              placeholder="Describe this page for search engines…"
+              className="mt-1.5 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <p
+              className={`mt-1 text-[11px] ${
+                descLen > 160
+                  ? "text-red-500"
+                  : descLen > 140
+                    ? "text-amber-500"
+                    : "text-gray-400"
+              }`}
+            >
+              {descLen}/160 chars
+            </p>
+          </div>
+
+          {/* Keywords */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Keywords
+            </label>
+            <input
+              type="text"
+              value={form.seoKeywords}
+              onChange={(e) =>
+                onChange({ ...form, seoKeywords: e.target.value })
+              }
+              placeholder="vacation rental, direct bookings…"
+              className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-[11px] text-gray-400">
+              Comma-separated · Optional, low weight in modern search
+            </p>
+          </div>
+
+          {/* OG Image */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+              <Image className="h-3.5 w-3.5" />
+              OG / Social image URL
+            </label>
+            <input
+              type="text"
+              value={form.seoOgImage}
+              onChange={(e) =>
+                onChange({ ...form, seoOgImage: e.target.value })
+              }
+              placeholder="https://example.com/og-image.jpg"
+              className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-[11px] text-gray-400">
+              Recommended 1200×630px · Shown when shared on social platforms
+            </p>
+          </div>
+
+          {/* Canonical */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+              <Link className="h-3.5 w-3.5" />
+              Canonical URL override
+            </label>
+            <input
+              type="text"
+              value={form.seoCanonical}
+              onChange={(e) =>
+                onChange({ ...form, seoCanonical: e.target.value })
+              }
+              placeholder="https://yourdomain.com/page-slug"
+              className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-[11px] text-gray-400">
+              Leave blank to use the default canonical derived from the page
+              slug
+            </p>
+          </div>
+
+          {/* noindex toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-gray-800">
+                Exclude from search results
+              </p>
+              <p className="text-xs text-gray-500">
+                Adds a noindex meta tag so search engines skip this page
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                onChange({ ...form, seoNoindex: !form.seoNoindex })
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                form.seoNoindex ? "bg-red-500" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 translate-x-1 transform rounded-full bg-white shadow transition-transform ${
+                  form.seoNoindex ? "translate-x-6" : ""
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Locale note */}
+          <p className="text-[11px] text-gray-400">
+            These settings apply to the{" "}
+            <span className="font-semibold">{locale}</span> version of this
+            page.
+          </p>
+        </div>
+      </div>
+
+      {/* Save bar */}
+      <div className="shrink-0 border-t border-gray-200 px-4 py-3">
+        <button
+          onClick={onSave}
+          disabled={!dirty || saving}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save SEO settings
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,19 +1,22 @@
 import {
+  Body,
   Controller,
-  Post,
-  UseGuards,
-  Req,
-  Res,
   HttpCode,
   HttpStatus,
-  Body,
+  Post,
+  Req,
+  Res,
   UnauthorizedException,
+  UseGuards,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { Throttle } from "@nestjs/throttler";
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
+import { AuthContextDto } from "./dto/auth-context.dto";
 import { LoginDto } from "./dto/login.dto";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { AuthResponse } from "./auth.types";
 
 @Controller("auth")
 export class AuthController {
@@ -24,15 +27,16 @@ export class AuthController {
   @UseGuards(AuthGuard("local"))
   @HttpCode(HttpStatus.OK)
   async login(
-    @Body() _loginDto: LoginDto,
+    @Body() loginDto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{
-    accessToken: string;
-    user: { id: string; email: string; role: string };
-  }> {
-    const user = req.user as { id: string; email: string; role: string };
-    const result = await this.authService.login(user);
+  ): Promise<AuthResponse> {
+    const user = req.user as {
+      id: string;
+      email: string;
+      platformRole: AuthResponse["user"]["platformRole"];
+    };
+    const result = await this.authService.login(user, loginDto);
 
     const refreshToken = await this.authService.generateRefreshToken(user.id);
     res.cookie(
@@ -48,12 +52,10 @@ export class AuthController {
   @Throttle({ refresh: {} })
   @HttpCode(HttpStatus.OK)
   async refresh(
+    @Body() context: AuthContextDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{
-    accessToken: string;
-    user: { id: string; email: string; role: string };
-  }> {
+  ): Promise<AuthResponse> {
     const rawToken = req.cookies?.["refresh_token"] as string | undefined;
 
     if (!rawToken) {
@@ -63,8 +65,8 @@ export class AuthController {
       });
     }
 
-    const { accessToken, newRefreshToken, user } =
-      await this.authService.refreshAccessToken(rawToken);
+    const { newRefreshToken, ...result } =
+      await this.authService.refreshAccessToken(rawToken, context);
 
     res.cookie(
       "refresh_token",
@@ -72,10 +74,11 @@ export class AuthController {
       this.authService.getRefreshTokenCookieOptions(),
     );
 
-    return { accessToken, user };
+    return result;
   }
 
   @Post("logout")
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async logout(
     @Res({ passthrough: true }) res: Response,

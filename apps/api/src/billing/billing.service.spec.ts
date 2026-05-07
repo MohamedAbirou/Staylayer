@@ -1,0 +1,401 @@
+/// <reference types="jest" />
+
+import { ConflictException, ForbiddenException } from "@nestjs/common";
+import { SubscriptionStatus } from "@prisma/client";
+import { BillingService } from "./billing.service";
+
+function buildPrismaMock() {
+  return {
+    tenant: {
+      findUnique: jest.fn(),
+    },
+    site: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+    },
+    domain: {
+      count: jest.fn(),
+    },
+    tenantMembership: {
+      count: jest.fn(),
+    },
+    page: {
+      count: jest.fn(),
+    },
+    formSubmission: {
+      count: jest.fn(),
+    },
+    subscription: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    billingWebhookEvent: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+  };
+}
+
+function buildConfigMock() {
+  return {
+    get: jest.fn((key: string) => {
+      if (key === "STRIPE_WEBHOOK_SECRET") {
+        return "whsec_test";
+      }
+
+      if (key === "STRIPE_SECRET_KEY") {
+        return "sk_test_123";
+      }
+
+      return undefined;
+    }),
+  };
+}
+
+function buildSubscription(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "db-sub-1",
+    tenantId: "tenant-1",
+    provider: "stripe",
+    providerCustomerId: "cus_123",
+    providerSubscriptionId: "sub_123",
+    providerPriceId: "price_123",
+    planKey: "starter_stay",
+    status: SubscriptionStatus.ACTIVE,
+    currentPeriodStart: new Date("2026-05-01T00:00:00.000Z"),
+    currentPeriodEnd: new Date("2026-06-01T00:00:00.000Z"),
+    cancelAtPeriodEnd: false,
+    limitsSnapshot: null,
+    gracePeriodEndsAt: null,
+    lastWebhookEventId: null,
+    lastWebhookAt: null,
+    createdAt: new Date("2026-05-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-05-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+describe("BillingService", () => {
+  let prisma: ReturnType<typeof buildPrismaMock>;
+  let config: ReturnType<typeof buildConfigMock>;
+  let service: BillingService;
+
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-05-02T00:00:00.000Z"));
+    prisma = buildPrismaMock();
+    config = buildConfigMock();
+    service = new BillingService(prisma as never, config as never);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("falls back to a starter trial snapshot when a tenant has no Stripe subscription yet", async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "Harbor House",
+      createdAt: new Date("2026-04-29T00:00:00.000Z"),
+    });
+    prisma.subscription.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    prisma.site.findMany.mockResolvedValue([
+      { id: "site-1", enabledLocales: ["en"] },
+    ]);
+    prisma.tenantMembership.count.mockResolvedValue(2);
+    prisma.page.count.mockResolvedValue(4);
+    prisma.formSubmission.count.mockResolvedValue(12);
+    prisma.domain.count.mockResolvedValue(0);
+
+    const snapshot = await service.getTenantPlanSnapshot("tenant-1");
+
+    expect(snapshot.planKey).toBe("starter_stay");
+    expect(snapshot.status).toBe("trialing");
+    expect(snapshot.usage).toEqual({
+      sites: 1,
+      locales: 1,
+      seats: 2,
+      formSubmissions: 12,
+      pages: 4,
+    });
+    expect(snapshot.actions.publishingBlocked).toBe(false);
+  });
+
+  it("blocks locale increases that exceed the current plan capacity", async () => {
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      enabledLocales: ["en"],
+      primaryLocale: "en",
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "Harbor House",
+      createdAt: new Date("2026-04-01T00:00:00.000Z"),
+    });
+    prisma.subscription.findFirst.mockResolvedValue(buildSubscription());
+    prisma.site.findMany.mockResolvedValue([
+      { id: "site-1", enabledLocales: ["en"] },
+    ]);
+    prisma.tenantMembership.count.mockResolvedValue(2);
+    prisma.page.count.mockResolvedValue(4);
+    prisma.formSubmission.count.mockResolvedValue(12);
+    prisma.domain.count.mockResolvedValue(0);
+
+    await expect(
+      service.assertCanUpdateSiteLocales("site-1", ["en", "es"]),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("blocks publishing after the billing grace period expires", async () => {
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      enabledLocales: ["en"],
+      primaryLocale: "en",
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "Harbor House",
+      createdAt: new Date("2026-04-01T00:00:00.000Z"),
+    });
+    prisma.subscription.findFirst.mockResolvedValue(
+      buildSubscription({
+        status: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: new Date("2026-05-01T00:00:00.000Z"),
+      }),
+    );
+    prisma.site.findMany.mockResolvedValue([
+      { id: "site-1", enabledLocales: ["en"] },
+    ]);
+    prisma.tenantMembership.count.mockResolvedValue(2);
+    prisma.page.count.mockResolvedValue(4);
+    prisma.formSubmission.count.mockResolvedValue(12);
+    prisma.domain.count.mockResolvedValue(0);
+
+    await expect(service.assertCanPublishSite("site-1")).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it("enforces the monthly inquiry limit from the hospitality plan", async () => {
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      enabledLocales: ["en"],
+      primaryLocale: "en",
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "Harbor House",
+      createdAt: new Date("2026-04-01T00:00:00.000Z"),
+    });
+    prisma.subscription.findFirst.mockResolvedValue(buildSubscription());
+    prisma.site.findMany.mockResolvedValue([
+      { id: "site-1", enabledLocales: ["en"] },
+    ]);
+    prisma.tenantMembership.count.mockResolvedValue(2);
+    prisma.page.count.mockResolvedValue(4);
+    prisma.formSubmission.count.mockResolvedValue(150);
+    prisma.domain.count.mockResolvedValue(0);
+
+    await expect(
+      service.assertCanAcceptInquiry("site-1"),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("enforces the tenant domain limit from the hospitality plan", async () => {
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      enabledLocales: ["en"],
+      primaryLocale: "en",
+    });
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "Harbor House",
+      createdAt: new Date("2026-04-01T00:00:00.000Z"),
+    });
+    prisma.subscription.findFirst.mockResolvedValue(buildSubscription());
+    prisma.site.findMany.mockResolvedValue([
+      { id: "site-1", enabledLocales: ["en"] },
+    ]);
+    prisma.tenantMembership.count.mockResolvedValue(2);
+    prisma.page.count.mockResolvedValue(4);
+    prisma.formSubmission.count.mockResolvedValue(12);
+    prisma.domain.count.mockResolvedValue(1);
+
+    await expect(service.assertCanAddDomain("site-1")).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+  });
+
+  it("records and applies a Stripe subscription webhook update", async () => {
+    const stripeEvent = {
+      id: "evt_123",
+      type: "customer.subscription.updated",
+      created: 1_777_000_000,
+      data: {
+        object: {
+          id: "sub_stripe_123",
+          customer: "cus_123",
+          metadata: {
+            tenantId: "tenant-1",
+            planKey: "boutique_growth",
+          },
+          status: "active",
+          items: {
+            data: [{ price: { id: "price_bg_123" } }],
+          },
+          current_period_start: 1_777_000_000,
+          current_period_end: 1_779_592_000,
+          cancel_at_period_end: false,
+        },
+      },
+    };
+
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.billingWebhookEvent.create.mockResolvedValue({ id: "receipt-1" });
+    prisma.subscription.findUnique.mockResolvedValue(null);
+    prisma.subscription.findFirst.mockResolvedValue(null);
+    prisma.subscription.create.mockResolvedValue({ id: "db-sub-2" });
+
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        webhooks: {
+          constructEvent: jest.fn().mockReturnValue(stripeEvent),
+        },
+      });
+
+    const result = await service.handleStripeWebhook(
+      "sig_test",
+      Buffer.from("{}"),
+    );
+
+    expect(result).toEqual({
+      received: true,
+      duplicate: false,
+      eventType: "customer.subscription.updated",
+    });
+    expect(prisma.subscription.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tenantId: "tenant-1",
+          provider: "stripe",
+          providerSubscriptionId: "sub_stripe_123",
+          planKey: "boutique_growth",
+          status: SubscriptionStatus.ACTIVE,
+        }),
+      }),
+    );
+    expect(prisma.billingWebhookEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tenantId: "tenant-1",
+          subscriptionId: "db-sub-2",
+        }),
+      }),
+    );
+  });
+
+  // ── Launch checklist: "billing webhooks are reliable and idempotent" ──────────
+  it("returns duplicate:true without re-processing a webhook event it has already seen", async () => {
+    const stripeEvent = {
+      id: "evt_already_seen",
+      type: "customer.subscription.updated",
+      data: { object: {} },
+    };
+
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      id: "receipt-existing",
+    });
+
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        webhooks: {
+          constructEvent: jest.fn().mockReturnValue(stripeEvent),
+        },
+      });
+
+    const result = await service.handleStripeWebhook(
+      "sig_test",
+      Buffer.from("{}"),
+    );
+
+    expect(result).toEqual({
+      received: true,
+      duplicate: true,
+      eventType: "customer.subscription.updated",
+    });
+    // Must not touch subscriptions when replaying a seen event
+    expect(prisma.billingWebhookEvent.create).not.toHaveBeenCalled();
+    expect(prisma.subscription.create).not.toHaveBeenCalled();
+    expect(prisma.subscription.update).not.toHaveBeenCalled();
+  });
+
+  // ── E2E path #4: "failed payment -> plan state changes -> restricted behavior" ─
+  it("updates a subscription to PAST_DUE and sets a grace period when Stripe reports payment failure", async () => {
+    const stripeEvent = {
+      id: "evt_payment_fail",
+      type: "customer.subscription.updated",
+      created: 1_777_000_000,
+      data: {
+        object: {
+          id: "sub_stripe_456",
+          customer: "cus_456",
+          metadata: { tenantId: "tenant-2", planKey: "starter_stay" },
+          status: "past_due",
+          items: { data: [{ price: { id: "price_starter_123" } }] },
+          current_period_start: 1_777_000_000,
+          current_period_end: 1_779_592_000,
+          cancel_at_period_end: false,
+        },
+      },
+    };
+
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.billingWebhookEvent.create.mockResolvedValue({ id: "receipt-2" });
+    // Existing subscription on record — triggers update path
+    prisma.subscription.findUnique.mockResolvedValue({
+      id: "db-sub-existing",
+      tenantId: "tenant-2",
+      gracePeriodEndsAt: null,
+    });
+    prisma.subscription.update.mockResolvedValue({ id: "db-sub-existing" });
+
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        webhooks: {
+          constructEvent: jest.fn().mockReturnValue(stripeEvent),
+        },
+      });
+
+    const result = await service.handleStripeWebhook(
+      "sig_test",
+      Buffer.from("{}"),
+    );
+
+    expect(result).toEqual({
+      received: true,
+      duplicate: false,
+      eventType: "customer.subscription.updated",
+    });
+    // Grace period must be set (7 days from the mocked "now" = 2026-05-02)
+    expect(prisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "db-sub-existing" },
+        data: expect.objectContaining({
+          status: SubscriptionStatus.PAST_DUE,
+          gracePeriodEndsAt: new Date("2026-05-09T00:00:00.000Z"),
+        }),
+      }),
+    );
+    expect(prisma.subscription.create).not.toHaveBeenCalled();
+  });
+});

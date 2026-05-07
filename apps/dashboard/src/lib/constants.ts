@@ -3,17 +3,6 @@ export const API_URL = import.meta.env.VITE_API_URL || "/api";
 export const LOCALES = ["en", "es", "fr", "de"] as const;
 export type Locale = (typeof LOCALES)[number];
 
-export const ROLES = ["EDITOR", "ADMIN", "SUPER_ADMIN"] as const;
-export type Role = (typeof ROLES)[number];
-
-export interface User {
-  id: string;
-  email: string;
-  role: Role;
-  createdAt: string;
-  updatedAt?: string;
-}
-
 export interface Page {
   id: string;
   slug: string;
@@ -24,6 +13,9 @@ export interface Page {
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
+  seoOgImage: string;
+  seoCanonical: string;
+  seoNoindex: boolean;
   createdAt: string;
   updatedAt: string;
 }

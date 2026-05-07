@@ -1,6 +1,30 @@
 import crypto from "crypto";
 
-const LOCALES = ["en", "es", "fr", "de"];
+const SUPPORTED_LOCALES = ["en", "es", "fr", "de"];
+
+function parseLocales() {
+  const primaryLocale = (process.env.PRIMARY_LOCALE || "en").trim() || "en";
+  const configuredLocales = (process.env.ENABLED_LOCALES || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const locales = Array.from(new Set([primaryLocale, ...configuredLocales]));
+  const invalidLocales = locales.filter(
+    (locale) => !SUPPORTED_LOCALES.includes(locale),
+  );
+
+  if (!SUPPORTED_LOCALES.includes(primaryLocale) || invalidLocales.length > 0) {
+    throw new Error(
+      `Unsupported locale configuration for dedicated site runtime: ${locales.join(", ")}`,
+    );
+  }
+
+  return locales;
+}
+
+function getRevalidationSecret() {
+  return process.env.REVALIDATE_SECRET || process.env.REVALIDATION_SECRET || "";
+}
 
 function secretsMatch(a, b) {
   if (!a || !b) return false;
@@ -16,7 +40,7 @@ export default async function handler(req, res) {
   }
 
   const secret = req.headers["x-revalidate-secret"];
-  if (!secretsMatch(secret, process.env.REVALIDATION_SECRET)) {
+  if (!secretsMatch(secret, getRevalidationSecret())) {
     return res.status(401).json({ message: "Invalid revalidation secret" });
   }
 
@@ -26,8 +50,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    const locales = parseLocales();
     const results = await Promise.allSettled(
-      LOCALES.map(async (locale) => {
+      locales.map(async (locale) => {
         const path = locale === "en" ? `/${slug}` : `/${locale}/${slug}`;
         await res.revalidate(path);
         return { locale, path, status: "ok" };
@@ -37,7 +62,7 @@ export default async function handler(req, res) {
     // Also revalidate the homepage if slug is 'index' or 'home'
     if (slug === "index" || slug === "home" || slug === "") {
       await Promise.allSettled(
-        LOCALES.map((locale) =>
+        locales.map((locale) =>
           res.revalidate(locale === "en" ? "/" : `/${locale}`),
         ),
       );

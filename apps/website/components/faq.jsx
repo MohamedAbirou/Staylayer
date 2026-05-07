@@ -14,9 +14,9 @@ export default function FAQ({ content, title }) {
         {title ? title : "Frequently asked questions"}
       </h2>
       <div>
-        {content.map((faq, index) => (
+        {(content ?? []).map((faq, index) => (
           <Accordion
-            key={faq.q}
+            key={faq.q ?? index}
             title={faq.q}
             isOpen={openIndex === index}
             setOpen={() => toggleAccordion(index)}
@@ -31,14 +31,14 @@ export default function FAQ({ content, title }) {
                     {paragraph}
                   </p>
                 ))}
-              {faq.a.points && (
+              {faq.a?.points && (
                 <ul className="list-disc pl-5 mt-2">
                   {faq.a.points.map((point, pIndex) => (
                     <li key={pIndex}>{point}</li>
                   ))}
                 </ul>
               )}
-              {faq.a.links && (
+              {faq.a?.links && (
                 <p>
                   {faq.a.links.map((link, lIndex) => (
                     <span key={lIndex}>
@@ -57,7 +57,7 @@ export default function FAQ({ content, title }) {
                   ))}
                 </p>
               )}
-              {faq.a.link && (
+              {faq.a?.link && (
                 <p>
                   {faq.a.link.text}
                   <a

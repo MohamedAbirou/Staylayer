@@ -1,10 +1,12 @@
 import client from "./client";
-import type { User, PaginatedResponse, Role } from "../lib/constants";
+import type { OperatorUser, PlatformRole } from "../auth/types";
+import type { PaginatedResponse } from "../lib/constants";
 
-export async function getUsers(
-  params?: { page?: number; limit?: number },
-): Promise<PaginatedResponse<User>> {
-  const { data } = await client.get<PaginatedResponse<User>>("/users", {
+export async function getUsers(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<PaginatedResponse<OperatorUser>> {
+  const { data } = await client.get<PaginatedResponse<OperatorUser>>("/users", {
     params,
   });
   return data;
@@ -13,25 +15,27 @@ export async function getUsers(
 interface CreateUserPayload {
   email: string;
   password: string;
-  role: Role;
+  platformRole: PlatformRole;
 }
 
-export async function createUser(payload: CreateUserPayload): Promise<User> {
-  const { data } = await client.post<User>("/users", payload);
+export async function createUser(
+  payload: CreateUserPayload,
+): Promise<OperatorUser> {
+  const { data } = await client.post<OperatorUser>("/users", payload);
   return data;
 }
 
 interface UpdateUserPayload {
   email?: string;
   password?: string;
-  role?: Role;
+  platformRole?: PlatformRole;
 }
 
 export async function updateUser(
   id: string,
   payload: UpdateUserPayload,
-): Promise<User> {
-  const { data } = await client.patch<User>(`/users/${id}`, payload);
+): Promise<OperatorUser> {
+  const { data } = await client.patch<OperatorUser>(`/users/${id}`, payload);
   return data;
 }
 

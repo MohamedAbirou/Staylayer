@@ -2,6 +2,7 @@ import type { ComponentConfig } from "@puckeditor/core";
 import { textColorField, backgroundColorField } from "../../lib/fields";
 
 export interface ContactSectionProps {
+  formKey?: string;
   heading: string;
   description: string;
   bulletItems: { text: string }[];
@@ -22,6 +23,7 @@ export interface ContactSectionProps {
  * ContactForm component (which has full validation + Formspree submit).
  */
 export const ContactSection = ({
+  formKey = "",
   heading = "Let's Connect",
   description = "Have a question? Fill out the form and our team will get back to you quickly.",
   bulletItems = [
@@ -78,6 +80,11 @@ export const ContactSection = ({
           {/* ── Right: form mock (editor preview only) ───────────────── */}
           <div className="md:col-span-2">
             <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-6 sm:p-8 flex flex-col gap-6 border border-gray-100">
+              {formKey ? (
+                <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+                  Assigned form key: {formKey}
+                </div>
+              ) : null}
               {/* Mock inputs — visual only, not interactive */}
               <div className="h-11 rounded-lg border border-gray-200 bg-gray-50 px-4 flex items-center">
                 <span className="text-gray-400 text-base">Your Name</span>
@@ -120,6 +127,12 @@ export const ContactSection = ({
 export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
   label: "Contact Section",
   fields: {
+    formKey: {
+      type: "text",
+      label: "Assigned Form Key",
+      helperText:
+        "Optional. If provided, the live website will resolve this section against the matching published form definition.",
+    },
     heading: {
       type: "text",
       label: "Panel Heading",
@@ -166,6 +179,7 @@ export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
     },
   },
   defaultProps: {
+    formKey: "",
     heading: "Let's Connect",
     description:
       "Have a question about MyAllocator or need help with your account? Fill out the form and our team will get back to you quickly.",

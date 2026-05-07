@@ -1,103 +1,102 @@
 {
   "seo": {
     "home": {
-      "title": "MyAllocator — Logiciel tout-en-un pour locations de vacances",
-      "description": "MyAllocator est la plateforme de gestion de locations de vacances tout-en-un : channel manager, tarification dynamique, moteur de réservation, communication avec les voyageurs et bien plus encore.",
-      "keywords": "logiciel de location de vacances, channel manager, tarification dynamique, gestion de propriétés, moteur de réservation, MyAllocator"
+      "title": "Bienvenue — Votre hébergement de prestige",
+      "description": "Découvrez le séjour idéal. Explorez notre hébergement, nos équipements et notre destination, et contactez-nous directement pour planifier votre visite.",
+      "keywords": "hébergement, hôtel boutique, villa, chambre d'hôtes, hôtellerie, séjour, demande directe"
     },
     "pricing": {
-      "title": "Tarifs — MyAllocator",
-      "description": "Des tarifs simples et transparents pour les gestionnaires de locations de vacances. Un seul forfait, tout compris. Commencez votre essai gratuit dès aujourd'hui.",
-      "keywords": "tarifs, prix du logiciel de location de vacances, coût MyAllocator, essai gratuit, tarifs gestion de propriétés"
+      "title": "Planifiez votre séjour",
+      "description": "Contactez-nous directement pour vérifier les disponibilités et recevoir un devis personnalisé pour votre visite.",
+      "keywords": "planifier votre séjour, demande d'hébergement, disponibilités, réservation directe, tarifs"
     }
   },
   "home": {
     "hero": {
-      "headingPrefix": "Tout ce dont vous avez besoin pour ",
-      "highlight": "gérer plus intelligemment",
-      "subheading": "MyAllocator est le logiciel tout-en-un de gestion de locations de vacances qui aide les hôtes et les gestionnaires de propriétés à gagner plus, travailler moins et ravir leurs voyageurs.",
-      "otaKicker": "La solution de confiance des gestionnaires connectés à"
+      "headingPrefix": "Un endroit où chaque voyageur ",
+      "highlight": "se sent chez soi",
+      "subheading": "Découvrez un hébergement soigneusement conçu et une hospitalité authentique. Parlez-nous de votre séjour idéal et nous nous occupons du reste."
     },
     "sections": {
       "tools": {
-        "title": "Des outils puissants pour chaque hôte",
-        "subtitle": "D'un seul appartement Airbnb à un portefeuille multi-propriétés, MyAllocator vous offre des fonctionnalités de niveau professionnel sans le prix professionnel.",
+        "title": "Tout ce qu'il faut pour un séjour parfait",
+        "subtitle": "Du moment où vous faites votre demande jusqu'au matin de votre départ, nous mettons tout en œuvre pour que chaque détail de votre visite soit exceptionnel.",
         "features": {
           "bookingEngine": {
-            "title": "Moteur de réservation",
+            "title": "Hébergement",
             "bullets": [
-              "Réservations directes sans commission",
-              "Widget de réservation personnalisé pour votre site web",
-              "Disponibilité en temps réel et confirmation instantanée",
-              "Support multidevise et multilingue"
+              "Chambres et suites magnifiquement aménagées",
+              "Horaires d'arrivée et de départ flexibles",
+              "Accueil personnalisé pour chaque voyageur",
+              "Forfaits exclusifs et options pour occasions spéciales"
             ]
           },
           "guestCommunication": {
-            "title": "Communication avec les voyageurs",
+            "title": "Expérience voyageur",
             "bullets": [
-              "Messages automatisés avant l'arrivée et au départ",
-              "Boîte de réception unifiée pour tous les canaux",
-              "Modèles avec variables intelligentes",
-              "Automatisation des demandes d'avis"
+              "Équipements et services soigneusement sélectionnés",
+              "Équipe de conciergerie dédiée",
+              "Recommandations locales de première main",
+              "Communication fluide de la demande au départ"
             ]
           },
           "teamManagement": {
-            "title": "Gestion d'équipe",
+            "title": "Lieu et destination",
             "bullets": [
-              "Accès basé sur les rôles pour votre équipe",
-              "Attribution des tâches de ménage et de maintenance",
-              "Calendrier du personnel avec mises à jour en temps réel",
-              "Suivi des performances et rapports"
+              "Cadre exceptionnel dans une destination prisée",
+              "Accès facile aux sites et activités locaux",
+              "Suggestions d'itinéraires guidés sur demande",
+              "Informations sur les transferts aéroport disponibles"
             ]
           },
           "websiteBuilder": {
-            "title": "Créateur de sites web",
+            "title": "Planifiez votre visite",
             "bullets": [
-              "Modèles élégants optimisés pour mobile",
-              "Outils SEO intégrés",
-              "Widget de réservation intégré",
-              "Support de nom de domaine personnalisé"
+              "Demande directe pour les meilleurs tarifs disponibles",
+              "Sans frais de réservation tiers",
+              "Réponse rapide et personnelle à chaque demande",
+              "Forfaits sur mesure pour groupes et événements"
             ]
           }
         }
       },
       "builtFor": {
-        "title": "Conçu pour les hôtes qui veulent plus",
-        "body": "Que vous gériez un chalet de montagne ou une flotte de villas en bord de mer, MyAllocator s'adapte à votre méthode de travail — et non l'inverse."
+        "title": "Où chaque détail compte",
+        "body": "Que vous planifiiez une escapade romantique, des vacances en famille ou une retraite d'entreprise, nous adaptons chaque aspect de votre séjour à vos besoins."
       },
       "stories": {
-        "title": "Ce que disent nos hôtes",
+        "title": "Ce que disent nos voyageurs",
         "quote": {
-          "text": "Depuis que nous sommes passés à MyAllocator, nos revenus ont augmenté de 32 % et le temps consacré à l'administration a diminué de moitié. Le moteur de tarification dynamique à lui seul a tout changé.",
-          "author": "Sofia R., gestionnaire de propriétés — Costa del Sol"
+          "text": "Dès notre arrivée, nous nous sommes sentis véritablement accueillis. Les chambres étaient magnifiques, l'équipe avait pensé à tout et l'emplacement était parfait.",
+          "author": "Avis voyageur"
         }
       },
       "integrations": {
-        "title": "Intégrations fluides",
-        "body": "MyAllocator se connecte à plus de 100 canaux de réservation, passerelles de paiement et appareils domotiques — pour que vous puissiez gérer votre activité depuis un seul tableau de bord."
+        "title": "Contactez-nous directement",
+        "body": "La meilleure façon de planifier votre séjour est de nous contacter directement. Nous sommes disponibles pour répondre à vos questions, confirmer les disponibilités et préparer l'itinéraire parfait pour votre visite."
       },
       "faq": {
         "title": "Questions fréquentes",
         "items": [
           {
-            "question": "Qu'est-ce que MyAllocator ?",
-            "answer": "MyAllocator est une plateforme tout-en-un de gestion de locations de vacances comprenant un channel manager, un moteur de réservation, la tarification dynamique, la communication avec les voyageurs, un créateur de sites web et bien plus encore."
+            "question": "Comment faire une demande ou une réservation ?",
+            "answer": "Utilisez simplement le formulaire de contact sur cette page ou envoyez-nous un e-mail. Nous vous répondrons personnellement dans les 24 heures avec les disponibilités et les tarifs."
           },
           {
-            "question": "Y a-t-il un essai gratuit ?",
-            "answer": "Oui ! Vous pouvez commencer un essai gratuit sans carte de crédit. Explorez toutes les fonctionnalités et constatez les résultats par vous-même avant de vous engager."
+            "question": "Qu'est-ce qui est inclus dans le tarif ?",
+            "answer": "Tous les tarifs incluent l'hébergement et nos équipements d'accueil standard. Le petit-déjeuner et les services supplémentaires peuvent être ajoutés lors de votre demande."
           },
           {
-            "question": "Quels canaux MyAllocator prend-il en charge ?",
-            "answer": "Nous prenons en charge plus de 100 canaux, dont Airbnb, Booking.com, Vrbo, Expedia, Google Vacation Rentals et de nombreuses OTA de niche."
+            "question": "Quelle est la politique d'annulation ?",
+            "answer": "Nous proposons des options d'annulation flexibles. Contactez-nous directement et nous vous confirmerons les conditions applicables à vos dates préférées."
           },
           {
-            "question": "Comment fonctionne la tarification dynamique ?",
-            "answer": "Notre algorithme analyse la demande du marché, les événements locaux, les tarifs des concurrents et la saisonnalité pour ajuster automatiquement vos prix en temps réel — maximisant les revenus tout en maintenant un taux d'occupation élevé."
+            "question": "Pouvez-vous satisfaire des demandes spéciales ?",
+            "answer": "Absolument. Qu'il s'agisse d'un régime alimentaire particulier, d'un arrangement pour une occasion spéciale ou d'un enregistrement anticipé, mentionnez-le dans votre demande et nous ferons de notre mieux."
           },
           {
-            "question": "Puis-je gérer plusieurs propriétés ?",
-            "answer": "Absolument. MyAllocator est conçu pour passer d'une seule annonce à des centaines de propriétés, avec édition groupée, rôles d'équipe et rapports au niveau du portefeuille."
+            "question": "Y a-t-il une durée de séjour minimale ?",
+            "answer": "Les exigences de séjour minimum varient selon la saison. Contactez-nous avec vos dates préférées et nous vous confirmerons les disponibilités et la durée minimale applicable."
           }
         ]
       }
@@ -107,26 +106,26 @@
     "faq": {
       "items": [
         {
-          "question": "Que comprend le forfait ?",
-          "answer": "Tout : channel manager, moteur de réservation, tarification dynamique, communication avec les voyageurs, créateur de sites web, rapports et membres d'équipe illimités."
+          "question": "Comment obtenir un tarif pour mes dates ?",
+          "answer": "Contactez-nous directement avec vos dates préférées et le nombre de voyageurs. Nous vous fournirons un devis personnalisé par retour."
         },
         {
-          "question": "Y a-t-il des frais cachés ?",
-          "answer": "Non. Le prix affiché est le prix que vous payez. Aucuns frais de mise en service, aucune commission par réservation, aucune surprise."
+          "question": "Les tarifs sont-ils négociables ?",
+          "answer": "Nous sommes heureux de discuter de tarifs spéciaux pour les longs séjours, les groupes ou les voyageurs réguliers. Contactez-nous et nous trouverons l'arrangement qui vous convient."
         },
         {
-          "question": "Puis-je annuler à tout moment ?",
-          "answer": "Oui. Il n'y a aucun engagement à long terme. Vous pouvez annuler votre abonnement à tout moment depuis les paramètres de votre compte."
+          "question": "Proposez-vous des bons cadeaux ?",
+          "answer": "Oui. Des bons cadeaux pour séjours et expériences sont disponibles. Contactez-nous pour plus de détails."
         },
         {
-          "question": "Proposez-vous une réduction pour la facturation annuelle ?",
-          "answer": "Oui — le paiement annuel vous fait économiser jusqu'à 20 % par rapport à la facturation mensuelle."
+          "question": "Offrez-vous des réductions pour les longs séjours ?",
+          "answer": "Oui — les séjours prolongés d'une semaine ou plus bénéficient de tarifs préférentiels. Renseignez-vous pour plus de détails."
         }
       ]
     }
   },
   "cta": {
-    "heading": "Prêt à développer votre activité de location ?",
-    "secondary": "Commencez votre essai gratuit dès aujourd'hui — sans carte de crédit."
+    "heading": "Prêt à planifier votre séjour ?",
+    "secondary": "Envoyez-nous une demande"
   }
 }

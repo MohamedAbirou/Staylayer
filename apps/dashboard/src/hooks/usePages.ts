@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../auth/useAuth";
 import { getPages } from "../api/pages";
 
 interface UsePagesFilters {
@@ -11,8 +12,11 @@ interface UsePagesFilters {
 }
 
 export function usePages(filters?: UsePagesFilters) {
+  const { session } = useAuth();
+  const activeSiteId = session?.activeSite?.id ?? null;
+
   return useQuery({
-    queryKey: ["pages", filters],
+    queryKey: ["pages", activeSiteId, filters],
     queryFn: () =>
       getPages({
         locale: filters?.locale ?? undefined,
@@ -22,5 +26,6 @@ export function usePages(filters?: UsePagesFilters) {
         limit: filters?.limit ?? 50,
         search: filters?.search,
       }),
+    enabled: !!activeSiteId,
   });
 }

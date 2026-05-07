@@ -2,17 +2,15 @@ import React from "react";
 import CTASection, { CTAHeading, CTALink } from "./ctaSection";
 
 export default function UnifiedCTA({
-  heading = "Ready to Take Control of Your Vacation Rental Business?",
-  secondary = "Get started",
+  heading = "Ready to plan your stay?",
+  secondary = "Send us an inquiry",
 }) {
   return (
     <CTASection>
-      <CTAHeading>
-        {heading}
-      </CTAHeading>
+      <CTAHeading>{heading}</CTAHeading>
       <div>
         <CTALink
-          href="/pricing"
+          href="/contact-us"
           linkText={secondary}
           className="border border-white"
         />

@@ -10,30 +10,53 @@ import {
   HttpStatus,
 } from "@nestjs/common";
 import { Request } from "express";
-import { Role } from "@prisma/client";
+import { TenantMembershipRole } from "@prisma/client";
 import { VersionsService } from "./versions.service";
 import { PageLocaleQueryDto, VersionQueryDto } from "./dto/page-query.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { Roles } from "../auth/decorators/roles.decorator";
+import { WorkspaceScopeGuard } from "../auth/guards/workspace-scope.guard";
+import { MembershipRoles } from "../auth/decorators/roles.decorator";
+import { WorkspaceAccessService } from "../auth/workspace-access.service";
+import { AuthenticatedRequestUser } from "../auth/auth.types";
 
 @Controller("pages/:slug/versions")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
 export class VersionsController {
-  constructor(private readonly versionsService: VersionsService) {}
+  constructor(
+    private readonly versionsService: VersionsService,
+    private readonly workspaceAccessService: WorkspaceAccessService,
+  ) {}
+
+  private async ensureAuthenticatedSiteAccess(req: Request): Promise<string> {
+    return this.workspaceAccessService.ensureSiteAccess(
+      req as Request & {
+        user?: AuthenticatedRequestUser;
+        query: Record<string, unknown>;
+        headers: Record<string, string | string[] | undefined>;
+      },
+    );
+  }
 
   @Get()
+  @MembershipRoles(
+    TenantMembershipRole.OWNER,
+    TenantMembershipRole.ADMIN,
+    TenantMembershipRole.EDITOR,
+  )
   async listVersions(
     @Param("slug") slug: string,
     @Query() query: VersionQueryDto,
+    @Req() req: Request,
   ): Promise<{
     data: { id: string; savedBy: string; note: string | null; savedAt: Date }[];
     total: number;
     page: number;
     limit: number;
   }> {
+    const siteId = await this.ensureAuthenticatedSiteAccess(req);
     return this.versionsService.listVersions(
-      query.siteId,
+      siteId,
       slug,
       query.locale || "en",
       query.page,
@@ -42,8 +65,7 @@ export class VersionsController {
   }
 
   @Post(":id/restore")
-  @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   async restoreVersion(
     @Param("slug") slug: string,
@@ -51,9 +73,10 @@ export class VersionsController {
     @Query() query: PageLocaleQueryDto,
     @Req() req: Request,
   ): Promise<Record<string, unknown>> {
+    const siteId = await this.ensureAuthenticatedSiteAccess(req);
     const user = req.user as { sub: string };
     return this.versionsService.restoreVersion(
-      query.siteId,
+      siteId,
       slug,
       query.locale || "en",
       versionId,

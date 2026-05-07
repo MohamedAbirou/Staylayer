@@ -1,6 +1,35 @@
 import client from "./client";
 import type { Page, PageListItem, PaginatedResponse } from "../lib/constants";
 
+function normalizePuckData(
+  puckData?: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!puckData || typeof puckData !== "object") {
+    return { content: [], root: { props: {} } };
+  }
+
+  const root =
+    puckData.root && typeof puckData.root === "object"
+      ? (puckData.root as Record<string, unknown>)
+      : {};
+
+  if ("props" in root) {
+    return puckData;
+  }
+
+  return {
+    ...puckData,
+    root: { props: root },
+  };
+}
+
+function normalizePage(page: Page): Page {
+  return {
+    ...page,
+    puckData: normalizePuckData(page.puckData),
+  };
+}
+
 interface GetPagesParams {
   locale?: string;
   published?: boolean;
@@ -23,7 +52,7 @@ export async function getPage(slug: string, locale: string): Promise<Page> {
   const { data } = await client.get<Page>(`/pages/${slug}`, {
     params: { locale },
   });
-  return data;
+  return normalizePage(data);
 }
 
 export async function getPagePreview(
@@ -33,7 +62,7 @@ export async function getPagePreview(
   const { data } = await client.get<Page>(`/pages/${slug}/preview`, {
     params: { locale },
   });
-  return data;
+  return normalizePage(data);
 }
 
 interface CreatePagePayload {
@@ -44,11 +73,14 @@ interface CreatePagePayload {
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
+  seoOgImage?: string;
+  seoCanonical?: string;
+  seoNoindex?: boolean;
 }
 
 export async function createPage(payload: CreatePagePayload): Promise<Page> {
   const { data } = await client.post<Page>("/pages", payload);
-  return data;
+  return normalizePage(data);
 }
 
 interface UpdatePagePayload {
@@ -57,6 +89,9 @@ interface UpdatePagePayload {
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
+  seoOgImage?: string;
+  seoCanonical?: string;
+  seoNoindex?: boolean;
 }
 
 export async function updatePage(
@@ -67,7 +102,7 @@ export async function updatePage(
   const { data } = await client.put<Page>(`/pages/${slug}`, payload, {
     params: { locale },
   });
-  return data;
+  return normalizePage(data);
 }
 
 export async function deletePage(slug: string, locale: string): Promise<void> {
@@ -113,7 +148,7 @@ export async function restoreVersion(
     null,
     { params: { locale } },
   );
-  return data;
+  return normalizePage(data);
 }
 
 interface DuplicatePagePayload {
@@ -132,7 +167,7 @@ export async function duplicatePage(
     payload,
     { params: { locale } },
   );
-  return data;
+  return normalizePage(data);
 }
 
 // ─── Soft-delete & Restore ─────────────────────────────────

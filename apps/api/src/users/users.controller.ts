@@ -13,17 +13,17 @@ import {
   HttpStatus,
 } from "@nestjs/common";
 import { Request } from "express";
-import { Role } from "@prisma/client";
+import { PlatformRole } from "@prisma/client";
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { Roles } from "../auth/decorators/roles.decorator";
+import { PlatformRoles } from "../auth/decorators/roles.decorator";
 
 @Controller("users")
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.SUPER_ADMIN)
+@PlatformRoles(PlatformRole.PLATFORM_OWNER)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -35,7 +35,7 @@ export class UsersController {
     data: {
       id: string;
       email: string;
-      role: Role;
+      platformRole: PlatformRole | null;
       createdAt: Date;
       updatedAt: Date;
     }[];
@@ -48,9 +48,12 @@ export class UsersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body() dto: CreateUserDto,
-  ): Promise<{ id: string; email: string; role: Role; createdAt: Date }> {
+  async create(@Body() dto: CreateUserDto): Promise<{
+    id: string;
+    email: string;
+    platformRole: PlatformRole | null;
+    createdAt: Date;
+  }> {
     return this.usersService.createUser(dto);
   }
 
@@ -58,7 +61,12 @@ export class UsersController {
   async update(
     @Param("id") id: string,
     @Body() dto: UpdateUserDto,
-  ): Promise<{ id: string; email: string; role: Role; updatedAt: Date }> {
+  ): Promise<{
+    id: string;
+    email: string;
+    platformRole: PlatformRole | null;
+    updatedAt: Date;
+  }> {
     return this.usersService.updateUser(id, dto);
   }
 

@@ -9,6 +9,10 @@
  */
 
 import {
+  FormEmailTemplateType,
+  FormFieldType,
+  FormType,
+  PlatformRole,
   PrismaClient,
   Role,
   SiteStatus,
@@ -35,20 +39,65 @@ async function upsertUser(
   email: string,
   password: string,
   role: Role,
-): Promise<{ id: string; email: string; role: Role }> {
-  const existing = await prisma.user.findUnique({ where: { email } });
+  platformRole: PlatformRole | null = null,
+): Promise<{ id: string; email: string; platformRole: PlatformRole | null }> {
+  const existing = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      passwordHash: true,
+      role: true,
+      platformRole: true,
+    },
+  });
   if (existing) {
-    console.log(`  [skip] user ${email} (${role})`);
-    return { id: existing.id, email: existing.email, role: existing.role };
+    const updates: {
+      passwordHash?: string;
+      role?: Role;
+      platformRole?: PlatformRole | null;
+    } = {};
+    const passwordMatches = await argon2.verify(
+      existing.passwordHash,
+      password,
+    );
+
+    if (!passwordMatches) {
+      updates.passwordHash = await hashPassword(password);
+    }
+
+    if (existing.role !== role) {
+      updates.role = role;
+    }
+
+    if (existing.platformRole !== platformRole) {
+      updates.platformRole = platformRole;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: updates,
+      });
+      console.log(`  [ok] user ${email} (${platformRole ?? "CUSTOMER"})`);
+      return { id: existing.id, email: existing.email, platformRole };
+    }
+
+    console.log(`  [skip] user ${email} (${platformRole ?? "CUSTOMER"})`);
+    return {
+      id: existing.id,
+      email: existing.email,
+      platformRole: existing.platformRole,
+    };
   }
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, passwordHash, role },
-    select: { id: true, email: true, role: true },
+    data: { email, passwordHash, role, platformRole },
+    select: { id: true, email: true, platformRole: true },
   });
 
-  console.log(`  [ok] user ${email} (${role})`);
+  console.log(`  [ok] user ${email} (${platformRole ?? "CUSTOMER"})`);
   return user;
 }
 
@@ -215,6 +264,245 @@ async function upsertPage(
   console.log(`  [ok] page ${siteId}:${slug}/${locale}`);
 }
 
+async function upsertFormDefinitionBundle(input: {
+  siteId: string;
+  key: string;
+  name: string;
+  description: string;
+  formType: FormType;
+  assignment?: { pageSlugs?: string[]; locales?: string[] };
+  fields: Array<{
+    key: string;
+    label: string;
+    type: FormFieldType;
+    required: boolean;
+    placeholder?: string;
+    helpText?: string;
+  }>;
+  routingRule: {
+    name: string;
+    pageSlug?: string;
+    emailRecipients: string[];
+    webhookUrl?: string;
+    webhookSecret?: string;
+    sendConfirmationEmail?: boolean;
+    confirmationReplyToFieldKey?: string;
+  };
+}): Promise<void> {
+  const existing = await prisma.formDefinition.findFirst({
+    where: {
+      siteId: input.siteId,
+      key: input.key,
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    console.log(`  [skip] form ${input.key}`);
+    return;
+  }
+
+  const definition = await prisma.formDefinition.create({
+    data: {
+      siteId: input.siteId,
+      key: input.key,
+      name: input.name,
+      description: input.description,
+      formType: input.formType,
+      status: "ACTIVE",
+      assignment: input.assignment ?? undefined,
+    },
+  });
+
+  await prisma.formField.createMany({
+    data: input.fields.map((field, index) => ({
+      formDefinitionId: definition.id,
+      key: field.key,
+      label: field.label,
+      placeholder: field.placeholder ?? "",
+      helpText: field.helpText ?? "",
+      type: field.type,
+      required: field.required,
+      sortOrder: index,
+      isPlatformManaged: false,
+    })),
+  });
+
+  const schemaSnapshot = {
+    formDefinitionId: definition.id,
+    key: input.key,
+    name: input.name,
+    description: input.description,
+    formType: input.formType,
+    assignment: input.assignment ?? null,
+    fields: input.fields.map((field, index) => ({
+      key: field.key,
+      label: field.label,
+      placeholder: field.placeholder ?? "",
+      helpText: field.helpText ?? "",
+      type: field.type,
+      required: field.required,
+      sortOrder: index,
+      validation: null,
+      options: [],
+      defaultValue: null,
+      isPlatformManaged: false,
+      visibilityRules: null,
+    })),
+  };
+
+  const version = await prisma.formSchemaVersion.create({
+    data: {
+      formDefinitionId: definition.id,
+      versionNumber: 1,
+      schemaSnapshot,
+      routingSnapshot: [input.routingRule],
+      publishedAt: new Date(),
+      createdBy: "seed",
+    },
+  });
+
+  await prisma.formDefinition.update({
+    where: { id: definition.id },
+    data: { activeSchemaVersionId: version.id },
+  });
+
+  await prisma.formRoutingRule.create({
+    data: {
+      siteId: input.siteId,
+      formDefinitionId: definition.id,
+      name: input.routingRule.name,
+      pageSlug: input.routingRule.pageSlug ?? null,
+      priority: 100,
+      isActive: true,
+      saveToInbox: true,
+      emailRecipients: input.routingRule.emailRecipients,
+      webhookUrl: input.routingRule.webhookUrl ?? "",
+      webhookSecret: input.routingRule.webhookSecret ?? "",
+      sendConfirmationEmail: input.routingRule.sendConfirmationEmail ?? false,
+      confirmationReplyToFieldKey:
+        input.routingRule.confirmationReplyToFieldKey ?? "email",
+    },
+  });
+
+  console.log(`  [ok] form ${input.key}`);
+}
+
+async function upsertEmailStudioFixture(input: {
+  siteId: string;
+  brandName: string;
+  logoUrl: string;
+  primaryColor: string;
+  accentColor: string;
+  surfaceColor: string;
+  textColor: string;
+  typographyFamily: string;
+  internalSubject: string;
+  internalIntro: string;
+  guestSubject: string;
+  guestIntro: string;
+  guestEnabled: boolean;
+}): Promise<void> {
+  await prisma.formEmailTheme.upsert({
+    where: { siteId: input.siteId },
+    create: {
+      siteId: input.siteId,
+      brandName: input.brandName,
+      logoUrl: input.logoUrl,
+      primaryColor: input.primaryColor,
+      accentColor: input.accentColor,
+      surfaceColor: input.surfaceColor,
+      textColor: input.textColor,
+      typographyFamily: input.typographyFamily,
+      footerContent: { text: `Sent from ${input.brandName}` },
+      updatedBy: "seed",
+    },
+    update: {
+      brandName: input.brandName,
+      logoUrl: input.logoUrl,
+      primaryColor: input.primaryColor,
+      accentColor: input.accentColor,
+      surfaceColor: input.surfaceColor,
+      textColor: input.textColor,
+      typographyFamily: input.typographyFamily,
+      footerContent: { text: `Sent from ${input.brandName}` },
+      updatedBy: "seed",
+    },
+  });
+
+  const existingTemplates = await prisma.formEmailTemplate.findMany({
+    where: { siteId: input.siteId, formDefinitionId: null },
+    select: { id: true, templateType: true },
+  });
+  const byType = new Map(
+    existingTemplates.map((template) => [template.templateType, template.id]),
+  );
+
+  const templateConfigs = [
+    {
+      templateType: FormEmailTemplateType.INTERNAL_NOTIFICATION,
+      name: "Seed internal notification",
+      enabled: true,
+      subjectTemplate: input.internalSubject,
+      previewText: "A new inquiry has been submitted.",
+      blocks: [
+        { type: "brand_header", title: "New {{formName}} submission" },
+        { type: "rich_text", text: input.internalIntro },
+        { type: "field_list", title: "Submitted fields" },
+        { type: "footer", text: `Sent from ${input.brandName}` },
+      ],
+      fieldOrder: ["name", "email", "message"],
+    },
+    {
+      templateType: FormEmailTemplateType.GUEST_CONFIRMATION,
+      name: "Seed guest confirmation",
+      enabled: input.guestEnabled,
+      subjectTemplate: input.guestSubject,
+      previewText: "We received your message.",
+      blocks: [
+        { type: "brand_header", title: "Thanks for contacting {{siteName}}" },
+        { type: "rich_text", text: input.guestIntro },
+        { type: "field_list", title: "Your submission" },
+        { type: "footer", text: `Sent from ${input.brandName}` },
+      ],
+      fieldOrder: ["name", "message"],
+    },
+  ] as const;
+
+  for (const template of templateConfigs) {
+    const existingId = byType.get(template.templateType);
+    if (existingId) {
+      await prisma.formEmailTemplate.update({
+        where: { id: existingId },
+        data: {
+          name: template.name,
+          enabled: template.enabled,
+          subjectTemplate: template.subjectTemplate,
+          previewText: template.previewText,
+          blocks: template.blocks,
+          fieldOrder: [...template.fieldOrder],
+        },
+      });
+      continue;
+    }
+
+    await prisma.formEmailTemplate.create({
+      data: {
+        siteId: input.siteId,
+        templateType: template.templateType,
+        name: template.name,
+        enabled: template.enabled,
+        subjectTemplate: template.subjectTemplate,
+        previewText: template.previewText,
+        blocks: template.blocks,
+        fieldOrder: [...template.fieldOrder],
+      },
+    });
+  }
+
+  console.log(`  [ok] email studio for ${input.siteId}`);
+}
+
 async function main(): Promise<void> {
   console.log("\nSeeding hospitality SaaS foundation...\n");
 
@@ -223,11 +511,13 @@ async function main(): Promise<void> {
     "superadmin@myallocator.com",
     "SuperAdmin123!",
     Role.SUPER_ADMIN,
+    PlatformRole.PLATFORM_OWNER,
   );
   const opsAdmin = await upsertUser(
     "admin@myallocator.com",
     "Admin123!",
     Role.ADMIN,
+    PlatformRole.SUPPORT_ADMIN,
   );
   const coastalOwner = await upsertUser(
     "owner@azurebayvillas.com",
@@ -335,6 +625,218 @@ async function main(): Promise<void> {
     activeLocales: ["en", "de"],
   });
 
+  console.log("\nForm studio and email studio:");
+  await upsertEmailStudioFixture({
+    siteId: coastalSite.id,
+    brandName: "Azure Bay Villas",
+    logoUrl: "/images/azure-bay-logo.png",
+    primaryColor: "#0f766e",
+    accentColor: "#0f172a",
+    surfaceColor: "#ffffff",
+    textColor: "#0f172a",
+    typographyFamily: "Georgia",
+    internalSubject: "[{{siteName}}] New {{formName}} from {{name}}",
+    internalIntro:
+      "A new guest inquiry is ready for review. Prioritize direct-booking follow-up within one business day.",
+    guestSubject: "We received your Azure Bay Villas request",
+    guestIntro:
+      "Thanks for contacting Azure Bay Villas. Our team will review your request and reply shortly.",
+    guestEnabled: true,
+  });
+  await upsertFormDefinitionBundle({
+    siteId: coastalSite.id,
+    key: "coastal-general",
+    name: "Coastal general inquiry",
+    description: "Default contact form for general guest questions.",
+    formType: FormType.CONTACT,
+    assignment: { pageSlugs: ["home"], locales: ["en"] },
+    fields: [
+      {
+        key: "name",
+        label: "Name",
+        type: FormFieldType.SINGLE_LINE_TEXT,
+        required: true,
+      },
+      {
+        key: "email",
+        label: "Email",
+        type: FormFieldType.EMAIL,
+        required: true,
+      },
+      {
+        key: "message",
+        label: "Message",
+        type: FormFieldType.MULTI_LINE_TEXT,
+        required: true,
+      },
+    ],
+    routingRule: {
+      name: "General inquiries",
+      pageSlug: "home",
+      emailRecipients: ["hosts@azurebayvillas.com"],
+      sendConfirmationEmail: true,
+      confirmationReplyToFieldKey: "email",
+    },
+  });
+  await upsertFormDefinitionBundle({
+    siteId: coastalSite.id,
+    key: "coastal-group-events",
+    name: "Group events inquiry",
+    description: "Captures retreat and event planning requests.",
+    formType: FormType.GROUP_STAY,
+    assignment: { pageSlugs: ["group-events"], locales: ["en"] },
+    fields: [
+      {
+        key: "name",
+        label: "Name",
+        type: FormFieldType.SINGLE_LINE_TEXT,
+        required: true,
+      },
+      {
+        key: "email",
+        label: "Email",
+        type: FormFieldType.EMAIL,
+        required: true,
+      },
+      {
+        key: "eventDate",
+        label: "Event date",
+        type: FormFieldType.DATE,
+        required: false,
+      },
+      {
+        key: "groupSize",
+        label: "Group size",
+        type: FormFieldType.NUMBER,
+        required: false,
+      },
+      {
+        key: "message",
+        label: "Event details",
+        type: FormFieldType.MULTI_LINE_TEXT,
+        required: true,
+      },
+    ],
+    routingRule: {
+      name: "Group events",
+      pageSlug: "group-events",
+      emailRecipients: [
+        "events@azurebayvillas.com",
+        "hosts@azurebayvillas.com",
+      ],
+      sendConfirmationEmail: true,
+      confirmationReplyToFieldKey: "email",
+    },
+  });
+  await upsertEmailStudioFixture({
+    siteId: glampingSite.id,
+    brandName: "Pine & Peak Glamping",
+    logoUrl: "/images/pine-and-peak-logo.png",
+    primaryColor: "#166534",
+    accentColor: "#422006",
+    surfaceColor: "#fffdf7",
+    textColor: "#3f3f46",
+    typographyFamily: "Trebuchet MS",
+    internalSubject: "[{{siteName}}] {{formName}} from {{name}}",
+    internalIntro:
+      "A new forest-stay inquiry has arrived. Review the guest preferences and route to reservations.",
+    guestSubject: "Your Pine & Peak request is in the queue",
+    guestIntro:
+      "Thanks for reaching out to Pine & Peak. We will confirm availability and next steps soon.",
+    guestEnabled: true,
+  });
+  await upsertFormDefinitionBundle({
+    siteId: glampingSite.id,
+    key: "glamping-availability",
+    name: "Availability request",
+    description: "Primary availability request form for direct-booking leads.",
+    formType: FormType.AVAILABILITY_REQUEST,
+    assignment: { pageSlugs: ["home"], locales: ["en"] },
+    fields: [
+      {
+        key: "name",
+        label: "Name",
+        type: FormFieldType.SINGLE_LINE_TEXT,
+        required: true,
+      },
+      {
+        key: "email",
+        label: "Email",
+        type: FormFieldType.EMAIL,
+        required: true,
+      },
+      {
+        key: "arrivalDate",
+        label: "Arrival date",
+        type: FormFieldType.DATE,
+        required: true,
+      },
+      {
+        key: "stayLength",
+        label: "Number of nights",
+        type: FormFieldType.NUMBER,
+        required: true,
+      },
+      {
+        key: "message",
+        label: "Stay notes",
+        type: FormFieldType.MULTI_LINE_TEXT,
+        required: false,
+      },
+    ],
+    routingRule: {
+      name: "Availability requests",
+      pageSlug: "home",
+      emailRecipients: ["reservations@pineandpeak.com"],
+      sendConfirmationEmail: true,
+      confirmationReplyToFieldKey: "email",
+    },
+  });
+  await upsertFormDefinitionBundle({
+    siteId: glampingSite.id,
+    key: "glamping-retreats",
+    name: "Retreat and workshop inquiry",
+    description: "Collects multi-guest retreat and workshop planning details.",
+    formType: FormType.GROUP_STAY,
+    assignment: { pageSlugs: ["retreats"], locales: ["en"] },
+    fields: [
+      {
+        key: "name",
+        label: "Organizer name",
+        type: FormFieldType.SINGLE_LINE_TEXT,
+        required: true,
+      },
+      {
+        key: "email",
+        label: "Email",
+        type: FormFieldType.EMAIL,
+        required: true,
+      },
+      {
+        key: "groupSize",
+        label: "Expected guests",
+        type: FormFieldType.NUMBER,
+        required: true,
+      },
+      {
+        key: "message",
+        label: "Retreat goals",
+        type: FormFieldType.MULTI_LINE_TEXT,
+        required: true,
+      },
+    ],
+    routingRule: {
+      name: "Retreat leads",
+      pageSlug: "retreats",
+      emailRecipients: [
+        "retreats@pineandpeak.com",
+        "reservations@pineandpeak.com",
+      ],
+      sendConfirmationEmail: true,
+      confirmationReplyToFieldKey: "email",
+    },
+  });
+
   console.log("\nPages:");
 
   const coastalHomePuckData = {
@@ -362,7 +864,7 @@ async function main(): Promise<void> {
         },
       },
     ],
-    root: { title: "Home" },
+    root: { props: { title: "Home" } },
   };
 
   const glampingHomePuckData = {
@@ -390,7 +892,7 @@ async function main(): Promise<void> {
         },
       },
     ],
-    root: { title: "Home" },
+    root: { props: { title: "Home" } },
   };
 
   await upsertPage(
@@ -410,7 +912,7 @@ async function main(): Promise<void> {
     "home",
     "es",
     "Azure Bay Villas | Villas frente al mar por consulta directa",
-    { ...coastalHomePuckData, root: { title: "Inicio" } },
+    { ...coastalHomePuckData, root: { props: { title: "Inicio" } } },
     "Azure Bay Villas | Villas frente al mar por consulta directa",
     "Villas frente al mar en Costa Brava con contenido multilingue y consultas directas.",
     false,
@@ -435,22 +937,22 @@ async function main(): Promise<void> {
     "  ┌────────────────────────────────────────┬──────────────────┬─────────────┐",
   );
   console.log(
-    "  │ Email                                  │ Password         │ Role        │",
+    "  │ Email                                  │ Password         │ Access scope │",
   );
   console.log(
     "  ├────────────────────────────────────────┼──────────────────┼─────────────┤",
   );
   console.log(
-    "  │ superadmin@myallocator.com             │ SuperAdmin123!   │ SUPER_ADMIN │",
+    "  │ superadmin@myallocator.com             │ SuperAdmin123!   │ PLATFORM_OWNER │",
   );
   console.log(
-    "  │ admin@myallocator.com                  │ Admin123!        │ ADMIN       │",
+    "  │ admin@myallocator.com                  │ Admin123!        │ SUPPORT_ADMIN │",
   );
   console.log(
-    "  │ owner@azurebayvillas.com               │ AzureBay123!     │ ADMIN       │",
+    "  │ owner@azurebayvillas.com               │ AzureBay123!     │ TENANT OWNER │",
   );
   console.log(
-    "  │ owner@pineandpeak.com                  │ PinePeak123!     │ ADMIN       │",
+    "  │ owner@pineandpeak.com                  │ PinePeak123!     │ TENANT OWNER │",
   );
   console.log(
     "  └────────────────────────────────────────┴──────────────────┴─────────────┘\n",

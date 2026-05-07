@@ -5,11 +5,38 @@ const puckComponentsSrc = path.resolve(
   "../../packages/puck-components/src/index.ts",
 );
 
+const SUPPORTED_LOCALES = ["en", "es", "fr", "de"];
+
+function getConfiguredLocales() {
+  const defaultLocale = (process.env.PRIMARY_LOCALE || "en").trim() || "en";
+  const configuredLocales = (process.env.ENABLED_LOCALES || "")
+    .split(",")
+    .map((locale) => locale.trim())
+    .filter(Boolean);
+  const locales = Array.from(new Set([defaultLocale, ...configuredLocales]));
+  const invalidLocales = locales.filter(
+    (locale) => !SUPPORTED_LOCALES.includes(locale),
+  );
+
+  if (!SUPPORTED_LOCALES.includes(defaultLocale) || invalidLocales.length > 0) {
+    throw new Error(
+      `Unsupported locale configuration for dedicated site runtime: ${locales.join(", ")}`,
+    );
+  }
+
+  return {
+    locales,
+    defaultLocale,
+  };
+}
+
+const { locales, defaultLocale } = getConfiguredLocales();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   i18n: {
-    locales: ["en", "es", "fr", "de"],
-    defaultLocale: "en",
+    locales,
+    defaultLocale,
   },
   // Transpile the raw source so Next.js compiles the TSX directly,
   // same as the Vite alias in the dashboard.

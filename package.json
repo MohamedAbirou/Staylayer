@@ -7,16 +7,22 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
+    "test:e2e": "pnpm --filter @myallocator/api db:seed && playwright test",
+    "phase10:validate": "node scripts/phase10-validate.mjs",
+    "local:mailpit": "docker compose -f docker-compose.local-tools.yml up -d mailpit",
+    "local:mailpit:down": "docker compose -f docker-compose.local-tools.yml down",
+    "local:webhooks": "node scripts/webhook-inspector.mjs",
     "db:generate": "turbo db:generate --filter=@myallocator/api",
     "db:migrate": "turbo db:migrate --filter=@myallocator/api",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "prettier": "^3.2.0",
     "turbo": "^2.3.0"
   },
   "packageManager": "pnpm@9.15.0",
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   }
 }

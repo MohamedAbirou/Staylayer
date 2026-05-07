@@ -6,17 +6,13 @@ import {
   IsInt,
   Min,
   Max,
-  MinLength,
 } from "class-validator";
 import { Transform } from "class-transformer";
+import { SiteScopeQueryDto } from "../../common/dto/site-scope-query.dto";
 
-export class SiteScopedQueryDto {
-  @IsString()
-  @MinLength(1)
-  siteId: string;
-}
+export { SiteScopeQueryDto as SiteScopedQueryDto };
 
-export class PageQueryDto extends SiteScopedQueryDto {
+export class PageQueryDto extends SiteScopeQueryDto {
   @IsOptional()
   @IsString()
   @IsIn(["en", "es", "fr", "de"])
@@ -58,7 +54,7 @@ export class PageQueryDto extends SiteScopedQueryDto {
   search?: string;
 }
 
-export class PageLocaleQueryDto extends SiteScopedQueryDto {
+export class PageLocaleQueryDto extends SiteScopeQueryDto {
   @IsOptional()
   @IsString()
   @IsIn(["en", "es", "fr", "de"])
@@ -74,7 +70,14 @@ export class PageLocaleQueryDto extends SiteScopedQueryDto {
   published?: boolean;
 }
 
-export class VersionQueryDto extends SiteScopedQueryDto {
+export class PublishedPagesQueryDto extends SiteScopeQueryDto {
+  @IsOptional()
+  @IsString()
+  @IsIn(["en", "es", "fr", "de"])
+  locale?: string;
+}
+
+export class VersionQueryDto extends SiteScopeQueryDto {
   @IsOptional()
   @IsString()
   @IsIn(["en", "es", "fr", "de"])

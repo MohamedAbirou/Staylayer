@@ -1,4 +1,12 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { AuthContext } from "./AuthContext";
 import {
   login as loginApi,
@@ -9,66 +17,146 @@ import {
   getAccessToken,
   hasUsableAccessToken,
   setAccessToken,
+  setWorkspaceContext,
 } from "../api/client";
-import type { User } from "../lib/constants";
+import type { AuthApiResponse, AuthContextRequest, AuthSession } from "./types";
 
-const AUTH_USER_KEY = "auth_user";
+const AUTH_SESSION_KEY = "auth_session";
+const CUSTOMER_QUERY_PREFIXES = new Set([
+  "pages",
+  "page",
+  "versions",
+  "settings",
+]);
 
-function getStoredUser(): User | null {
+function getStoredSession(): AuthSession | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(AUTH_USER_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    return raw ? (JSON.parse(raw) as AuthSession) : null;
   } catch {
     return null;
   }
 }
 
-function setStoredUser(user: User | null): void {
+function setStoredSession(session: AuthSession | null): void {
   if (typeof window === "undefined") return;
   try {
-    if (user) {
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    if (session) {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
     } else {
-      localStorage.removeItem(AUTH_USER_KEY);
+      localStorage.removeItem(AUTH_SESSION_KEY);
     }
   } catch {
     // Ignore storage failures to avoid breaking auth flow.
   }
 }
 
+function extractSession(response: AuthApiResponse): AuthSession {
+  const { accessToken: _accessToken, ...session } = response;
+  return session;
+}
+
+function toWorkspaceContext(
+  session: AuthSession | null,
+): AuthContextRequest | null {
+  if (!session?.activeTenant && !session?.activeSite) {
+    return null;
+  }
+
+  return {
+    tenantId: session.activeTenant?.id,
+    siteId: session.activeSite?.id,
+  };
+}
+
+function didWorkspaceChange(
+  previous: AuthSession | null,
+  next: AuthSession | null,
+): boolean {
+  const previousContext = toWorkspaceContext(previous);
+  const nextContext = toWorkspaceContext(next);
+
+  return (
+    previousContext?.tenantId !== nextContext?.tenantId ||
+    previousContext?.siteId !== nextContext?.siteId
+  );
+}
+
+function isCustomerQuery(queryKey: QueryKey): boolean {
+  const head = queryKey[0];
+  return typeof head === "string" && CUSTOMER_QUERY_PREFIXES.has(head);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  const queryClient = useQueryClient();
+  const storedSessionRef = useRef<AuthSession | null>(getStoredSession());
+  const [session, setSession] = useState<AuthSession | null>(
+    () => storedSessionRef.current,
+  );
   const [loading, setLoading] = useState(true);
+
+  const syncSession = useCallback(
+    (response: AuthApiResponse | null) => {
+      const nextSession = response ? extractSession(response) : null;
+      const workspaceChanged = didWorkspaceChange(
+        storedSessionRef.current,
+        nextSession,
+      );
+
+      setAccessToken(response?.accessToken ?? null);
+      setWorkspaceContext(toWorkspaceContext(nextSession));
+      setStoredSession(nextSession);
+      storedSessionRef.current = nextSession;
+
+      startTransition(() => {
+        setSession(nextSession);
+      });
+
+      if (workspaceChanged) {
+        queryClient.removeQueries({
+          predicate: (query) => isCustomerQuery(query.queryKey),
+        });
+      }
+    },
+    [queryClient],
+  );
+
+  const refreshCurrentSession = useCallback(
+    async (context?: AuthContextRequest) => {
+      const response = await refreshApi(
+        context ?? toWorkspaceContext(storedSessionRef.current) ?? undefined,
+      );
+      syncSession(response);
+      return extractSession(response);
+    },
+    [syncSession],
+  );
 
   useEffect(() => {
     let cancelled = false;
 
-    const cachedUser = getStoredUser();
-    if (cachedUser) {
-      setUser(cachedUser);
+    const cachedSession = storedSessionRef.current;
+    setWorkspaceContext(toWorkspaceContext(cachedSession));
+
+    if (cachedSession) {
+      setSession(cachedSession);
     }
 
-    if (cachedUser && hasUsableAccessToken()) {
+    if (cachedSession && hasUsableAccessToken()) {
       setLoading(false);
       return () => {
         cancelled = true;
       };
     }
 
-    refreshApi()
-      .then(({ accessToken, user: u }) => {
+    refreshCurrentSession()
+      .then(() => {
         if (cancelled) return;
-        setAccessToken(accessToken);
-        setUser(u);
-        setStoredUser(u);
       })
       .catch(() => {
         if (cancelled) return;
-        // No valid session — clear everything so ProtectedRoute redirects.
-        setAccessToken(null);
-        setUser(null);
-        setStoredUser(null);
+        syncSession(null);
       })
       .finally(() => {
         if (!cancelled) {
@@ -79,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshCurrentSession, syncSession]);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -90,14 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const timer = setTimeout(
         async () => {
           try {
-            const { accessToken, user: u } = await refreshApi();
-            setAccessToken(accessToken);
-            setUser(u);
-            setStoredUser(u);
+            await refreshCurrentSession();
           } catch {
-            setAccessToken(null);
-            setUser(null);
-            setStoredUser(null);
+            syncSession(null);
           }
         },
         Math.max(msUntilRefresh, 0),
@@ -106,28 +189,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       return;
     }
-  }, [user]);
+  }, [refreshCurrentSession, session, syncSession]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const { accessToken, user: u } = await loginApi(email, password);
-    setAccessToken(accessToken);
-    setUser(u);
-    setStoredUser(u);
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const response = await loginApi(email, password);
+      syncSession(response);
+      return extractSession(response);
+    },
+    [syncSession],
+  );
+
+  const switchWorkspace = useCallback(
+    async (context: AuthContextRequest) => {
+      return refreshCurrentSession(context);
+    },
+    [refreshCurrentSession],
+  );
 
   const logout = useCallback(async () => {
     try {
       await logoutApi();
     } finally {
-      setAccessToken(null);
-      setUser(null);
-      setStoredUser(null);
+      syncSession(null);
+      queryClient.removeQueries({
+        predicate: (query) => isCustomerQuery(query.queryKey),
+      });
     }
-  }, []);
+  }, [queryClient, syncSession]);
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, getAccessToken, login, logout }}
+      value={{
+        session,
+        user: session?.user ?? null,
+        loading,
+        getAccessToken,
+        login,
+        logout,
+        switchWorkspace,
+      }}
     >
       {children}
     </AuthContext.Provider>

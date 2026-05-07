@@ -1,84 +1,254 @@
-const fs = require("fs");
-const path = require("path");
-const { execSync } = require("child_process");
+const CMS_API_URL =
+  process.env.NEXT_PUBLIC_CMS_API_URL ||
+  process.env.CMS_API_URL ||
+  "http://localhost:4000";
+const BUILD_TIMESTAMP = new Date().toISOString();
+const SUPPORTED_LOCALES = ["en", "es", "fr", "de"];
+const HOMEPAGE_SLUG_ALIASES = new Set(["", "index", "home"]);
 
-function findSourceFile(urlPath) {
-  const pagesDir = path.join(process.cwd(), "pages");
-  const tryExts = [".js", ".jsx", ".ts", ".tsx", ".mdx"];
-
-  if (urlPath === "/") {
-    for (const ext of tryExts) {
-      const f = path.join(pagesDir, `index${ext}`);
-      if (fs.existsSync(f)) return f;
-    }
-  } else {
-    const rel = urlPath.replace(/^\//, "");
-    for (const ext of tryExts) {
-      let f = path.join(pagesDir, rel + ext);
-      if (fs.existsSync(f)) return f;
-      f = path.join(pagesDir, rel, `index${ext}`);
-      if (fs.existsSync(f)) return f;
-    }
+class SiteRuntimeConfigError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "SiteRuntimeConfigError";
   }
-  return null;
 }
 
-function lastGitDateISO(filePath) {
+function getConfiguredSiteId() {
+  const serverSiteId = (process.env.SITE_ID || "").trim();
+  const publicSiteId = (process.env.NEXT_PUBLIC_SITE_ID || "").trim();
+
+  if (serverSiteId && publicSiteId && serverSiteId !== publicSiteId) {
+    throw new SiteRuntimeConfigError(
+      "SITE_ID and NEXT_PUBLIC_SITE_ID must match for site-scoped sitemap generation",
+    );
+  }
+
+  const siteId = publicSiteId || serverSiteId;
+
+  if (!siteId) {
+    throw new SiteRuntimeConfigError(
+      "SITE_ID or NEXT_PUBLIC_SITE_ID must be configured for site-scoped sitemap generation",
+    );
+  }
+
+  return siteId;
+}
+
+function getConfiguredBrandUrl() {
+  const configuredBrandUrl = (process.env.NEXT_PUBLIC_BRAND_URL || "").trim();
+
+  if (configuredBrandUrl) {
+    try {
+      return new URL(configuredBrandUrl).toString().replace(/\/$/, "");
+    } catch {
+      throw new SiteRuntimeConfigError(
+        "NEXT_PUBLIC_BRAND_URL must be a valid absolute URL for sitemap generation",
+      );
+    }
+  }
+
+  const brandName = (process.env.NEXT_PUBLIC_BRAND_NAME || "BrandName").trim();
+  return `https://${brandName.toLowerCase()}.com`;
+}
+
+function getConfiguredLocales() {
+  const defaultLocale = (process.env.PRIMARY_LOCALE || "en").trim() || "en";
+  const configuredLocales = (process.env.ENABLED_LOCALES || "")
+    .split(",")
+    .map((locale) => locale.trim())
+    .filter(Boolean);
+  const locales = Array.from(new Set([defaultLocale, ...configuredLocales]));
+  const invalidLocales = locales.filter(
+    (locale) => !SUPPORTED_LOCALES.includes(locale),
+  );
+
+  if (!SUPPORTED_LOCALES.includes(defaultLocale) || invalidLocales.length > 0) {
+    throw new SiteRuntimeConfigError(
+      `Unsupported locale configuration for dedicated site sitemap generation: ${locales.join(", ")}`,
+    );
+  }
+
+  return {
+    locales,
+    defaultLocale,
+  };
+}
+
+function buildCmsUrl(path, params = {}) {
+  const url = new URL(path, CMS_API_URL);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  return url.toString();
+}
+
+function isHomepageSlug(slug = "") {
+  return HOMEPAGE_SLUG_ALIASES.has(String(slug).trim().toLowerCase());
+}
+
+function getRouteForPage(slug, locale, defaultLocale) {
+  const normalizedSlug = String(slug || "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+  const localePrefix = locale && locale !== defaultLocale ? `/${locale}` : "";
+
+  if (isHomepageSlug(normalizedSlug)) {
+    return localePrefix || "/";
+  }
+
+  return `${localePrefix}/${normalizedSlug}`;
+}
+
+async function fetchPublishedPages() {
   try {
-    return execSync(`git log -1 --format=%cI -- "${filePath}"`, {
-      encoding: "utf8",
-    }).trim();
-  } catch {
+    const siteId = getConfiguredSiteId();
+    const { locales } = getConfiguredLocales();
+    const response = await fetch(buildCmsUrl("/pages/published", { siteId }), {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`CMS API error: ${response.status}`);
+    }
+
+    const body = await response.json();
+    const pages = Array.isArray(body) ? body : body.data || [];
+
+    return pages.filter((page) => locales.includes(page.locale));
+  } catch (error) {
+    if (error instanceof SiteRuntimeConfigError) {
+      throw error;
+    }
+
+    console.error("Failed to load published sitemap paths", error);
+    return [];
+  }
+}
+
+async function fetchPublicSettings() {
+  try {
+    const siteId = getConfiguredSiteId();
+    const response = await fetch(buildCmsUrl("/settings/public", { siteId }), {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof SiteRuntimeConfigError) {
+      throw error;
+    }
+
+    console.error("Failed to load public sitemap settings", error);
     return null;
   }
 }
 
-function findHtmlFile(urlPath) {
-  const outDir = process.env.OUT_DIR || path.join(process.cwd(), "out");
-  if (urlPath === "/") {
-    return path.join(outDir, "index.html");
+function groupPagesBySlug(pages) {
+  const groups = new Map();
+
+  for (const page of pages) {
+    const slug = String(page.slug || "").trim();
+    const locale = String(page.locale || "").trim();
+    const key = isHomepageSlug(slug) ? "__home__" : slug;
+
+    if (!groups.has(key)) {
+      groups.set(key, new Map());
+    }
+
+    const localeMap = groups.get(key);
+    if (!localeMap.has(locale)) {
+      localeMap.set(locale, { slug, locale });
+    }
   }
-  return path.join(outDir, urlPath.replace(/^\//, ""), "index.html");
+
+  return Array.from(groups.values(), (localeMap) =>
+    Array.from(localeMap.values()),
+  );
+}
+
+function buildAlternateRefs(entries, siteUrl, defaultLocale) {
+  return entries.map((entry) => ({
+    hrefLang: entry.locale,
+    href: `${siteUrl}${getRouteForPage(entry.slug, entry.locale, defaultLocale)}`,
+  }));
+}
+
+async function buildSitePageEntries(config) {
+  const settings = await fetchPublicSettings();
+
+  if (settings?.seoIndexingEnabled === false) {
+    return [];
+  }
+
+  const siteUrl = config.siteUrl.replace(/\/$/, "");
+  const { defaultLocale } = getConfiguredLocales();
+  const pages = await fetchPublishedPages();
+  const groups = groupPagesBySlug(pages);
+
+  return groups.flatMap((entries) => {
+    const alternateRefs = buildAlternateRefs(entries, siteUrl, defaultLocale);
+    const defaultLocaleEntry = entries.find(
+      (entry) => entry.locale === defaultLocale,
+    );
+    const xDefaultRef = defaultLocaleEntry
+      ? {
+          hrefLang: "x-default",
+          href: `${siteUrl}${getRouteForPage(
+            defaultLocaleEntry.slug,
+            defaultLocale,
+            defaultLocale,
+          )}`,
+        }
+      : null;
+
+    return entries.map((entry) => ({
+      loc: getRouteForPage(entry.slug, entry.locale, defaultLocale),
+      changefreq: config.changefreq,
+      priority: isHomepageSlug(entry.slug) ? 1 : config.priority,
+      lastmod: BUILD_TIMESTAMP,
+      alternateRefs: xDefaultRef
+        ? [...alternateRefs, xDefaultRef]
+        : alternateRefs,
+    }));
+  });
+}
+
+function buildRobotsTxt(siteUrl, indexingEnabled) {
+  return [
+    "User-agent: *",
+    indexingEnabled ? "Allow: /" : "Disallow: /",
+    "",
+    `Sitemap: ${siteUrl}/sitemap.xml`,
+  ].join("\n");
 }
 
 module.exports = {
-  siteUrl: `https://${process.env.NEXT_PUBLIC_BRAND_NAME?.toLowerCase()}.com`,
+  siteUrl: getConfiguredBrandUrl(),
   generateRobotsTxt: true,
-
-  robotsTxtOptions: {
-    policies: [{ userAgent: "*", allow: "/" }],
-    transformRobotsTxt: async (_, txt) => txt.replace(/^Host:.*\r?\n?/gm, ""),
-  },
-
-  exclude: ["/api/*", "/404.html"],
+  exclude: ["/api/*", "/404", "/404.html"],
   autoLastmod: false,
   changefreq: "daily",
   priority: 0.7,
 
-  transform: async (config, urlPath) => {
-    let lastmod;
+  transform: async () => null,
+  additionalPaths: async (config) => buildSitePageEntries(config),
 
-    const src = findSourceFile(urlPath);
-    if (src) {
-      const gitDate = lastGitDateISO(src);
-      if (gitDate) lastmod = gitDate;
-    }
-
-    if (!lastmod) {
-      try {
-        const html = findHtmlFile(urlPath);
-        const stats = fs.statSync(html);
-        lastmod = stats.mtime.toISOString();
-      } catch {
-        lastmod = new Date().toISOString();
-      }
-    }
-
-    return {
-      loc: urlPath,
-      changefreq: config.changefreq,
-      priority: config.priority,
-      lastmod,
-    };
+  robotsTxtOptions: {
+    policies: [{ userAgent: "*", allow: "/" }],
+    transformRobotsTxt: async (config) => {
+      const settings = await fetchPublicSettings();
+      return buildRobotsTxt(
+        config.siteUrl.replace(/\/$/, ""),
+        settings?.seoIndexingEnabled !== false,
+      );
+    },
   },
 };

@@ -4,6 +4,9 @@ export interface SiteSettings {
   id: string;
   siteName: string;
   supportEmail: string;
+  defaultInquiryRoutingEmail: string;
+  inquiryWebhookUrl: string;
+  inquiryWebhookSecretConfigured: boolean;
   logoUrl: string;
   faviconUrl: string;
   seoTitleTemplate: string;
@@ -23,9 +26,52 @@ export interface SiteSettings {
   updatedBy: string | null;
 }
 
-export type UpdateSettingsPayload = Partial<
-  Omit<SiteSettings, "id" | "updatedAt" | "updatedBy">
->;
+export interface UpdateSettingsPayload {
+  siteName?: string;
+  supportEmail?: string;
+  defaultInquiryRoutingEmail?: string;
+  inquiryWebhookUrl?: string;
+  inquiryWebhookSecret?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  seoTitleTemplate?: string;
+  seoDefaultDesc?: string;
+  seoOgImage?: string;
+  seoIndexingEnabled?: boolean;
+  googleSiteVerify?: string;
+  gaTrackingId?: string;
+  gtmContainerId?: string;
+  clarityId?: string;
+  twitterHandle?: string;
+  linkedinUrl?: string;
+  facebookUrl?: string;
+  defaultLocale?: string;
+  activeLocales?: string[];
+}
+
+export type ReadinessSeverity = "ready" | "warning" | "blocking";
+
+export interface GoLiveReadinessCheck {
+  key: string;
+  label: string;
+  severity: ReadinessSeverity;
+  summary: string;
+  action: string | null;
+}
+
+export interface GoLiveReadiness {
+  siteId: string;
+  siteSlug: string;
+  checkedAt: string;
+  severity: ReadinessSeverity;
+  isReady: boolean;
+  liveUrl: string | null;
+  primaryDomain: {
+    hostname: string;
+    status: string;
+  } | null;
+  checks: GoLiveReadinessCheck[];
+}
 
 export async function getSettings(): Promise<SiteSettings> {
   const { data } = await client.get<SiteSettings>("/settings");
@@ -36,6 +82,11 @@ export async function updateSettings(
   payload: UpdateSettingsPayload,
 ): Promise<SiteSettings> {
   const { data } = await client.patch<SiteSettings>("/settings", payload);
+  return data;
+}
+
+export async function getReadiness(): Promise<GoLiveReadiness> {
+  const { data } = await client.get<GoLiveReadiness>("/settings/readiness");
   return data;
 }
 

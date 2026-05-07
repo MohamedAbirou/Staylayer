@@ -1,7 +1,13 @@
 import axios from "axios";
 import { API_URL } from "../lib/constants";
+import type { AuthApiResponse, AuthContextRequest } from "../auth/types";
 
 const ACCESS_TOKEN_KEY = "auth_access_token";
+
+interface WorkspaceContext {
+  tenantId: string | null;
+  siteId: string | null;
+}
 
 function readStoredAccessToken(): string | null {
   if (typeof window === "undefined") {
@@ -16,8 +22,11 @@ function readStoredAccessToken(): string | null {
 }
 
 let accessToken: string | null = readStoredAccessToken();
-let refreshRequest: Promise<{ accessToken: string; user: unknown }> | null =
-  null;
+let refreshRequest: Promise<AuthApiResponse> | null = null;
+let workspaceContext: WorkspaceContext = {
+  tenantId: null,
+  siteId: null,
+};
 
 export function getAccessToken(): string | null {
   return accessToken;
@@ -41,6 +50,13 @@ export function setAccessToken(token: string | null): void {
   }
 }
 
+export function setWorkspaceContext(context: AuthContextRequest | null): void {
+  workspaceContext = {
+    tenantId: context?.tenantId ?? null,
+    siteId: context?.siteId ?? null,
+  };
+}
+
 export function hasUsableAccessToken(bufferMs = 30_000): boolean {
   const token = getAccessToken();
   if (!token) {
@@ -59,17 +75,19 @@ export function hasUsableAccessToken(bufferMs = 30_000): boolean {
   }
 }
 
-export async function refreshSession(): Promise<{
-  accessToken: string;
-  user: unknown;
-}> {
+async function refreshSessionWithContext(
+  context?: AuthContextRequest,
+): Promise<AuthApiResponse> {
   if (!refreshRequest) {
+    const requestContext = context ?? {
+      tenantId: workspaceContext.tenantId ?? undefined,
+      siteId: workspaceContext.siteId ?? undefined,
+    };
+
     refreshRequest = axios
-      .post<{ accessToken: string; user: unknown }>(
-        `${API_URL}/auth/refresh`,
-        {},
-        { withCredentials: true },
-      )
+      .post<AuthApiResponse>(`${API_URL}/auth/refresh`, requestContext, {
+        withCredentials: true,
+      })
       .then(({ data }) => {
         setAccessToken(data.accessToken);
         return data;
@@ -86,6 +104,16 @@ export async function refreshSession(): Promise<{
   return refreshRequest;
 }
 
+export async function refreshSession(
+  context?: AuthContextRequest,
+): Promise<AuthApiResponse> {
+  return refreshSessionWithContext(context);
+}
+
+function isSiteScopedRequest(url?: string): boolean {
+  return !!url && (url.startsWith("/pages") || url.startsWith("/settings"));
+}
+
 const client = axios.create({
   baseURL: API_URL,
   withCredentials: true,
@@ -96,6 +124,20 @@ client.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  if (workspaceContext.tenantId) {
+    config.headers["X-Active-Tenant-Id"] = workspaceContext.tenantId;
+  }
+
+  if (isSiteScopedRequest(config.url) && workspaceContext.siteId) {
+    config.headers["X-Active-Site-Id"] = workspaceContext.siteId;
+
+    const params = (config.params as Record<string, unknown> | undefined) ?? {};
+    if (params.siteId === undefined) {
+      config.params = { ...params, siteId: workspaceContext.siteId };
+    }
+  }
+
   return config;
 });
 
@@ -114,7 +156,7 @@ client.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const { accessToken: newToken } = await refreshSession();
+        const { accessToken: newToken } = await refreshSessionWithContext();
         originalRequest.headers = originalRequest.headers ?? {};
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return client(originalRequest);

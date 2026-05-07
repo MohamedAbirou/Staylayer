@@ -6,13 +6,19 @@ import {
   HttpStatus,
   Logger,
 } from "@nestjs/common";
-import { Request, Response } from "express";
+import { Response } from "express";
+import {
+  RequestWithContext,
+  ensureRequestId,
+  getRequestContext,
+} from "../request-context";
 
 interface ErrorResponseBody {
   statusCode: number;
   error: string;
   code: string;
   message: string;
+  requestId: string;
 }
 
 @Catch()
@@ -22,7 +28,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<RequestWithContext>();
+    const requestId = ensureRequestId(request, response);
 
     let statusCode: number;
     let errorResponse: ErrorResponseBody;
@@ -38,6 +45,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           error: (resp["error"] as string) || HttpStatus[statusCode] || "Error",
           code: (resp["code"] as string) || this.mapStatusToCode(statusCode),
           message: this.extractMessage(resp),
+          requestId,
         };
       } else {
         errorResponse = {
@@ -45,6 +53,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           error: HttpStatus[statusCode] || "Error",
           code: this.mapStatusToCode(statusCode),
           message: String(exceptionResponse),
+          requestId,
         };
       }
     } else {
@@ -54,18 +63,25 @@ export class HttpExceptionFilter implements ExceptionFilter {
         error: "Internal Server Error",
         code: "INTERNAL_ERROR",
         message: "An unexpected error occurred",
+        requestId,
       };
-
-      this.logger.error(
-        `Unhandled exception on ${request.method} ${request.url}`,
-        exception instanceof Error ? exception.stack : String(exception),
-      );
     }
 
     if (statusCode >= 500) {
+      const requestContext = getRequestContext(request);
+
       this.logger.error(
-        `${request.method} ${request.url} ${statusCode}`,
-        exception instanceof Error ? exception.stack : undefined,
+        JSON.stringify({
+          event: "http_request_failed",
+          method: request.method,
+          url: request.originalUrl ?? request.url,
+          statusCode,
+          error: errorResponse.error,
+          code: errorResponse.code,
+          message: errorResponse.message,
+          stack: exception instanceof Error ? exception.stack : undefined,
+          ...requestContext,
+        }),
       );
     }
 

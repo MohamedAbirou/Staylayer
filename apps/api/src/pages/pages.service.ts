@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { BillingService } from "../billing/billing.service";
 import { CreatePageDto } from "./dto/create-page.dto";
 import { UpdatePageDto } from "./dto/update-page.dto";
 
@@ -13,7 +14,10 @@ const MAX_PUCK_DATA_SIZE = 5 * 1024 * 1024; // 5 MB
 
 @Injectable()
 export class PagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billingService: BillingService,
+  ) {}
 
   async createPage(
     siteId: string,
@@ -33,6 +37,12 @@ export class PagesService {
       });
     }
 
+    await this.billingService.assertCanIncreasePageCount(siteId, 1);
+
+    if (dto.published === true) {
+      await this.billingService.assertCanPublishSite(siteId);
+    }
+
     const page = await this.prisma.page.create({
       data: {
         siteId,
@@ -43,6 +53,9 @@ export class PagesService {
         seoTitle: dto.seoTitle,
         seoDescription: dto.seoDescription,
         seoKeywords: dto.seoKeywords,
+        seoOgImage: dto.seoOgImage,
+        seoCanonical: dto.seoCanonical,
+        seoNoindex: dto.seoNoindex ?? false,
         published: dto.published ?? false,
       },
     });
@@ -154,6 +167,25 @@ export class PagesService {
     return page as unknown as Record<string, unknown>;
   }
 
+  async findPublishedSlugs(
+    siteId: string,
+    locale?: string,
+  ): Promise<Array<{ slug: string; locale: string }>> {
+    return this.prisma.page.findMany({
+      where: {
+        siteId,
+        locale,
+        published: true,
+        deletedAt: null,
+      },
+      select: {
+        slug: true,
+        locale: true,
+      },
+      orderBy: [{ slug: "asc" }, { locale: "asc" }],
+    });
+  }
+
   async updatePage(
     siteId: string,
     slug: string,
@@ -176,6 +208,10 @@ export class PagesService {
       });
     }
 
+    if (dto.published === true && !page.published) {
+      await this.billingService.assertCanPublishSite(siteId);
+    }
+
     const updateData: Prisma.PageUpdateInput = {};
     if (dto.title !== undefined) updateData.title = dto.title;
     if (dto.puckData !== undefined)
@@ -184,6 +220,10 @@ export class PagesService {
     if (dto.seoDescription !== undefined)
       updateData.seoDescription = dto.seoDescription;
     if (dto.seoKeywords !== undefined) updateData.seoKeywords = dto.seoKeywords;
+    if (dto.seoOgImage !== undefined) updateData.seoOgImage = dto.seoOgImage;
+    if (dto.seoCanonical !== undefined)
+      updateData.seoCanonical = dto.seoCanonical;
+    if (dto.seoNoindex !== undefined) updateData.seoNoindex = dto.seoNoindex;
     if (dto.published !== undefined) updateData.published = dto.published;
 
     const updated = await this.prisma.page.update({
@@ -249,6 +289,8 @@ export class PagesService {
       return { message: "Page is not deleted", slug, locale };
     }
 
+    await this.billingService.assertCanIncreasePageCount(siteId, 1);
+
     await this.prisma.page.update({
       where: this.pageWhereUnique(siteId, slug, locale),
       data: { deletedAt: null },
@@ -286,6 +328,8 @@ export class PagesService {
     siteId: string,
     pages: { slug: string; locale: string }[],
   ): Promise<{ message: string; count: number }> {
+    await this.billingService.assertCanPublishSite(siteId);
+
     const result = await this.prisma.page.updateMany({
       where: {
         siteId,
@@ -343,6 +387,19 @@ export class PagesService {
     siteId: string,
     pages: { slug: string; locale: string }[],
   ): Promise<{ message: string; count: number }> {
+    const restoreCount = await this.prisma.page.count({
+      where: {
+        siteId,
+        deletedAt: { not: null },
+        OR: pages.map((page) => ({
+          slug: page.slug,
+          locale: page.locale,
+        })),
+      },
+    });
+
+    await this.billingService.assertCanIncreasePageCount(siteId, restoreCount);
+
     const result = await this.prisma.page.updateMany({
       where: {
         siteId,
@@ -380,6 +437,8 @@ export class PagesService {
     slug: string,
     locale: string,
   ): Promise<{ message: string; slug: string; locale: string }> {
+    await this.billingService.assertCanPublishSite(siteId);
+
     const page = await this.prisma.page.findUnique({
       where: this.pageWhereUnique(siteId, slug, locale),
     });
@@ -479,6 +538,8 @@ export class PagesService {
         message: `Page with slug '${newSlug}' and locale '${newLocale}' already exists`,
       });
     }
+
+    await this.billingService.assertCanIncreasePageCount(siteId, 1);
 
     const puckData = source.puckData as unknown as Record<string, unknown>;
     this.validatePuckDataSize(puckData);

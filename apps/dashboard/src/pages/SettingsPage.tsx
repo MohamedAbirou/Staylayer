@@ -1,19 +1,22 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useUsers } from "../hooks/useUsers";
-import {
-  useSettings,
-  useUpdateSettings,
-  useHealth,
-} from "../hooks/useSettings";
-import { useAuth } from "../auth/useAuth";
+import { useSettings, useUpdateSettings } from "../hooks/useSettings";
 import { createUser, updateUser, deleteUser } from "../api/users";
 import { getPages } from "../api/pages";
+import { getReadiness } from "../api/settings";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { formatDate, formatRelativeTime } from "../lib/formatDate";
-import { ROLES, LOCALES, type Role } from "../lib/constants";
+import { LOCALES } from "../lib/constants";
+import {
+  PLATFORM_ROLES,
+  type AuthUser,
+  type PlatformRole,
+} from "../auth/types";
+import { describePlatformRole } from "../auth/access";
 import type { UpdateSettingsPayload } from "../api/settings";
+import { useAuth } from "../auth/useAuth";
 import {
   Plus,
   Pencil,
@@ -26,11 +29,7 @@ import {
   ShieldCheck,
   UserCog,
   Globe,
-  Activity,
-  Database,
-  Clock,
   CheckCircle2,
-  XCircle,
   Save,
   RotateCcw,
   BarChart3,
@@ -52,8 +51,26 @@ import toast from "react-hot-toast";
 interface UserFormData {
   email: string;
   password: string;
-  role: Role;
+  platformRole: PlatformRole;
 }
+
+const readinessTone = {
+  ready: {
+    badge: "bg-emerald-100 text-emerald-700",
+    panel: "border-emerald-200 bg-emerald-50/60",
+    kicker: "text-emerald-700",
+  },
+  warning: {
+    badge: "bg-amber-100 text-amber-800",
+    panel: "border-amber-200 bg-amber-50/60",
+    kicker: "text-amber-800",
+  },
+  blocking: {
+    badge: "bg-red-100 text-red-700",
+    panel: "border-red-200 bg-red-50/60",
+    kicker: "text-red-700",
+  },
+} as const;
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -67,25 +84,19 @@ const LOCALE_META: Record<
   de: { label: "German", flag: "🇩🇪", nativeName: "Deutsch" },
 };
 
-function formatUptime(seconds: number): string {
-  const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (d > 0) return `${d}d ${h}h ${m}m`;
-  if (h > 0) return `${h}h ${m}m ${s}s`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
-
 // ─── Main Page ─────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const { user: currentUser } = useAuth();
+  type SettingsTab = "site" | "seo" | "localization" | "readiness";
 
-  const [tab, setTab] = useState<"users" | "site" | "seo" | "localization">(
-    "users",
-  );
+  const [tab, setTab] = useState<SettingsTab>("site");
+
+  const availableTabs: Array<{ id: SettingsTab; label: string }> = [
+    { id: "site", label: "Site Settings" },
+    { id: "seo", label: "SEO Defaults" },
+    { id: "localization", label: "Localization" },
+    { id: "readiness", label: "Go-Live Readiness" },
+  ];
 
   const tabClass = (t: string) =>
     `border-b-2 px-5 py-3 text-sm font-medium transition-colors ${
@@ -99,34 +110,129 @@ export default function SettingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Manage your CMS configuration, users, and publishing settings
+          Manage the active site without leaving the hospitality workspace.
         </p>
       </div>
 
       <div className="mb-6 border-b border-gray-200">
         <nav className="-mb-px flex gap-1">
-          <button className={tabClass("users")} onClick={() => setTab("users")}>
-            Users
-          </button>
-          <button className={tabClass("site")} onClick={() => setTab("site")}>
-            Site Settings
-          </button>
-          <button className={tabClass("seo")} onClick={() => setTab("seo")}>
-            SEO Defaults
-          </button>
-          <button
-            className={tabClass("localization")}
-            onClick={() => setTab("localization")}
-          >
-            Localization
-          </button>
+          {availableTabs.map((item) => (
+            <button
+              key={item.id}
+              className={tabClass(item.id)}
+              onClick={() => setTab(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
         </nav>
       </div>
 
-      {tab === "users" && <UsersTab currentUser={currentUser} />}
       {tab === "site" && <SiteSettingsTab />}
       {tab === "seo" && <SeoDefaultsTab />}
       {tab === "localization" && <LocalizationTab />}
+      {tab === "readiness" && <ReadinessTab />}
+    </div>
+  );
+}
+
+function ReadinessTab() {
+  const { session } = useAuth();
+  const siteId = session?.activeSite?.id ?? null;
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["go-live-readiness", siteId],
+    queryFn: () => getReadiness(),
+    enabled: !!siteId,
+    retry: false,
+  });
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        Could not load readiness checks. Refresh the page or contact support.
+      </div>
+    );
+  }
+
+  const headerTone = readinessTone[data.severity];
+
+  return (
+    <div className="space-y-6">
+      <div className={`rounded-2xl border p-6 ${headerTone.panel}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p
+              className={`text-xs font-semibold uppercase tracking-[0.2em] ${headerTone.kicker}`}
+            >
+              Go-live status
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-gray-900">
+              {data.severity === "ready"
+                ? "This site is ready to go live"
+                : data.severity === "warning"
+                  ? "This site is close, but still has launch warnings"
+                  : "This site is blocked from a safe go-live"}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-gray-600">
+              Subscribers can use this checklist to understand whether
+              deployment, domain, SEO, and inquiry delivery are safe for
+              production without operator-only context.
+            </p>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${headerTone.badge}`}
+          >
+            {data.severity.toUpperCase()}
+          </span>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">
+          <span>Checked {formatRelativeTime(data.checkedAt)}</span>
+          {data.primaryDomain ? (
+            <span>Primary domain: {data.primaryDomain.hostname}</span>
+          ) : (
+            <span>No primary domain configured</span>
+          )}
+          {data.liveUrl ? <span>Live URL: {data.liveUrl}</span> : null}
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {data.checks.map((check) => {
+          const tone = readinessTone[check.severity];
+
+          return (
+            <div
+              key={check.key}
+              className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone.badge}`}
+                    >
+                      {check.severity.toUpperCase()}
+                    </span>
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      {check.label}
+                    </h3>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">{check.summary}</p>
+                  {check.action ? (
+                    <p className="mt-2 text-xs font-medium text-gray-500">
+                      Next action: {check.action}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -135,11 +241,7 @@ export default function SettingsPage() {
 // USERS TAB
 // ══════════════════════════════════════════════════════════
 
-function UsersTab({
-  currentUser,
-}: {
-  currentUser: { id: string; email: string; role: Role } | null;
-}) {
+export function UsersTab({ currentUser }: { currentUser: AuthUser | null }) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useUsers();
 
@@ -148,7 +250,7 @@ function UsersTab({
   const [formData, setFormData] = useState<UserFormData>({
     email: "",
     password: "",
-    role: "EDITOR",
+    platformRole: "SUPPORT_ADMIN",
   });
   const [formError, setFormError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -156,7 +258,7 @@ function UsersTab({
     email: string;
   } | null>(null);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<Role | "ALL">("ALL");
+  const [roleFilter, setRoleFilter] = useState<PlatformRole | "ALL">("ALL");
 
   const createMutation = useMutation({
     mutationFn: createUser,
@@ -181,7 +283,7 @@ function UsersTab({
       id: string;
       email?: string;
       password?: string;
-      role?: Role;
+      platformRole?: PlatformRole;
     }) => updateUser(id, payload),
     onSuccess: () => {
       toast.success("User updated successfully");
@@ -214,13 +316,21 @@ function UsersTab({
   const resetForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData({ email: "", password: "", role: "EDITOR" });
+    setFormData({ email: "", password: "", platformRole: "SUPPORT_ADMIN" });
     setFormError("");
   };
 
-  const handleEdit = (user: { id: string; email: string; role: Role }) => {
+  const handleEdit = (user: {
+    id: string;
+    email: string;
+    platformRole: PlatformRole | null;
+  }) => {
     setEditingId(user.id);
-    setFormData({ email: user.email, password: "", role: user.role });
+    setFormData({
+      email: user.email,
+      password: "",
+      platformRole: user.platformRole ?? "SUPPORT_ADMIN",
+    });
     setShowForm(true);
     setFormError("");
   };
@@ -233,11 +343,11 @@ function UsersTab({
         id: string;
         email?: string;
         password?: string;
-        role?: Role;
+        platformRole?: PlatformRole;
       } = {
         id: editingId,
         email: formData.email,
-        role: formData.role,
+        platformRole: formData.platformRole,
       };
       if (formData.password) payload.password = formData.password;
       updateMutation.mutate(payload);
@@ -253,33 +363,40 @@ function UsersTab({
   const filtered = allUsers.filter((u) => {
     const matchesSearch =
       !search || u.email.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
+    const matchesRole = roleFilter === "ALL" || u.platformRole === roleFilter;
     return matchesSearch && matchesRole;
   });
 
   const stats = {
     total: allUsers.length,
-    superAdmins: allUsers.filter((u) => u.role === "SUPER_ADMIN").length,
-    admins: allUsers.filter((u) => u.role === "ADMIN").length,
-    editors: allUsers.filter((u) => u.role === "EDITOR").length,
+    platformOwners: allUsers.filter((u) => u.platformRole === "PLATFORM_OWNER")
+      .length,
+    supportAdmins: allUsers.filter((u) => u.platformRole === "SUPPORT_ADMIN")
+      .length,
+    financeAdmins: allUsers.filter((u) => u.platformRole === "FINANCE_ADMIN")
+      .length,
   };
 
-  const roleBadge = (role: Role) => {
-    const map: Record<Role, string> = {
-      SUPER_ADMIN: "bg-purple-100 text-purple-800 border border-purple-200",
-      ADMIN: "bg-blue-100 text-blue-800 border border-blue-200",
-      EDITOR: "bg-gray-100 text-gray-700 border border-gray-200",
-    };
-    const labels: Record<Role, string> = {
-      SUPER_ADMIN: "Super Admin",
-      ADMIN: "Admin",
-      EDITOR: "Editor",
+  const roleBadge = (role: PlatformRole | null) => {
+    if (!role) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+          No platform role
+        </span>
+      );
+    }
+
+    const map: Record<PlatformRole, string> = {
+      PLATFORM_OWNER: "bg-purple-100 text-purple-800 border border-purple-200",
+      SUPPORT_ADMIN: "bg-blue-100 text-blue-800 border border-blue-200",
+      FINANCE_ADMIN:
+        "bg-emerald-100 text-emerald-800 border border-emerald-200",
     };
     return (
       <span
         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${map[role]}`}
       >
-        {labels[role]}
+        {describePlatformRole(role)}
       </span>
     );
   };
@@ -298,22 +415,22 @@ function UsersTab({
             color: "text-gray-900 bg-gray-50 border-gray-200",
           },
           {
-            label: "Super Admins",
-            value: stats.superAdmins,
+            label: "Platform Owners",
+            value: stats.platformOwners,
             icon: ShieldCheck,
             color: "text-purple-700 bg-purple-50 border-purple-200",
           },
           {
-            label: "Admins",
-            value: stats.admins,
+            label: "Support Admins",
+            value: stats.supportAdmins,
             icon: UserCog,
             color: "text-blue-700 bg-blue-50 border-blue-200",
           },
           {
-            label: "Editors",
-            value: stats.editors,
+            label: "Finance Admins",
+            value: stats.financeAdmins,
             icon: Pencil,
-            color: "text-amber-700 bg-amber-50 border-amber-200",
+            color: "text-emerald-700 bg-emerald-50 border-emerald-200",
           },
         ].map(({ label, value, icon: Icon, color }) => (
           <div
@@ -344,13 +461,15 @@ function UsersTab({
           </div>
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as Role | "ALL")}
+            onChange={(e) =>
+              setRoleFilter(e.target.value as PlatformRole | "ALL")
+            }
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="ALL">All Roles</option>
-            <option value="SUPER_ADMIN">Super Admin</option>
-            <option value="ADMIN">Admin</option>
-            <option value="EDITOR">Editor</option>
+            <option value="PLATFORM_OWNER">Platform owner</option>
+            <option value="SUPPORT_ADMIN">Support admin</option>
+            <option value="FINANCE_ADMIN">Finance admin</option>
           </select>
         </div>
         {!showForm && (
@@ -444,19 +563,18 @@ function UsersTab({
                 </label>
                 <select
                   id="user-role"
-                  value={formData.role}
+                  value={formData.platformRole}
                   onChange={(e) =>
-                    setFormData((f) => ({ ...f, role: e.target.value as Role }))
+                    setFormData((f) => ({
+                      ...f,
+                      platformRole: e.target.value as PlatformRole,
+                    }))
                   }
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  {ROLES.map((role) => (
+                  {PLATFORM_ROLES.map((role) => (
                     <option key={role} value={role}>
-                      {role === "SUPER_ADMIN"
-                        ? "Super Admin"
-                        : role === "ADMIN"
-                          ? "Admin"
-                          : "Editor"}
+                      {describePlatformRole(role)}
                     </option>
                   ))}
                 </select>
@@ -553,7 +671,7 @@ function UsersTab({
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">{roleBadge(u.role as Role)}</td>
+                  <td className="px-4 py-3">{roleBadge(u.platformRole)}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
                     <span title={formatDate(u.createdAt)}>
                       {formatRelativeTime(u.createdAt)}
@@ -575,7 +693,7 @@ function UsersTab({
                           handleEdit({
                             id: u.id,
                             email: u.email,
-                            role: u.role as Role,
+                            platformRole: u.platformRole,
                           })
                         }
                         className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
@@ -629,12 +747,16 @@ function UsersTab({
 
 function SiteSettingsTab() {
   const { data: settings, isLoading } = useSettings();
-  const { data: health, isLoading: healthLoading } = useHealth();
   const updateMutation = useUpdateSettings();
 
   const [general, setGeneral] = useState({
     siteName: "",
     supportEmail: "",
+    defaultInquiryRoutingEmail: "",
+    inquiryWebhookUrl: "",
+    inquiryWebhookSecret: "",
+    inquiryWebhookSecretConfigured: false,
+    clearInquiryWebhookSecret: false,
     logoUrl: "",
     faviconUrl: "",
   });
@@ -658,6 +780,11 @@ function SiteSettingsTab() {
       setGeneral({
         siteName: settings.siteName,
         supportEmail: settings.supportEmail,
+        defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+        inquiryWebhookUrl: settings.inquiryWebhookUrl,
+        inquiryWebhookSecret: "",
+        inquiryWebhookSecretConfigured: settings.inquiryWebhookSecretConfigured,
+        clearInquiryWebhookSecret: false,
         logoUrl: settings.logoUrl,
         faviconUrl: settings.faviconUrl,
       });
@@ -685,112 +812,24 @@ function SiteSettingsTab() {
     });
   };
 
+  const buildGeneralPayload = (): UpdateSettingsPayload => ({
+    siteName: general.siteName,
+    supportEmail: general.supportEmail,
+    defaultInquiryRoutingEmail: general.defaultInquiryRoutingEmail,
+    inquiryWebhookUrl: general.inquiryWebhookUrl,
+    ...(general.clearInquiryWebhookSecret
+      ? { inquiryWebhookSecret: "" }
+      : general.inquiryWebhookSecret.trim()
+        ? { inquiryWebhookSecret: general.inquiryWebhookSecret.trim() }
+        : {}),
+    logoUrl: general.logoUrl,
+    faviconUrl: general.faviconUrl,
+  });
+
   if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="space-y-6">
-      {/* System Health */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-gray-100 bg-gray-50 px-5 py-3.5 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-gray-500" />
-          <h2 className="text-sm font-semibold text-gray-800">System Status</h2>
-          <span className="ml-auto text-xs text-gray-400">
-            Refreshes every 30s
-          </span>
-        </div>
-        <div className="grid divide-x divide-gray-100 sm:grid-cols-4">
-          {/* API Status */}
-          <div className="px-5 py-4">
-            <p className="text-xs font-medium text-gray-500 mb-1.5">
-              API Status
-            </p>
-            {healthLoading ? (
-              <div className="h-5 w-12 animate-pulse rounded bg-gray-200" />
-            ) : (
-              <div className="flex items-center gap-1.5">
-                {health?.status === "ok" ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    <span className="text-sm font-semibold text-emerald-600">
-                      Online
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4 text-red-500" />
-                    <span className="text-sm font-semibold text-red-600">
-                      Error
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          {/* DB Status */}
-          <div className="px-5 py-4">
-            <p className="text-xs font-medium text-gray-500 mb-1.5">Database</p>
-            {healthLoading ? (
-              <div className="h-5 w-16 animate-pulse rounded bg-gray-200" />
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <Database
-                  className={`h-4 w-4 ${health?.dbConnected ? "text-emerald-500" : "text-red-500"}`}
-                />
-                <span
-                  className={`text-sm font-semibold ${health?.dbConnected ? "text-emerald-600" : "text-red-600"}`}
-                >
-                  {health?.dbConnected ? "Connected" : "Disconnected"}
-                </span>
-              </div>
-            )}
-          </div>
-          {/* Uptime */}
-          <div className="px-5 py-4">
-            <p className="text-xs font-medium text-gray-500 mb-1.5">Uptime</p>
-            {healthLoading ? (
-              <div className="h-5 w-20 animate-pulse rounded bg-gray-200" />
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-semibold text-gray-800">
-                  {health ? formatUptime(health.uptime) : "—"}
-                </span>
-              </div>
-            )}
-          </div>
-          {/* Last Check */}
-          <div className="px-5 py-4">
-            <p className="text-xs font-medium text-gray-500 mb-1.5">
-              Last Check
-            </p>
-            {healthLoading ? (
-              <div className="h-5 w-24 animate-pulse rounded bg-gray-200" />
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-600">
-                  {health
-                    ? new Date(health.timestamp).toLocaleTimeString()
-                    : "—"}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-        {settings?.updatedBy && (
-          <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500">
-            Settings last updated by{" "}
-            <span className="font-medium text-gray-700">
-              {settings.updatedBy}
-            </span>
-            {" · "}
-            <span title={formatDate(settings.updatedAt)}>
-              {formatRelativeTime(settings.updatedAt)}
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* General Settings */}
       <SettingsCard
         icon={Globe}
@@ -798,12 +837,27 @@ function SiteSettingsTab() {
         description="Basic site identity shown across the CMS and published website"
         dirty={generalDirty}
         saving={updateMutation.isPending}
-        onSave={() => save(general, () => setGeneralDirty(false))}
+        onSave={() =>
+          save(buildGeneralPayload(), () => {
+            setGeneralDirty(false);
+            setGeneral((previous) => ({
+              ...previous,
+              inquiryWebhookSecret: "",
+              clearInquiryWebhookSecret: false,
+            }));
+          })
+        }
         onReset={() => {
           if (settings)
             setGeneral({
               siteName: settings.siteName,
               supportEmail: settings.supportEmail,
+              defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+              inquiryWebhookUrl: settings.inquiryWebhookUrl,
+              inquiryWebhookSecret: "",
+              inquiryWebhookSecretConfigured:
+                settings.inquiryWebhookSecretConfigured,
+              clearInquiryWebhookSecret: false,
               logoUrl: settings.logoUrl,
               faviconUrl: settings.faviconUrl,
             });
@@ -844,6 +898,100 @@ function SiteSettingsTab() {
               className={inputCls}
               placeholder="support@example.com"
             />
+          </SettingsField>
+          <SettingsField
+            label="Inquiry Routing Email"
+            id="defaultInquiryRoutingEmail"
+            hint="Primary inbox for hospitality inquiry forwarding"
+          >
+            <input
+              id="defaultInquiryRoutingEmail"
+              type="email"
+              value={general.defaultInquiryRoutingEmail}
+              onChange={(e) => {
+                setGeneral((p) => ({
+                  ...p,
+                  defaultInquiryRoutingEmail: e.target.value,
+                }));
+                setGeneralDirty(true);
+              }}
+              className={inputCls}
+              placeholder="reservations@example.com"
+            />
+          </SettingsField>
+          <SettingsField
+            label="Inquiry Webhook URL"
+            id="inquiryWebhookUrl"
+            hint="Optional POST endpoint for structured inquiry delivery"
+          >
+            <input
+              id="inquiryWebhookUrl"
+              type="url"
+              value={general.inquiryWebhookUrl}
+              onChange={(e) => {
+                setGeneral((p) => ({
+                  ...p,
+                  inquiryWebhookUrl: e.target.value,
+                }));
+                setGeneralDirty(true);
+              }}
+              className={inputCls}
+              placeholder="https://ops.example.com/hooks/inquiries"
+            />
+          </SettingsField>
+          <SettingsField
+            label="Webhook Secret"
+            id="inquiryWebhookSecret"
+            hint="Optional HMAC secret used to sign delivery webhooks"
+          >
+            <div className="space-y-2">
+              <input
+                id="inquiryWebhookSecret"
+                type="password"
+                value={general.inquiryWebhookSecret}
+                onChange={(e) => {
+                  setGeneral((p) => ({
+                    ...p,
+                    inquiryWebhookSecret: e.target.value,
+                    clearInquiryWebhookSecret: false,
+                  }));
+                  setGeneralDirty(true);
+                }}
+                className={inputCls}
+                placeholder={
+                  general.inquiryWebhookSecretConfigured &&
+                  !general.clearInquiryWebhookSecret
+                    ? "Stored secret configured"
+                    : "whsec_..."
+                }
+              />
+              {general.inquiryWebhookSecretConfigured &&
+                !general.clearInquiryWebhookSecret && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGeneral((p) => ({
+                        ...p,
+                        inquiryWebhookSecret: "",
+                        clearInquiryWebhookSecret: true,
+                      }));
+                      setGeneralDirty(true);
+                    }}
+                    className="text-xs font-medium text-amber-700 hover:text-amber-800"
+                  >
+                    Clear stored secret on next save
+                  </button>
+                )}
+              {general.clearInquiryWebhookSecret ? (
+                <p className="text-xs text-amber-700">
+                  The stored webhook secret will be removed when you save.
+                </p>
+              ) : general.inquiryWebhookSecretConfigured ? (
+                <p className="text-xs text-gray-500">
+                  A secret is already stored. Leave this field blank to keep it.
+                </p>
+              ) : null}
+            </div>
           </SettingsField>
           <SettingsField
             label="Logo URL"
@@ -892,6 +1040,12 @@ function SiteSettingsTab() {
             />
             <span className="text-xs text-gray-500">Logo preview</span>
           </div>
+        )}
+        {settings?.updatedBy && (
+          <p className="mt-3 text-xs text-gray-500">
+            Settings last updated by {settings.updatedBy} ·{" "}
+            {formatRelativeTime(settings.updatedAt)}
+          </p>
         )}
       </SettingsCard>
 
@@ -1256,6 +1410,37 @@ function SeoDefaultsTab() {
                     ((e.target as HTMLImageElement).style.display = "none")
                   }
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Social card preview */}
+          {form.seoOgImage && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+                Social card preview
+              </p>
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white max-w-sm shadow-sm">
+                <img
+                  src={form.seoOgImage}
+                  alt="Social OG card preview"
+                  className="aspect-[1200/630] w-full object-cover"
+                  onError={(e) =>
+                    ((e.target as HTMLImageElement).style.display = "none")
+                  }
+                />
+                <div className="border-t border-gray-100 bg-gray-50 px-3 py-2">
+                  <p className="text-xs font-medium text-gray-900 line-clamp-1">
+                    {form.seoTitleTemplate.replace("%s", previewTitle) ||
+                      previewTitle}
+                  </p>
+                  <p className="text-[11px] text-gray-500 line-clamp-2">
+                    {form.seoDefaultDesc}
+                  </p>
+                  <p className="mt-0.5 text-[10px] uppercase text-gray-400">
+                    yourdomain.com
+                  </p>
+                </div>
               </div>
             </div>
           )}

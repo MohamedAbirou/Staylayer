@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updatePage } from "../api/pages";
+import { useAuth } from "../auth/useAuth";
 
 interface SavePageVariables {
   slug: string;
@@ -10,6 +11,8 @@ interface SavePageVariables {
 
 export function useSavePage() {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const activeSiteId = session?.activeSite?.id ?? null;
 
   return useMutation({
     mutationFn: ({ slug, locale, puckData, title }: SavePageVariables) => {
@@ -30,9 +33,9 @@ export function useSavePage() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["page", variables.slug, variables.locale],
+        queryKey: ["page", activeSiteId, variables.slug, variables.locale],
       });
-      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      queryClient.invalidateQueries({ queryKey: ["pages", activeSiteId] });
     },
   });
 }

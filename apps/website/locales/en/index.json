@@ -1,103 +1,102 @@
 {
   "seo": {
     "home": {
-      "title": "MyAllocator — All-in-One Vacation Rental Software",
-      "description": "MyAllocator is the all-in-one vacation-rental management platform: channel manager, dynamic pricing, booking engine, guest communications, and more.",
-      "keywords": "vacation rental software, channel manager, dynamic pricing, property management, booking engine, MyAllocator"
+      "title": "Welcome — Your Hospitality Property",
+      "description": "Discover your perfect stay. Explore our accommodation, amenities, and local area, then get in touch to plan your visit directly with our team.",
+      "keywords": "accommodation, boutique hotel, villa, guest house, hospitality, stay, direct inquiry"
     },
     "pricing": {
-      "title": "Pricing — MyAllocator",
-      "description": "Simple, transparent pricing for vacation-rental managers. One plan, everything included. Start your free trial today.",
-      "keywords": "pricing, vacation rental software price, MyAllocator cost, free trial, property management pricing"
+      "title": "Plan Your Stay",
+      "description": "Contact us directly to check availability and receive a personalised quote for your visit.",
+      "keywords": "plan your stay, accommodation enquiry, availability, direct booking, rates"
     }
   },
   "home": {
     "hero": {
-      "headingPrefix": "Everything you need to ",
-      "highlight": "manage smarter",
-      "subheading": "MyAllocator is the all-in-one vacation-rental management software that helps hosts and property managers earn more, work less, and delight guests.",
-      "otaKicker": "Trusted by property managers connected to"
+      "headingPrefix": "A place where every guest ",
+      "highlight": "feels at home",
+      "subheading": "Discover carefully crafted accommodation and genuine hospitality. Tell us about your ideal stay and we will take care of the rest."
     },
     "sections": {
       "tools": {
-        "title": "Powerful Tools for Every Host",
-        "subtitle": "From a single Airbnb to a multi-property portfolio, MyAllocator gives you enterprise-grade features without the enterprise price tag.",
+        "title": "Everything You Need for a Perfect Stay",
+        "subtitle": "From the moment you enquire to the morning you check out, we focus on making every detail of your visit exceptional.",
         "features": {
           "bookingEngine": {
-            "title": "Booking Engine",
+            "title": "Accommodation",
             "bullets": [
-              "Commission-free direct bookings",
-              "Branded booking widget for your website",
-              "Real-time availability & instant confirmation",
-              "Multi-currency & multi-language support"
+              "Beautifully appointed rooms and suites",
+              "Flexible check-in and check-out times",
+              "Personalised welcome for every guest",
+              "Exclusive packages and special-occasion add-ons"
             ]
           },
           "guestCommunication": {
-            "title": "Guest Communication",
+            "title": "Guest Experience",
             "bullets": [
-              "Automated pre-arrival & checkout messages",
-              "Unified inbox for all channels",
-              "Templates with smart placeholders",
-              "Review request automation"
+              "Curated amenities and in-house services",
+              "Dedicated concierge team",
+              "Local insider recommendations",
+              "Seamless communication from enquiry to checkout"
             ]
           },
           "teamManagement": {
-            "title": "Team Management",
+            "title": "Location & Destination",
             "bullets": [
-              "Role-based access for your team",
-              "Cleaning & maintenance task assignment",
-              "Staff calendar with real-time updates",
-              "Performance tracking & reports"
+              "Exceptional setting in a sought-after destination",
+              "Easy access to local landmarks and activities",
+              "Guided itinerary suggestions on request",
+              "Airport and transfer information available"
             ]
           },
           "websiteBuilder": {
-            "title": "Website Builder",
+            "title": "Plan Your Visit",
             "bullets": [
-              "Beautiful, mobile-optimized templates",
-              "Built-in SEO tools",
-              "Integrated booking widget",
-              "Custom domain support"
+              "Direct inquiry for the best available rates",
+              "No third-party booking fees",
+              "Prompt, personal response to every enquiry",
+              "Custom group and event packages available"
             ]
           }
         }
       },
       "builtFor": {
-        "title": "Built for Hosts Who Want More",
-        "body": "Whether you manage a cozy mountain cabin or a fleet of beachfront villas, MyAllocator adapts to your workflow — not the other way around."
+        "title": "Where Every Detail Matters",
+        "body": "Whether you are planning a romantic escape, a family holiday, or a corporate retreat, we tailor every aspect of your stay to you."
       },
       "stories": {
-        "title": "What Our Hosts Say",
+        "title": "What Our Guests Say",
         "quote": {
-          "text": "Since switching to MyAllocator, our revenue increased by 32 % and the time we spend on admin dropped by half. The dynamic-pricing engine alone has been a game-changer.",
-          "author": "Sofia R., Property Manager — Costa del Sol"
+          "text": "From the moment we arrived we felt genuinely welcomed. The rooms were stunning, the team thought of everything, and the location could not have been more perfect.",
+          "author": "Guest review"
         }
       },
       "integrations": {
-        "title": "Seamless Integrations",
-        "body": "MyAllocator connects to over 100 booking channels, payment gateways, and smart-home devices — so you can run your business from a single dashboard."
+        "title": "Reach Us Directly",
+        "body": "The best way to plan your stay is to reach out directly. We are on hand to answer questions, confirm availability, and put together the perfect itinerary for your visit."
       },
       "faq": {
         "title": "Frequently Asked Questions",
         "items": [
           {
-            "question": "What is MyAllocator?",
-            "answer": "MyAllocator is an all-in-one vacation-rental management platform that includes a channel manager, booking engine, dynamic pricing, guest communications, website builder, and more."
+            "question": "How do I make an inquiry or reservation?",
+            "answer": "Simply use the contact form on this page or send us an email. We will respond personally within 24 hours with availability and rates."
           },
           {
-            "question": "Is there a free trial?",
-            "answer": "Yes! You can start a free trial with no credit card required. Explore every feature and see the results for yourself before committing."
+            "question": "What is included with the room rate?",
+            "answer": "All rates include accommodation and our standard welcome amenities. Breakfast and additional services can be added when you enquire."
           },
           {
-            "question": "Which channels does MyAllocator support?",
-            "answer": "We support over 100 channels including Airbnb, Booking.com, Vrbo, Expedia, Google Vacation Rentals, and many more niche OTAs."
+            "question": "What is the cancellation policy?",
+            "answer": "We offer flexible cancellation options. Please enquire directly and we will confirm the terms that apply to your preferred dates."
           },
           {
-            "question": "How does dynamic pricing work?",
-            "answer": "Our algorithm analyses market demand, local events, competitor rates, and seasonality to automatically adjust your rates in real time — maximizing revenue while keeping occupancy high."
+            "question": "Do you accommodate special requests?",
+            "answer": "Absolutely. Whether it is a dietary requirement, a special occasion arrangement, or an early check-in, just let us know in your enquiry and we will do our best."
           },
           {
-            "question": "Can I manage multiple properties?",
-            "answer": "Absolutely. MyAllocator is designed to scale from a single listing to hundreds of properties, with bulk editing, team roles, and portfolio-level reporting."
+            "question": "Is there a minimum stay?",
+            "answer": "Minimum stay requirements vary by season. Please get in touch with your preferred dates and we will confirm availability and any minimum stay that applies."
           }
         ]
       }
@@ -107,26 +106,26 @@
     "faq": {
       "items": [
         {
-          "question": "What is included in the plan?",
-          "answer": "Everything: channel manager, booking engine, dynamic pricing, guest communications, website builder, reporting, and unlimited team members."
+          "question": "How do I get a rate for my dates?",
+          "answer": "Contact us directly with your preferred dates and number of guests. We will provide a personalised quote by return."
         },
         {
-          "question": "Are there any hidden fees?",
-          "answer": "No. The price you see is the price you pay. There are no setup fees, no per-booking commissions, and no surprise charges."
+          "question": "Are the rates negotiable?",
+          "answer": "We are happy to discuss special rates for extended stays, groups, or repeat guests. Reach out and we will find the right arrangement for you."
         },
         {
-          "question": "Can I cancel at any time?",
-          "answer": "Yes. There are no long-term contracts. You can cancel your subscription at any time directly from your account settings."
+          "question": "Do you offer gift vouchers?",
+          "answer": "Yes. Gift vouchers for stays and experiences are available. Contact us for details."
         },
         {
-          "question": "Do you offer a discount for annual billing?",
-          "answer": "Yes — paying annually saves you up to 20 % compared with monthly billing."
+          "question": "Do you offer long-stay discounts?",
+          "answer": "Yes — extended stays of a week or more are eligible for preferential rates. Please enquire for details."
         }
       ]
     }
   },
   "cta": {
-    "heading": "Ready to Grow Your Rental Business?",
-    "secondary": "Start your free trial today — no credit card required."
+    "heading": "Ready to plan your stay?",
+    "secondary": "Send us an inquiry"
   }
 }

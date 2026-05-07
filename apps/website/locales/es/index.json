@@ -1,103 +1,102 @@
 {
   "seo": {
     "home": {
-      "title": "MyAllocator — Software integral para alquileres vacacionales",
-      "description": "MyAllocator es la plataforma integral de gestión de alquileres vacacionales: channel manager, precios dinámicos, motor de reservas, comunicación con huéspedes y mucho más.",
-      "keywords": "software para alquiler vacacional, channel manager, precios dinámicos, gestión de propiedades, motor de reservas, MyAllocator"
+      "title": "Bienvenido — Su alojamiento de hospitalidad",
+      "description": "Descubra su estancia perfecta. Explore nuestro alojamiento, instalaciones y entorno local, y póngase en contacto para planificar su visita directamente con nuestro equipo.",
+      "keywords": "alojamiento, hotel boutique, villa, casa de huéspedes, hospitalidad, estancia, consulta directa"
     },
     "pricing": {
-      "title": "Precios — MyAllocator",
-      "description": "Precios simples y transparentes para gestores de alquileres vacacionales. Un solo plan, todo incluido. Comience su prueba gratuita hoy.",
-      "keywords": "precios, precio del software de alquiler vacacional, coste de MyAllocator, prueba gratuita, precios de gestión de propiedades"
+      "title": "Planifique su estancia",
+      "description": "Contáctenos directamente para comprobar disponibilidad y recibir un presupuesto personalizado para su visita.",
+      "keywords": "planifique su estancia, consulta de alojamiento, disponibilidad, reserva directa, tarifas"
     }
   },
   "home": {
     "hero": {
-      "headingPrefix": "Todo lo que necesita para ",
-      "highlight": "gestionar mejor",
-      "subheading": "MyAllocator es el software integral de gestión de alquileres vacacionales que ayuda a anfitriones y gestores de propiedades a ganar más, trabajar menos y encantar a sus huéspedes.",
-      "otaKicker": "La solución en la que confían los gestores conectados a"
+      "headingPrefix": "Un lugar donde cada huésped ",
+      "highlight": "se siente como en casa",
+      "subheading": "Descubra un alojamiento cuidadosamente diseñado y una hospitalidad auténtica. Cuéntenos cómo imagina su estancia y nosotros nos encargamos del resto."
     },
     "sections": {
       "tools": {
-        "title": "Herramientas potentes para cada anfitrión",
-        "subtitle": "Desde un solo apartamento en Airbnb hasta un portafolio de múltiples propiedades, MyAllocator le ofrece funcionalidades de nivel empresarial sin el precio empresarial.",
+        "title": "Todo lo que necesita para una estancia perfecta",
+        "subtitle": "Desde el momento en que realiza su consulta hasta la mañana de su salida, nos centramos en hacer de cada detalle de su visita algo excepcional.",
         "features": {
           "bookingEngine": {
-            "title": "Motor de reservas",
+            "title": "Alojamiento",
             "bullets": [
-              "Reservas directas sin comisiones",
-              "Widget de reservas personalizado para su sitio web",
-              "Disponibilidad en tiempo real y confirmación instantánea",
-              "Soporte multidivisa y multiidioma"
+              "Habitaciones y suites bellamente acondicionadas",
+              "Horarios flexibles de entrada y salida",
+              "Bienvenida personalizada para cada huésped",
+              "Paquetes exclusivos y complementos para ocasiones especiales"
             ]
           },
           "guestCommunication": {
-            "title": "Comunicación con huéspedes",
+            "title": "Experiencia del huésped",
             "bullets": [
-              "Mensajes automatizados antes de la llegada y al checkout",
-              "Bandeja de entrada unificada para todos los canales",
-              "Plantillas con marcadores inteligentes",
-              "Automatización de solicitudes de reseñas"
+              "Instalaciones y servicios internos cuidadosamente seleccionados",
+              "Equipo de conserjería dedicado",
+              "Recomendaciones locales de primera mano",
+              "Comunicación fluida desde la consulta hasta la salida"
             ]
           },
           "teamManagement": {
-            "title": "Gestión de equipos",
+            "title": "Ubicación y destino",
             "bullets": [
-              "Acceso basado en roles para su equipo",
-              "Asignación de tareas de limpieza y mantenimiento",
-              "Calendario del personal con actualizaciones en tiempo real",
-              "Seguimiento del rendimiento e informes"
+              "Entorno excepcional en un destino muy solicitado",
+              "Fácil acceso a monumentos y actividades locales",
+              "Sugerencias de itinerarios guiados a petición",
+              "Información sobre aeropuerto y traslados disponible"
             ]
           },
           "websiteBuilder": {
-            "title": "Creador de sitios web",
+            "title": "Planifique su visita",
             "bullets": [
-              "Plantillas atractivas optimizadas para dispositivos móviles",
-              "Herramientas de SEO integradas",
-              "Widget de reservas integrado",
-              "Soporte de dominio personalizado"
+              "Consulta directa para las mejores tarifas disponibles",
+              "Sin comisiones de terceros",
+              "Respuesta rápida y personal a cada consulta",
+              "Paquetes personalizados para grupos y eventos"
             ]
           }
         }
       },
       "builtFor": {
-        "title": "Diseñado para anfitriones que quieren más",
-        "body": "Ya sea que gestione una acogedora cabaña en la montaña o una flota de villas frente al mar, MyAllocator se adapta a su flujo de trabajo, y no al revés."
+        "title": "Donde cada detalle importa",
+        "body": "Ya sea que esté planeando una escapada romántica, unas vacaciones en familia o un retiro corporativo, adaptamos cada aspecto de su estancia a sus necesidades."
       },
       "stories": {
-        "title": "Lo que dicen nuestros anfitriones",
+        "title": "Lo que dicen nuestros huéspedes",
         "quote": {
-          "text": "Desde que cambiamos a MyAllocator, nuestros ingresos aumentaron un 32 % y el tiempo dedicado a la administración se redujo a la mitad. Solo el motor de precios dinámicos ha sido un cambio radical.",
-          "author": "Sofía R., Gestora de propiedades — Costa del Sol"
+          "text": "Desde el momento en que llegamos nos sentimos genuinamente bienvenidos. Las habitaciones eran espectaculares, el equipo pensó en todo y la ubicación no podría haber sido más perfecta.",
+          "author": "Reseña de huésped"
         }
       },
       "integrations": {
-        "title": "Integraciones perfectas",
-        "body": "MyAllocator se conecta con más de 100 canales de reservas, pasarelas de pago y dispositivos inteligentes para el hogar, para que pueda gestionar su negocio desde un único panel."
+        "title": "Contáctenos directamente",
+        "body": "La mejor forma de planificar su estancia es contactarnos directamente. Estamos disponibles para responder sus preguntas, confirmar disponibilidad y preparar el itinerario perfecto para su visita."
       },
       "faq": {
         "title": "Preguntas frecuentes",
         "items": [
           {
-            "question": "¿Qué es MyAllocator?",
-            "answer": "MyAllocator es una plataforma integral de gestión de alquileres vacacionales que incluye channel manager, motor de reservas, precios dinámicos, comunicación con huéspedes, creador de sitios web y mucho más."
+            "question": "¿Cómo puedo hacer una consulta o reserva?",
+            "answer": "Simplemente utilice el formulario de contacto de esta página o envíenos un correo electrónico. Le responderemos personalmente en 24 horas con disponibilidad y tarifas."
           },
           {
-            "question": "¿Hay una prueba gratuita?",
-            "answer": "¡Sí! Puede comenzar una prueba gratuita sin necesidad de tarjeta de crédito. Explore todas las funcionalidades y compruebe los resultados por sí mismo antes de comprometerse."
+            "question": "¿Qué está incluido en la tarifa?",
+            "answer": "Todas las tarifas incluyen alojamiento y nuestras comodidades de bienvenida estándar. El desayuno y los servicios adicionales se pueden añadir al hacer su consulta."
           },
           {
-            "question": "¿Qué canales admite MyAllocator?",
-            "answer": "Soportamos más de 100 canales, incluyendo Airbnb, Booking.com, Vrbo, Expedia, Google Vacation Rentals y muchas más OTAs de nicho."
+            "question": "¿Cuál es la política de cancelación?",
+            "answer": "Ofrecemos opciones de cancelación flexibles. Consúltenos directamente y le confirmaremos los términos aplicables a sus fechas preferidas."
           },
           {
-            "question": "¿Cómo funciona el sistema de precios dinámicos?",
-            "answer": "Nuestro algoritmo analiza la demanda del mercado, eventos locales, tarifas de la competencia y la estacionalidad para ajustar automáticamente sus precios en tiempo real, maximizando los ingresos y manteniendo una alta ocupación."
+            "question": "¿Pueden atender solicitudes especiales?",
+            "answer": "Por supuesto. Ya sea un requisito dietético, un arreglo para una ocasión especial o una entrada anticipada, simplemente indíquelo en su consulta y haremos todo lo posible."
           },
           {
-            "question": "¿Puedo gestionar múltiples propiedades?",
-            "answer": "Por supuesto. MyAllocator está diseñado para escalar desde un solo anuncio hasta cientos de propiedades, con edición masiva, roles de equipo e informes a nivel de portafolio."
+            "question": "¿Hay una estancia mínima?",
+            "answer": "Los requisitos de estancia mínima varían según la temporada. Póngase en contacto con sus fechas preferidas y le confirmaremos la disponibilidad y la estancia mínima aplicable."
           }
         ]
       }
@@ -107,26 +106,26 @@
     "faq": {
       "items": [
         {
-          "question": "¿Qué incluye el plan?",
-          "answer": "Todo: channel manager, motor de reservas, precios dinámicos, comunicación con huéspedes, creador de sitios web, informes y miembros del equipo ilimitados."
+          "question": "¿Cómo obtengo una tarifa para mis fechas?",
+          "answer": "Contáctenos directamente con sus fechas preferidas y número de huéspedes. Le proporcionaremos un presupuesto personalizado a vuelta de correo."
         },
         {
-          "question": "¿Hay costes ocultos?",
-          "answer": "No. El precio que ve es el precio que paga. No hay tarifas de configuración, ni comisiones por reserva, ni cargos sorpresa."
+          "question": "¿Son negociables las tarifas?",
+          "answer": "Con gusto discutimos tarifas especiales para estancias prolongadas, grupos o huéspedes habituales. Contáctenos y encontraremos el arreglo adecuado para usted."
         },
         {
-          "question": "¿Puedo cancelar en cualquier momento?",
-          "answer": "Sí. No hay contratos a largo plazo. Puede cancelar su suscripción en cualquier momento directamente desde la configuración de su cuenta."
+          "question": "¿Ofrecen vales de regalo?",
+          "answer": "Sí. Disponemos de vales de regalo para estancias y experiencias. Contáctenos para más detalles."
         },
         {
-          "question": "¿Ofrecen descuento por facturación anual?",
-          "answer": "Sí — pagar anualmente le ahorra hasta un 20 % en comparación con la facturación mensual."
+          "question": "¿Ofrecen descuentos por estancias prolongadas?",
+          "answer": "Sí — las estancias prolongadas de una semana o más son elegibles para tarifas preferenciales. Consúltenos para más detalles."
         }
       ]
     }
   },
   "cta": {
-    "heading": "¿Listo para hacer crecer su negocio de alquiler?",
-    "secondary": "Comience su prueba gratuita hoy — no se requiere tarjeta de crédito."
+    "heading": "¿Listo para planificar su estancia?",
+    "secondary": "Envíenos una consulta"
   }
 }

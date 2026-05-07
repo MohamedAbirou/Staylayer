@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePages } from "../hooks/usePages";
 import { usePublishPage } from "../hooks/usePublishPage";
+import { canPermanentlyDeleteContent, canPublishContent } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
 import {
   deletePage,
@@ -43,7 +44,7 @@ import toast from "react-hot-toast";
 
 export default function PagesListPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { session } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [localeFilter, setLocaleFilter] = useState<string | null>(null);
@@ -304,9 +305,9 @@ export default function PagesListPage() {
     [filteredPages, currentPage, ITEMS_PER_PAGE],
   );
 
-  const canPublish = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
-  const canDelete = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
-  const canPermDelete = user?.role === "SUPER_ADMIN";
+  const canPublish = canPublishContent(session);
+  const canDelete = canPublishContent(session);
+  const canPermDelete = canPermanentlyDeleteContent(session);
 
   // True when any bulk mutation is in flight
   const bulkPending =
@@ -1026,7 +1027,7 @@ export default function PagesListPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {/* ── Permanent delete confirm (SUPER_ADMIN only) ── */}
+      {/* ── Permanent delete confirm (OWNER membership role only) ── */}
       <ConfirmDialog
         open={!!permDeleteTarget}
         title="⚠️ Permanently Delete Page"

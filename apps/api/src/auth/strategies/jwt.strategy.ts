@@ -1,16 +1,10 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
+import { ConfigService } from "@nestjs/config";
+import { SiteStatus, TenantStatus } from "@prisma/client";
 import { UsersService } from "../../users/users.service";
-
-interface JwtPayload {
-  sub: string;
-  email: string;
-  role: string;
-  iat: number;
-  exp: number;
-}
+import { AuthenticatedRequestUser, JwtAccessPayload } from "../auth.types";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -31,10 +25,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(
-    payload: JwtPayload,
-  ): Promise<{ sub: string; email: string; role: string }> {
-    const user = await this.usersService.findById(payload.sub);
+  async validate(payload: JwtAccessPayload): Promise<AuthenticatedRequestUser> {
+    const user = await this.usersService.findAuthUserById(payload.sub);
 
     if (!user) {
       throw new UnauthorizedException({
@@ -50,10 +42,51 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
+    if (payload.platformRole !== (user.platformRole ?? null)) {
+      throw new UnauthorizedException({
+        code: "STALE_PLATFORM_ROLE",
+        message: "Refresh your session before continuing",
+      });
+    }
+
+    if (payload.activeTenantId || payload.activeMembershipRole) {
+      const activeMembership = user.memberships.find(
+        (membership) =>
+          membership.tenantId === payload.activeTenantId &&
+          membership.role === payload.activeMembershipRole,
+      );
+
+      if (
+        !activeMembership ||
+        activeMembership.tenant.status !== TenantStatus.ACTIVE
+      ) {
+        throw new UnauthorizedException({
+          code: "TENANT_ACCESS_DENIED",
+          message: "The active tenant is no longer available",
+        });
+      }
+
+      if (payload.activeSiteId) {
+        const activeSite = activeMembership.tenant.sites.find(
+          (site) => site.id === payload.activeSiteId,
+        );
+
+        if (!activeSite || activeSite.status === SiteStatus.ARCHIVED) {
+          throw new UnauthorizedException({
+            code: "SITE_ACCESS_DENIED",
+            message: "The active site is no longer available",
+          });
+        }
+      }
+    }
+
     return {
       sub: payload.sub,
       email: payload.email,
-      role: payload.role,
+      platformRole: payload.platformRole ?? null,
+      activeTenantId: payload.activeTenantId ?? null,
+      activeMembershipRole: payload.activeMembershipRole ?? null,
+      activeSiteId: payload.activeSiteId ?? null,
     };
   }
 }

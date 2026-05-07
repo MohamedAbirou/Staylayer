@@ -6,15 +6,20 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
-import { UsersService } from "../users/users.service";
+import { SiteStatus, TenantStatus } from "@prisma/client";
+import { UsersService, type AuthUserRecord } from "../users/users.service";
+import {
+  ActiveSiteContext,
+  AuthContextRequest,
+  AuthMembershipSummary,
+  AuthResponse,
+  AuthenticatedUserProfile,
+  JwtAccessPayload,
+  RefreshTokenPayload,
+} from "./auth.types";
 
 const ACCESS_TOKEN_EXPIRY = 15 * 60 * 1000;
 const REFRESH_TOKEN_EXPIRY = 30 * 24 * 60 * 60 * 1000;
-
-interface RefreshTokenPayload {
-  sub: string;
-  type: string;
-}
 
 @Injectable()
 export class AuthService {
@@ -29,8 +34,12 @@ export class AuthService {
   async validateUser(
     email: string,
     password: string,
-  ): Promise<{ id: string; email: string; role: string } | null> {
-    const user = await this.usersService.findByEmail(email);
+  ): Promise<{
+    id: string;
+    email: string;
+    platformRole: AuthenticatedUserProfile["platformRole"];
+  } | null> {
+    const user = await this.usersService.findAuthUserByEmail(email);
     if (!user) {
       return null;
     }
@@ -57,18 +66,31 @@ export class AuthService {
     // Reset failed attempts on successful login
     await this.usersService.resetFailedAttempts(user.id);
 
-    return { id: user.id, email: user.email, role: user.role };
+    return {
+      id: user.id,
+      email: user.email,
+      platformRole: user.platformRole ?? null,
+    };
   }
 
-  async login(user: { id: string; email: string; role: string }): Promise<{
-    accessToken: string;
-    user: { id: string; email: string; role: string };
-  }> {
-    const accessToken = await this.generateAccessToken(user);
-    return {
-      accessToken,
-      user: { id: user.id, email: user.email, role: user.role },
-    };
+  async login(
+    user: {
+      id: string;
+      email: string;
+      platformRole: AuthenticatedUserProfile["platformRole"];
+    },
+    context: AuthContextRequest = {},
+  ): Promise<AuthResponse> {
+    const authUser = await this.usersService.findAuthUserById(user.id);
+
+    if (!authUser) {
+      throw new UnauthorizedException({
+        code: "USER_NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    return this.buildAuthResponse(authUser, context);
   }
 
   async generateRefreshToken(userId: string): Promise<string> {
@@ -78,11 +100,10 @@ export class AuthService {
     );
   }
 
-  async refreshAccessToken(refreshToken: string): Promise<{
-    accessToken: string;
-    newRefreshToken: string;
-    user: { id: string; email: string; role: string };
-  }> {
+  async refreshAccessToken(
+    refreshToken: string,
+    context: AuthContextRequest = {},
+  ): Promise<AuthResponse & { newRefreshToken: string }> {
     let payload: RefreshTokenPayload;
     try {
       payload =
@@ -101,7 +122,7 @@ export class AuthService {
       });
     }
 
-    const user = await this.usersService.findById(payload.sub);
+    const user = await this.usersService.findAuthUserById(payload.sub);
     if (!user) {
       throw new UnauthorizedException({
         code: "USER_NOT_FOUND",
@@ -109,17 +130,12 @@ export class AuthService {
       });
     }
 
-    const accessToken = await this.generateAccessToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    const session = await this.buildAuthResponse(user, context);
     const newRefreshToken = await this.generateRefreshToken(user.id);
 
     return {
-      accessToken,
+      ...session,
       newRefreshToken,
-      user: { id: user.id, email: user.email, role: user.role },
     };
   }
 
@@ -155,17 +171,156 @@ export class AuthService {
     };
   }
 
-  private async generateAccessToken(user: {
-    id: string;
-    email: string;
-    role: string;
-  }): Promise<string> {
-    const payload = {
+  private async buildAuthResponse(
+    user: AuthUserRecord,
+    context: AuthContextRequest,
+  ): Promise<AuthResponse> {
+    const memberships = this.buildMembershipSummaries(user);
+
+    if (!user.platformRole && memberships.length === 0) {
+      throw new ForbiddenException({
+        code: "NO_WORKSPACE_ACCESS",
+        message: "This account has no platform role or tenant memberships",
+      });
+    }
+
+    const activeMembership = this.resolveActiveMembership(memberships, context);
+    const activeTenant = activeMembership
+      ? {
+          id: activeMembership.tenantId,
+          slug: activeMembership.tenantSlug,
+          name: activeMembership.tenantName,
+          status: activeMembership.tenantStatus,
+        }
+      : null;
+    const activeSite = this.resolveActiveSite(activeMembership, context);
+    const accessToken = await this.generateAccessToken({
       sub: user.id,
       email: user.email,
-      role: user.role,
-    };
+      platformRole: user.platformRole ?? null,
+      activeTenantId: activeTenant?.id ?? null,
+      activeMembershipRole: activeMembership?.role ?? null,
+      activeSiteId: activeSite?.id ?? null,
+    });
 
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        platformRole: user.platformRole ?? null,
+      },
+      memberships,
+      activeTenant,
+      activeSite,
+      activeMembershipRole: activeMembership?.role ?? null,
+    };
+  }
+
+  private buildMembershipSummaries(
+    user: AuthUserRecord,
+  ): AuthMembershipSummary[] {
+    return user.memberships
+      .filter((membership) => membership.tenant.status === TenantStatus.ACTIVE)
+      .map((membership) => ({
+        tenantId: membership.tenant.id,
+        tenantSlug: membership.tenant.slug,
+        tenantName: membership.tenant.name,
+        tenantStatus: membership.tenant.status,
+        role: membership.role,
+        isDefault: membership.isDefault,
+        sites: membership.tenant.sites.filter(
+          (site) => site.status !== SiteStatus.ARCHIVED,
+        ),
+      }));
+  }
+
+  private resolveActiveMembership(
+    memberships: AuthMembershipSummary[],
+    context: AuthContextRequest,
+  ): AuthMembershipSummary | null {
+    if (memberships.length === 0) {
+      if (context.tenantId) {
+        throw new ForbiddenException({
+          code: "TENANT_ACCESS_DENIED",
+          message: "The requested tenant is not available for this user",
+        });
+      }
+      return null;
+    }
+
+    if (context.tenantId) {
+      const requestedMembership = memberships.find(
+        (membership) => membership.tenantId === context.tenantId,
+      );
+
+      if (!requestedMembership) {
+        throw new ForbiddenException({
+          code: "TENANT_ACCESS_DENIED",
+          message: "The requested tenant is not available for this user",
+        });
+      }
+
+      return requestedMembership;
+    }
+
+    if (memberships.length === 1) {
+      return memberships[0];
+    }
+
+    const defaultMemberships = memberships.filter(
+      (membership) => membership.isDefault,
+    );
+
+    if (defaultMemberships.length === 1) {
+      return defaultMemberships[0];
+    }
+
+    throw new ForbiddenException({
+      code: "TENANT_CONTEXT_REQUIRED",
+      message: "Select a tenant workspace to continue",
+    });
+  }
+
+  private resolveActiveSite(
+    membership: AuthMembershipSummary | null,
+    context: AuthContextRequest,
+  ): ActiveSiteContext | null {
+    if (!membership) {
+      if (context.siteId) {
+        throw new ForbiddenException({
+          code: "SITE_ACCESS_DENIED",
+          message: "The requested site is not available in the active tenant",
+        });
+      }
+      return null;
+    }
+
+    if (context.siteId) {
+      const requestedSite = membership.sites.find(
+        (site) => site.id === context.siteId,
+      );
+
+      if (!requestedSite) {
+        throw new ForbiddenException({
+          code: "SITE_ACCESS_DENIED",
+          message: "The requested site is not available in the active tenant",
+        });
+      }
+
+      return requestedSite;
+    }
+
+    if (membership.sites.length === 1) {
+      return membership.sites[0];
+    }
+
+    return null;
+  }
+
+  private async generateAccessToken(
+    payload: JwtAccessPayload,
+  ): Promise<string> {
     return this.jwtService.signAsync(payload, {
       expiresIn: ACCESS_TOKEN_EXPIRY,
     });

@@ -1,32 +1,25 @@
 import axios from "axios";
 import client, { refreshSession } from "./client";
 import { API_URL } from "../lib/constants";
-import type { User } from "../lib/constants";
-
-interface LoginResponse {
-  accessToken: string;
-  user: User;
-}
-
-interface RefreshResponse {
-  accessToken: string;
-  user: User;
-}
+import type { AuthApiResponse, AuthContextRequest } from "../auth/types";
 
 export async function login(
   email: string,
   password: string,
-): Promise<LoginResponse> {
-  const { data } = await axios.post<LoginResponse>(
+  context?: AuthContextRequest,
+): Promise<AuthApiResponse> {
+  const { data } = await axios.post<AuthApiResponse>(
     `${API_URL}/auth/login`,
-    { email, password },
+    { email, password, ...context },
     { withCredentials: true },
   );
   return data;
 }
 
-export async function refresh(): Promise<RefreshResponse> {
-  return refreshSession() as Promise<RefreshResponse>;
+export async function refresh(
+  context?: AuthContextRequest,
+): Promise<AuthApiResponse> {
+  return refreshSession(context) as Promise<AuthApiResponse>;
 }
 
 export async function logout(): Promise<void> {
