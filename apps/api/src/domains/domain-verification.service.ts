@@ -86,12 +86,12 @@ export class DomainVerificationService
     }
 
     this.timer = setInterval(() => {
-      void this.processScheduledBatch();
+      this.runScheduledBatch();
     }, this.getPendingRecheckMs());
     this.timer.unref?.();
 
     queueMicrotask(() => {
-      void this.processScheduledBatch();
+      this.runScheduledBatch();
     });
   }
 
@@ -256,6 +256,14 @@ export class DomainVerificationService
     });
 
     await this.syncFailureAlert(domain, nextStatus, lastError, details, now);
+  }
+
+  private runScheduledBatch(): void {
+    void this.processScheduledBatch().catch((error: unknown) => {
+      this.logger.error(
+        `Scheduled domain verification batch failed: ${this.formatError(error)}`,
+      );
+    });
   }
 
   private async processScheduledBatch(): Promise<void> {
