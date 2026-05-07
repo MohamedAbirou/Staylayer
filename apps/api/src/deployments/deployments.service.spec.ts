@@ -205,6 +205,85 @@ describe("DeploymentsService", () => {
     });
   });
 
+  it("sanitizes legacy site slugs before sending project and env names to Vercel", async () => {
+    prisma.deployment.findFirst.mockResolvedValueOnce(null);
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      name: "Pine & Peak Glamping",
+      slug: "Pine & Peak Glamping",
+      primaryLocale: "en",
+      enabledLocales: ["en"],
+      settings: { siteName: "Pine & Peak Glamping" },
+      domains: [],
+      deployments: [],
+    });
+    prisma.deployment.create.mockResolvedValue({
+      id: "dep-legacy",
+      siteId: "site-1",
+      status: DeploymentStatus.PENDING,
+      provider: "vercel",
+      providerProjectId: null,
+      providerDeployId: null,
+      url: null,
+      metadata: null,
+      errorMessage: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    prisma.deployment.update
+      .mockResolvedValueOnce({ status: DeploymentStatus.CREATING_PROJECT })
+      .mockResolvedValueOnce({ status: DeploymentStatus.SYNCING_ENV })
+      .mockResolvedValueOnce({ status: DeploymentStatus.DEPLOYING })
+      .mockResolvedValueOnce({
+        id: "dep-legacy",
+        siteId: "site-1",
+        status: DeploymentStatus.DEPLOYING,
+        provider: "vercel",
+        providerProjectId: "prj_legacy",
+        providerDeployId: "dpl_legacy",
+        url: "https://maa-site-pine-peak-glamping.vercel.app",
+        metadata: {
+          providerReadyState: "BUILDING",
+        },
+        errorMessage: null,
+      });
+
+    provider.ensureProject.mockResolvedValue({
+      projectId: "prj_legacy",
+      projectName: "maa-site-pine-peak-glamping-legacy01",
+      created: true,
+    });
+    provider.syncEnvironmentVariables.mockResolvedValue();
+    provider.triggerDeployment.mockResolvedValue({
+      providerDeployId: "dpl_legacy",
+      url: "https://maa-site-pine-peak-glamping.vercel.app",
+      readyState: "BUILDING",
+      rawStatus: "QUEUED",
+      isLive: false,
+      isFailed: false,
+      errorMessage: null,
+    });
+
+    await service.provisionSite("site-1");
+
+    expect(provider.ensureProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: expect.stringContaining("pine-peak-glamping"),
+      }),
+    );
+    expect(provider.syncEnvironmentVariables).toHaveBeenCalledWith(
+      expect.objectContaining({
+        environment: expect.arrayContaining([
+          expect.objectContaining({
+            key: "SITE_SLUG",
+            value: "pine-peak-glamping",
+          }),
+        ]),
+      }),
+    );
+  });
+
   it("creates a fresh deployment when a live deployment already exists", async () => {
     prisma.deployment.findFirst.mockResolvedValueOnce(null);
     prisma.site.findUnique.mockResolvedValue({

@@ -783,13 +783,24 @@ export class DeploymentsService {
       this.configService.get<string>("DEPLOYMENTS_PROJECT_NAME_PREFIX") ??
       "myallocator-site";
     const suffix = site.id.slice(-8);
-    const candidate = `${prefix}-${site.slug}-${suffix}`.toLowerCase();
+    const siteSlug = this.normalizeSiteSlug(site.slug, site.name);
+    const candidate = `${prefix}-${siteSlug}-${suffix}`.toLowerCase();
 
     return candidate
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/-{2,}/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 100);
+  }
+
+  private normalizeSiteSlug(slug: string, fallbackName: string): string {
+    const normalized = `${slug || fallbackName}`
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    return normalized || "site";
   }
 
   private buildInitialMetadata(
@@ -804,7 +815,7 @@ export class DeploymentsService {
   private toSiteContext(site: SiteProvisioningRecord): SiteDeploymentContext {
     return {
       siteId: site.id,
-      siteSlug: site.slug,
+      siteSlug: this.normalizeSiteSlug(site.slug, site.name),
       siteName: site.settings?.siteName || site.name,
       tenantId: site.tenantId,
       primaryLocale: site.primaryLocale,
