@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Plus, Trash2, Loader as Loader2, ToggleLeft, ToggleRight, Search, MapPin, Building, Phone, Star } from "lucide-react";
+import {
+  ArrowRight,
+  Plus,
+  Trash2,
+  Loader as Loader2,
+  ToggleLeft,
+  ToggleRight,
+  MapPin,
+  Building,
+  Phone,
+} from "lucide-react";
 import { useAuth } from "../auth/useAuth";
 import {
   getRedirects,
@@ -9,7 +19,6 @@ import {
   deleteRedirect,
   getStructuredData,
   upsertStructuredData,
-  type RedirectDto,
   type StructuredDataDto,
 } from "../api/seo";
 
@@ -24,7 +33,9 @@ export default function SeoPage() {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">SEO</h1>
-        <p className="mt-2 text-sm text-gray-600">Select a site to manage SEO settings.</p>
+        <p className="mt-2 text-sm text-gray-600">
+          Select a site to manage SEO settings.
+        </p>
       </div>
     );
   }
@@ -82,7 +93,9 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
   const createMutation = useMutation({
     mutationFn: () => createRedirect(siteId, { fromPath, toPath, permanent }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seo", "redirects", siteId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", siteId],
+      });
       setShowAdd(false);
       setFromPath("");
       setToPath("");
@@ -93,14 +106,18 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
       toggleRedirect(siteId, id, enabled),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seo", "redirects", siteId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", siteId],
+      });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteRedirect(siteId, id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seo", "redirects", siteId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", siteId],
+      });
     },
   });
 
@@ -108,7 +125,8 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          Redirect old URLs to prevent broken links after slug renames or page deletions.
+          Redirect old URLs to prevent broken links after slug renames or page
+          deletions.
         </p>
         <button
           onClick={() => setShowAdd(true)}
@@ -123,7 +141,9 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">From path</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                From path
+              </label>
               <input
                 type="text"
                 value={fromPath}
@@ -133,7 +153,9 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">To path</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                To path
+              </label>
               <input
                 type="text"
                 value={toPath}
@@ -154,17 +176,24 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
           </label>
           {createMutation.isError && (
             <p className="mt-2 text-xs text-red-600">
-              {(createMutation.error as { response?: { data?: { message?: string } } })
-                ?.response?.data?.message ?? "Failed to create redirect."}
+              {(
+                createMutation.error as {
+                  response?: { data?: { message?: string } };
+                }
+              )?.response?.data?.message ?? "Failed to create redirect."}
             </p>
           )}
           <div className="mt-4 flex gap-2">
             <button
               onClick={() => createMutation.mutate()}
-              disabled={!fromPath.trim() || !toPath.trim() || createMutation.isPending}
+              disabled={
+                !fromPath.trim() || !toPath.trim() || createMutation.isPending
+              }
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-blue-700"
             >
-              {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {createMutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
               Create
             </button>
             <button
@@ -186,12 +215,17 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
         ) : redirects.length === 0 ? (
           <div className="flex flex-col items-center py-12 text-center">
             <ArrowRight className="h-8 w-8 text-gray-200" />
-            <p className="mt-3 text-sm text-gray-500">No redirects configured</p>
+            <p className="mt-3 text-sm text-gray-500">
+              No redirects configured
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
             {redirects.map((r) => (
-              <div key={r.id} className="flex items-center justify-between px-5 py-3">
+              <div
+                key={r.id}
+                className="flex items-center justify-between px-5 py-3"
+              >
                 <div className="flex items-center gap-3 min-w-0">
                   <span
                     className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
@@ -202,13 +236,19 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
                   >
                     {r.statusCode}
                   </span>
-                  <span className="truncate font-mono text-sm text-gray-900">{r.fromPath}</span>
+                  <span className="truncate font-mono text-sm text-gray-900">
+                    {r.fromPath}
+                  </span>
                   <ArrowRight className="h-3 w-3 shrink-0 text-gray-400" />
-                  <span className="truncate font-mono text-sm text-gray-600">{r.toPath}</span>
+                  <span className="truncate font-mono text-sm text-gray-600">
+                    {r.toPath}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => toggleMutation.mutate({ id: r.id, enabled: !r.enabled })}
+                    onClick={() =>
+                      toggleMutation.mutate({ id: r.id, enabled: !r.enabled })
+                    }
                     className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
                     title={r.enabled ? "Disable" : "Enable"}
                   >
@@ -254,7 +294,9 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
   const saveMutation = useMutation({
     mutationFn: () => upsertStructuredData(siteId, form),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["seo", "structured-data", siteId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "structured-data", siteId],
+      });
     },
   });
 
@@ -274,14 +316,17 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
   return (
     <div className="space-y-6">
       <p className="text-sm text-gray-600">
-        Configure Schema.org structured data for rich search results. This information helps
-        search engines display enhanced listings for your hospitality business.
+        Configure Schema.org structured data for rich search results. This
+        information helps search engines display enhanced listings for your
+        hospitality business.
       </p>
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
           <Building className="h-4 w-4 text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-900">Business Identity</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            Business Identity
+          </h3>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
@@ -289,7 +334,15 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
             value={form.businessType ?? "Hotel"}
             onChange={(v) => updateField("businessType", v)}
             type="select"
-            options={["Hotel", "Resort", "Hostel", "Motel", "BedAndBreakfast", "VacationRental", "LodgingBusiness"]}
+            options={[
+              "Hotel",
+              "Resort",
+              "Hostel",
+              "Motel",
+              "BedAndBreakfast",
+              "VacationRental",
+              "LodgingBusiness",
+            ]}
           />
           <Field
             label="Business name"
@@ -324,10 +377,26 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
             onChange={(v) => updateField("streetAddress", v)}
             className="sm:col-span-2"
           />
-          <Field label="City" value={form.city ?? ""} onChange={(v) => updateField("city", v)} />
-          <Field label="Region/State" value={form.region ?? ""} onChange={(v) => updateField("region", v)} />
-          <Field label="Postal code" value={form.postalCode ?? ""} onChange={(v) => updateField("postalCode", v)} />
-          <Field label="Country" value={form.country ?? ""} onChange={(v) => updateField("country", v)} />
+          <Field
+            label="City"
+            value={form.city ?? ""}
+            onChange={(v) => updateField("city", v)}
+          />
+          <Field
+            label="Region/State"
+            value={form.region ?? ""}
+            onChange={(v) => updateField("region", v)}
+          />
+          <Field
+            label="Postal code"
+            value={form.postalCode ?? ""}
+            onChange={(v) => updateField("postalCode", v)}
+          />
+          <Field
+            label="Country"
+            value={form.country ?? ""}
+            onChange={(v) => updateField("country", v)}
+          />
           <Field
             label="Latitude"
             value={form.latitude?.toString() ?? ""}
@@ -346,24 +415,53 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
           <Phone className="h-4 w-4 text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-900">Contact & Details</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            Contact & Details
+          </h3>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Telephone" value={form.telephone ?? ""} onChange={(v) => updateField("telephone", v)} />
-          <Field label="Email" value={form.email ?? ""} onChange={(v) => updateField("email", v)} />
-          <Field label="Price range" value={form.priceRange ?? ""} onChange={(v) => updateField("priceRange", v)} placeholder="e.g. $$" />
+          <Field
+            label="Telephone"
+            value={form.telephone ?? ""}
+            onChange={(v) => updateField("telephone", v)}
+          />
+          <Field
+            label="Email"
+            value={form.email ?? ""}
+            onChange={(v) => updateField("email", v)}
+          />
+          <Field
+            label="Price range"
+            value={form.priceRange ?? ""}
+            onChange={(v) => updateField("priceRange", v)}
+            placeholder="e.g. $$"
+          />
           <Field
             label="Star rating"
             value={form.starRating?.toString() ?? ""}
-            onChange={(v) => updateField("starRating", v ? parseInt(v, 10) : null)}
+            onChange={(v) =>
+              updateField("starRating", v ? parseInt(v, 10) : null)
+            }
             placeholder="1-5"
           />
-          <Field label="Check-in time" value={form.checkInTime ?? ""} onChange={(v) => updateField("checkInTime", v)} placeholder="e.g. 15:00" />
-          <Field label="Check-out time" value={form.checkOutTime ?? ""} onChange={(v) => updateField("checkOutTime", v)} placeholder="e.g. 11:00" />
+          <Field
+            label="Check-in time"
+            value={form.checkInTime ?? ""}
+            onChange={(v) => updateField("checkInTime", v)}
+            placeholder="e.g. 15:00"
+          />
+          <Field
+            label="Check-out time"
+            value={form.checkOutTime ?? ""}
+            onChange={(v) => updateField("checkOutTime", v)}
+            placeholder="e.g. 11:00"
+          />
           <Field
             label="Room count"
             value={form.roomCount?.toString() ?? ""}
-            onChange={(v) => updateField("roomCount", v ? parseInt(v, 10) : null)}
+            onChange={(v) =>
+              updateField("roomCount", v ? parseInt(v, 10) : null)
+            }
           />
         </div>
       </div>
@@ -374,7 +472,9 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
           disabled={saveMutation.isPending}
           className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
         >
-          {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          {saveMutation.isPending && (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          )}
           Save structured data
         </button>
       </div>
@@ -401,7 +501,9 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <label className="mb-1 block text-xs font-medium text-gray-700">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-gray-700">
+        {label}
+      </label>
       {type === "select" && options ? (
         <select
           value={value}
@@ -409,7 +511,9 @@ function Field({
           className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
         >
           {options.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
           ))}
         </select>
       ) : (

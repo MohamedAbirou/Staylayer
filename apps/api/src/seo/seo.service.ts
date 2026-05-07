@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { Prisma } from "@prisma/client";
 
 // ── Redirect Management ─────────────────────────────────────────────────────
 
@@ -84,7 +85,9 @@ export class SeoService {
     const normalizedTo = this.normalizePath(input.toPath);
 
     if (normalizedFrom === normalizedTo) {
-      throw new BadRequestException("Source and destination paths cannot be the same");
+      throw new BadRequestException(
+        "Source and destination paths cannot be the same",
+      );
     }
 
     const redirect = await this.prisma.redirect.create({
@@ -129,7 +132,11 @@ export class SeoService {
     return redirect ? this.redirectToDto(redirect) : null;
   }
 
-  async toggleRedirect(siteId: string, redirectId: string, enabled: boolean): Promise<RedirectDto> {
+  async toggleRedirect(
+    siteId: string,
+    redirectId: string,
+    enabled: boolean,
+  ): Promise<RedirectDto> {
     const existing = await this.prisma.redirect.findFirst({
       where: { id: redirectId, siteId },
     });
@@ -186,7 +193,8 @@ export class SeoService {
           field: "seoTitle",
           severity: "warning",
           message: `SEO title may be truncated (${page.seoTitle.length} chars)`,
-          suggestion: "Keep under 60 characters to avoid truncation in search results",
+          suggestion:
+            "Keep under 60 characters to avoid truncation in search results",
         });
       }
     } else {
@@ -194,7 +202,8 @@ export class SeoService {
         field: "seoTitle",
         severity: "warning",
         message: "SEO title is not set (page title will be used)",
-        suggestion: "Set a custom SEO title for better search result appearance",
+        suggestion:
+          "Set a custom SEO title for better search result appearance",
       });
     }
 
@@ -219,7 +228,8 @@ export class SeoService {
         field: "seoDescription",
         severity: "warning",
         message: "Meta description is not set",
-        suggestion: "Add a compelling description to improve click-through rates",
+        suggestion:
+          "Add a compelling description to improve click-through rates",
       });
     }
 
@@ -237,7 +247,8 @@ export class SeoService {
         field: "seoNoindex",
         severity: "info",
         message: "This page is marked as noindex but is published",
-        suggestion: "Ensure this is intentional — noindex pages won't appear in search",
+        suggestion:
+          "Ensure this is intentional — noindex pages won't appear in search",
       });
     }
 
@@ -299,38 +310,69 @@ export class SeoService {
         priceRange: input.priceRange ?? null,
         checkInTime: input.checkInTime ?? null,
         checkOutTime: input.checkOutTime ?? null,
-        amenities: input.amenities ?? null,
+        amenities: input.amenities ?? undefined,
         roomCount: input.roomCount ?? null,
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
         imageUrl: input.imageUrl ?? null,
       },
       update: {
-        ...(input.businessType !== undefined ? { businessType: input.businessType } : {}),
-        ...(input.businessName !== undefined ? { businessName: input.businessName } : {}),
-        ...(input.description !== undefined ? { description: input.description } : {}),
-        ...(input.streetAddress !== undefined ? { streetAddress: input.streetAddress } : {}),
+        ...(input.businessType !== undefined
+          ? { businessType: input.businessType }
+          : {}),
+        ...(input.businessName !== undefined
+          ? { businessName: input.businessName }
+          : {}),
+        ...(input.description !== undefined
+          ? { description: input.description }
+          : {}),
+        ...(input.streetAddress !== undefined
+          ? { streetAddress: input.streetAddress }
+          : {}),
         ...(input.city !== undefined ? { city: input.city } : {}),
         ...(input.region !== undefined ? { region: input.region } : {}),
-        ...(input.postalCode !== undefined ? { postalCode: input.postalCode } : {}),
+        ...(input.postalCode !== undefined
+          ? { postalCode: input.postalCode }
+          : {}),
         ...(input.country !== undefined ? { country: input.country } : {}),
-        ...(input.telephone !== undefined ? { telephone: input.telephone } : {}),
+        ...(input.telephone !== undefined
+          ? { telephone: input.telephone }
+          : {}),
         ...(input.email !== undefined ? { email: input.email } : {}),
-        ...(input.starRating !== undefined ? { starRating: input.starRating } : {}),
-        ...(input.priceRange !== undefined ? { priceRange: input.priceRange } : {}),
-        ...(input.checkInTime !== undefined ? { checkInTime: input.checkInTime } : {}),
-        ...(input.checkOutTime !== undefined ? { checkOutTime: input.checkOutTime } : {}),
-        ...(input.amenities !== undefined ? { amenities: input.amenities } : {}),
-        ...(input.roomCount !== undefined ? { roomCount: input.roomCount } : {}),
+        ...(input.starRating !== undefined
+          ? { starRating: input.starRating }
+          : {}),
+        ...(input.priceRange !== undefined
+          ? { priceRange: input.priceRange }
+          : {}),
+        ...(input.checkInTime !== undefined
+          ? { checkInTime: input.checkInTime }
+          : {}),
+        ...(input.checkOutTime !== undefined
+          ? { checkOutTime: input.checkOutTime }
+          : {}),
+        ...(input.amenities !== undefined
+          ? {
+              amenities:
+                input.amenities !== null ? input.amenities : Prisma.DbNull,
+            }
+          : {}),
+        ...(input.roomCount !== undefined
+          ? { roomCount: input.roomCount }
+          : {}),
         ...(input.latitude !== undefined ? { latitude: input.latitude } : {}),
-        ...(input.longitude !== undefined ? { longitude: input.longitude } : {}),
+        ...(input.longitude !== undefined
+          ? { longitude: input.longitude }
+          : {}),
         ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
       },
     });
     return this.structuredDataToDto(data);
   }
 
-  async generateJsonLd(siteId: string): Promise<Record<string, unknown> | null> {
+  async generateJsonLd(
+    siteId: string,
+  ): Promise<Record<string, unknown> | null> {
     const data = await this.prisma.siteStructuredData.findUnique({
       where: { siteId },
     });
@@ -403,7 +445,12 @@ export class SeoService {
 
   private calculateSeoScore(
     issues: SeoIssue[],
-    page: { seoTitle: string | null; seoDescription: string | null; seoOgImage: string | null; published: boolean },
+    page: {
+      seoTitle: string | null;
+      seoDescription: string | null;
+      seoOgImage: string | null;
+      published: boolean;
+    },
   ): number {
     let score = 100;
     for (const issue of issues) {
@@ -411,8 +458,18 @@ export class SeoService {
       else if (issue.severity === "warning") score -= 10;
       else score -= 3;
     }
-    if (page.seoTitle && page.seoTitle.length >= 30 && page.seoTitle.length <= 60) score += 5;
-    if (page.seoDescription && page.seoDescription.length >= 120 && page.seoDescription.length <= 160) score += 5;
+    if (
+      page.seoTitle &&
+      page.seoTitle.length >= 30 &&
+      page.seoTitle.length <= 60
+    )
+      score += 5;
+    if (
+      page.seoDescription &&
+      page.seoDescription.length >= 120 &&
+      page.seoDescription.length <= 160
+    )
+      score += 5;
     if (page.seoOgImage) score += 5;
     return Math.max(0, Math.min(100, score));
   }
