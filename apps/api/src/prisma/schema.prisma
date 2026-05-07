@@ -706,6 +706,59 @@ model OperationalAlert {
     @@map("operational_alerts")
 }
 
+// ─── Tenant Onboarding ─────────────────────────────────────
+
+enum OnboardingMilestoneKey {
+    SITE_CREATED
+    FIRST_PAGE_PUBLISHED
+    DEPLOYMENT_PROVISIONED
+    DOMAIN_CONNECTED
+    SEO_COMPLETED
+    FORM_CONFIGURED
+    TRANSLATION_CONFIGURED
+}
+
+model TenantOnboarding {
+    id         String    @id @default(cuid())
+    tenantId   String    @unique @map("tenant_id")
+    startedAt  DateTime  @default(now()) @map("started_at")
+    completedAt DateTime? @map("completed_at")
+    milestones TenantOnboardingMilestone[]
+
+    @@map("tenant_onboarding")
+}
+
+model TenantOnboardingMilestone {
+    id             String                 @id @default(cuid())
+    onboardingId   String                 @map("onboarding_id")
+    milestone      OnboardingMilestoneKey
+    completedAt    DateTime               @default(now()) @map("completed_at")
+    metadata       Json?
+
+    onboarding TenantOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+    @@unique([onboardingId, milestone])
+    @@index([onboardingId])
+    @@map("tenant_onboarding_milestones")
+}
+
+// ─── Translation Usage ─────────────────────────────────────
+
+model TranslationUsage {
+    id          String   @id @default(cuid())
+    tenantId    String   @map("tenant_id")
+    siteId      String?  @map("site_id")
+    characters  Int
+    periodStart DateTime @map("period_start")
+    provider    String   @default("deepl")
+    metadata    Json?
+    createdAt   DateTime @default(now()) @map("created_at")
+
+    @@index([tenantId, periodStart])
+    @@index([siteId, periodStart])
+    @@map("translation_usage")
+}
+
 // ─── Audit Log ─────────────────────────────────────────────
 
 model AuditLog {

@@ -1,6 +1,10 @@
 export type BillingProvider = "stripe";
 
-export type BillingPlanKey = "starter_stay" | "boutique_growth" | "portfolio";
+export type BillingPlanKey =
+  | "free"
+  | "starter_stay"
+  | "boutique_growth"
+  | "portfolio";
 
 export type BillingPublicStatus =
   | "trialing"
@@ -9,6 +13,8 @@ export type BillingPublicStatus =
   | "canceled"
   | "inactive";
 
+export type BillingSupportTier = "docs" | "email" | "priority" | "white_glove";
+
 export interface BillingPlanLimits {
   sites: number;
   locales: number;
@@ -16,6 +22,14 @@ export interface BillingPlanLimits {
   formSubmissions: number;
   pages: number | null;
   domains: number;
+  allowedLanguages: string[];
+  translationCharactersPerMonth: number;
+  deploymentRetention: number;
+  rollbackEnabled: boolean;
+  analyticsEnabled: boolean;
+  exportEnabled: boolean;
+  scheduledExports: boolean;
+  supportTier: BillingSupportTier;
 }
 
 export interface BillingEnforcementPolicy {
@@ -32,6 +46,8 @@ export interface BillingUsageTotals {
   seats: number;
   formSubmissions: number;
   pages: number;
+  domains: number;
+  translationCharactersThisMonth: number;
 }
 
 export interface BillingActionState {
@@ -47,7 +63,8 @@ export interface BillingPlanDefinition {
   name: string;
   description: string;
   provider: BillingProvider;
-  stripePriceIdEnvVar: string;
+  stripePriceIdEnvVar: string | null;
+  isFree: boolean;
   limits: BillingPlanLimits;
 }
 
@@ -63,13 +80,14 @@ export interface TenantBillingSnapshot {
   gracePeriodEndsAt: Date | null;
   limits: BillingPlanLimits;
   usage: BillingUsageTotals;
-  source: "stripe" | "default_trial";
+  source: "stripe" | "default_trial" | "free";
   providerCustomerId: string | null;
   providerSubscriptionId: string | null;
   cancelAtPeriodEnd: boolean;
   actions: BillingActionState;
   lastWebhookAt: Date | null;
   subscriptionId: string | null;
+  isFreePlan: boolean;
 }
 
 export interface CreateCheckoutSessionResult {

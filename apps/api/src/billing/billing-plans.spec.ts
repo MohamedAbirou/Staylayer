@@ -14,7 +14,14 @@ describe("billing plans", () => {
 
     for (const plan of Object.values(BILLING_PLANS)) {
       expect(plan.provider).toBe("stripe");
-      expect(plan.stripePriceIdEnvVar.startsWith("STRIPE_PRICE_")).toBe(true);
+      if (plan.isFree) {
+        expect(plan.stripePriceIdEnvVar).toBeNull();
+      } else {
+        expect(plan.stripePriceIdEnvVar).not.toBeNull();
+        expect(plan.stripePriceIdEnvVar!.startsWith("STRIPE_PRICE_")).toBe(
+          true,
+        );
+      }
     }
   });
 

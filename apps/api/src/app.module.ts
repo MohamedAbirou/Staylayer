@@ -15,6 +15,7 @@ import { DeploymentsModule } from "./deployments/deployments.module";
 import { DomainsModule } from "./domains/domains.module";
 import { FormsModule } from "./forms/forms.module";
 import { TenantWorkspaceModule } from "./tenant-workspace/tenant-workspace.module";
+import { OnboardingModule } from "./onboarding/onboarding.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 
@@ -53,6 +54,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     DomainsModule,
     FormsModule,
     TenantWorkspaceModule,
+    OnboardingModule,
   ],
   providers: [
     // Reactivate later if we want global throttling (currently we apply it at the controller level with @UseGuards(ThrottlerGuard) and @Throttle() decorators)

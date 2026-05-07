@@ -1,6 +1,10 @@
 import client from "./client";
 
-export type BillingPlanKey = "starter_stay" | "boutique_growth" | "portfolio";
+export type BillingPlanKey =
+  | "free"
+  | "starter_stay"
+  | "boutique_growth"
+  | "portfolio";
 
 export type BillingPlanStatus =
   | "trialing"
@@ -9,28 +13,67 @@ export type BillingPlanStatus =
   | "canceled"
   | "inactive";
 
+export type BillingSupportTier = "docs" | "email" | "priority" | "white_glove";
+
+export interface BillingPlanLimits {
+  sites: number;
+  locales: number;
+  seats: number;
+  formSubmissions: number;
+  pages: number | null;
+  domains: number;
+  allowedLanguages: string[];
+  translationCharactersPerMonth: number;
+  deploymentRetention: number;
+  rollbackEnabled: boolean;
+  analyticsEnabled: boolean;
+  exportEnabled: boolean;
+  scheduledExports: boolean;
+  supportTier: BillingSupportTier;
+}
+
+export interface BillingUsageTotals {
+  sites: number;
+  locales: number;
+  seats: number;
+  formSubmissions: number;
+  pages: number;
+  domains: number;
+  translationCharactersThisMonth: number;
+}
+
 export interface PlanCatalogEntry {
   key: BillingPlanKey;
   name: string;
   tagline: string;
+  isFree: boolean;
 }
 
-/** Frontend mirror of the backend plan catalog — used for the checkout plan picker. */
 export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
+  {
+    key: "free",
+    name: "Free",
+    tagline: "1 site · English only · 1 seat · 50 inquiries/mo",
+    isFree: true,
+  },
   {
     key: "starter_stay",
     name: "Starter Stay",
-    tagline: "1 site · 1 language · 2 seats · 150 inquiries/mo",
+    tagline: "1 site · 2 languages · 2 seats · 250 inquiries/mo · 1 domain",
+    isFree: false,
   },
   {
     key: "boutique_growth",
     name: "Boutique Growth",
-    tagline: "1 site · 4 languages · 5 seats · 750 inquiries/mo",
+    tagline: "1 site · 4 languages · 5 seats · 1 500 inquiries/mo · 3 domains",
+    isFree: false,
   },
   {
     key: "portfolio",
     name: "Portfolio",
-    tagline: "5 sites · 8 languages · 15 seats · 3 000 inquiries/mo",
+    tagline:
+      "5 sites · 4 languages/site · 15 seats · 10 000 inquiries/mo · 15 domains",
+    isFree: false,
   },
 ];
 
@@ -43,21 +86,8 @@ export interface BillingPlanSnapshot {
   renewsAt: string | null;
   currentPeriodStart: string | null;
   gracePeriodEndsAt: string | null;
-  limits: {
-    sites: number;
-    locales: number;
-    seats: number;
-    formSubmissions: number;
-    pages: number | null;
-    domains: number;
-  };
-  usage: {
-    sites: number;
-    locales: number;
-    seats: number;
-    formSubmissions: number;
-    pages: number;
-  };
+  limits: BillingPlanLimits;
+  usage: BillingUsageTotals;
   provider: "stripe";
   providerCustomerId: string | null;
   providerSubscriptionId: string | null;
@@ -70,8 +100,9 @@ export interface BillingPlanSnapshot {
     gracePeriodActive: boolean;
   };
   lastWebhookAt: string | null;
-  source: "stripe" | "default_trial";
+  source: "stripe" | "default_trial" | "free";
   subscriptionId: string | null;
+  isFreePlan: boolean;
 }
 
 export interface BillingCheckoutSession {
@@ -88,11 +119,28 @@ export interface BillingPortalSession {
   portalUrl: string;
 }
 
+export interface BillingPlanCatalogEntry {
+  key: BillingPlanKey;
+  name: string;
+  description: string;
+  isFree: boolean;
+  limits: BillingPlanLimits;
+}
+
 export async function getBillingPlan(
   tenantId: string,
 ): Promise<BillingPlanSnapshot> {
   const { data } = await client.get<BillingPlanSnapshot>(
     `/tenants/${tenantId}/billing/plan`,
+  );
+  return data;
+}
+
+export async function listBillingPlans(
+  tenantId: string,
+): Promise<BillingPlanCatalogEntry[]> {
+  const { data } = await client.get<BillingPlanCatalogEntry[]>(
+    `/tenants/${tenantId}/billing/plans`,
   );
   return data;
 }

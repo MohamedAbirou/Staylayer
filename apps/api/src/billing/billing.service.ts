@@ -17,12 +17,13 @@ import {
 import Stripe = require("stripe");
 import { PrismaService } from "../prisma/prisma.service";
 import {
-  BILLING_DEFAULT_TRIAL_DAYS,
+  BILLING_DEFAULT_PLAN_KEY,
   BILLING_ENFORCEMENT_POLICY,
   BILLING_PLANS,
   BILLING_PROVIDER,
   getBillingPlan,
   isBillingPlanKey,
+  isPaidPlanKey,
 } from "./billing-plans";
 import {
   AdminSubscriptionListItem,
@@ -30,6 +31,7 @@ import {
   BillingPlanLimits,
   BillingPublicStatus,
   CreateBillingPortalSessionResult,
+  BillingSupportTier,
   BillingUsageTotals,
   CreateCheckoutSessionResult,
   TenantBillingSnapshot,
@@ -119,7 +121,7 @@ export class BillingService {
     ]);
 
     if (!subscription) {
-      return this.buildDefaultTrialSnapshot(tenant.id, tenant.createdAt, usage);
+      return this.buildFreePlanSnapshot(tenant.id, usage);
     }
 
     const planKey = this.getPlanKeyOrThrow(subscription.planKey);
@@ -147,6 +149,7 @@ export class BillingService {
       actions: this.buildActionState(status, subscription.gracePeriodEndsAt),
       lastWebhookAt: subscription.lastWebhookAt,
       subscriptionId: subscription.id,
+      isFreePlan: plan.isFree,
     };
   }
 
@@ -156,6 +159,14 @@ export class BillingService {
     user: CheckoutUser,
     urls: { successUrl: string; cancelUrl: string },
   ): Promise<CreateCheckoutSessionResult> {
+    if (!isPaidPlanKey(planKey)) {
+      throw new BadRequestException({
+        code: "CHECKOUT_NOT_AVAILABLE_FOR_FREE_PLAN",
+        message:
+          "Checkout is only available for paid hospitality plans. The Free plan is applied automatically.",
+      });
+    }
+
     const plan = getBillingPlan(planKey);
     const priceId = this.getStripePriceId(planKey);
     const stripe = this.getStripeClient();
@@ -427,6 +438,19 @@ export class BillingService {
         requested: projectedTotal,
       });
     }
+
+    const disallowed = normalizedLocales.filter(
+      (locale) => !snapshot.limits.allowedLanguages.includes(locale),
+    );
+    if (disallowed.length > 0) {
+      throw new ConflictException({
+        code: "PLAN_LANGUAGE_NOT_ALLOWED",
+        message: `This plan does not include the following languages: ${disallowed.join(", ")}`,
+        limitType: "allowedLanguages",
+        allowed: snapshot.limits.allowedLanguages,
+        requested: normalizedLocales,
+      });
+    }
   }
 
   async assertCanIncreasePageCount(
@@ -507,23 +531,27 @@ export class BillingService {
   async assertCanAddDomain(siteId: string): Promise<void> {
     const site = await this.requireSite(siteId);
     const snapshot = await this.getTenantPlanSnapshot(site.tenantId);
-    const currentDomains = await this.prisma.domain.count({
-      where: {
-        site: {
-          tenantId: site.tenantId,
-          status: { not: SiteStatus.ARCHIVED },
-        },
-      },
-    });
 
-    if (currentDomains + 1 > snapshot.limits.domains) {
+    if (snapshot.limits.domains <= 0) {
+      throw new ConflictException({
+        code: "PLAN_DOMAIN_NOT_INCLUDED",
+        message:
+          "Custom domains are not included on the Free plan. Upgrade to connect a domain.",
+        limitType: "domains",
+        limit: 0,
+        current: snapshot.usage.domains,
+        requested: snapshot.usage.domains + 1,
+      });
+    }
+
+    if (snapshot.usage.domains + 1 > snapshot.limits.domains) {
       throw new ConflictException({
         code: "PLAN_LIMIT_EXCEEDED",
         message: "This plan does not include another custom domain",
         limitType: "domains",
         limit: snapshot.limits.domains,
-        current: currentDomains,
-        requested: currentDomains + 1,
+        current: snapshot.usage.domains,
+        requested: snapshot.usage.domains + 1,
       });
     }
   }
@@ -541,6 +569,42 @@ export class BillingService {
         limit: snapshot.limits.formSubmissions,
         current: snapshot.usage.formSubmissions,
         requested: snapshot.usage.formSubmissions + 1,
+      });
+    }
+  }
+
+  async assertCanConsumeTranslationCharacters(
+    tenantId: string,
+    charactersRequested: number,
+  ): Promise<void> {
+    if (charactersRequested <= 0) {
+      return;
+    }
+
+    const snapshot = await this.getTenantPlanSnapshot(tenantId);
+
+    if (snapshot.limits.translationCharactersPerMonth <= 0) {
+      throw new ConflictException({
+        code: "PLAN_TRANSLATION_NOT_INCLUDED",
+        message:
+          "Machine translation is not included on this plan. Upgrade to unlock multilingual publishing.",
+        limitType: "translationCharactersPerMonth",
+        limit: 0,
+      });
+    }
+
+    const projected =
+      snapshot.usage.translationCharactersThisMonth + charactersRequested;
+
+    if (projected > snapshot.limits.translationCharactersPerMonth) {
+      throw new ConflictException({
+        code: "PLAN_LIMIT_EXCEEDED",
+        message:
+          "This translation request would exceed the plan's monthly translation allowance",
+        limitType: "translationCharactersPerMonth",
+        limit: snapshot.limits.translationCharactersPerMonth,
+        current: snapshot.usage.translationCharactersThisMonth,
+        requested: projected,
       });
     }
   }
@@ -669,7 +733,7 @@ export class BillingService {
 
     const planKey = session.metadata?.planKey;
 
-    if (!planKey || !isBillingPlanKey(planKey)) {
+    if (!planKey || !isBillingPlanKey(planKey) || !isPaidPlanKey(planKey)) {
       return { tenantId };
     }
 
@@ -683,37 +747,47 @@ export class BillingService {
     monthStart.setUTCDate(1);
     monthStart.setUTCHours(0, 0, 0, 0);
 
-    const [sites, seats, pages, formSubmissions] = await Promise.all([
-      this.prisma.site.findMany({
-        where: {
-          tenantId,
-          status: { not: SiteStatus.ARCHIVED },
-        },
-        select: {
-          id: true,
-          enabledLocales: true,
-        },
-      }),
-      this.prisma.tenantMembership.count({ where: { tenantId } }),
-      this.prisma.page.count({
-        where: {
-          deletedAt: null,
-          site: {
+    const [sites, seats, pages, formSubmissions, domains, translationUsage] =
+      await Promise.all([
+        this.prisma.site.findMany({
+          where: {
             tenantId,
             status: { not: SiteStatus.ARCHIVED },
           },
-        },
-      }),
-      this.prisma.formSubmission.count({
-        where: {
-          createdAt: { gte: monthStart },
-          site: {
-            tenantId,
-            status: { not: SiteStatus.ARCHIVED },
+          select: {
+            id: true,
+            enabledLocales: true,
           },
-        },
-      }),
-    ]);
+        }),
+        this.prisma.tenantMembership.count({ where: { tenantId } }),
+        this.prisma.page.count({
+          where: {
+            deletedAt: null,
+            site: {
+              tenantId,
+              status: { not: SiteStatus.ARCHIVED },
+            },
+          },
+        }),
+        this.prisma.formSubmission.count({
+          where: {
+            createdAt: { gte: monthStart },
+            site: {
+              tenantId,
+              status: { not: SiteStatus.ARCHIVED },
+            },
+          },
+        }),
+        this.prisma.domain.count({
+          where: {
+            site: {
+              tenantId,
+              status: { not: SiteStatus.ARCHIVED },
+            },
+          },
+        }),
+        this.getTranslationUsageForMonth(tenantId, monthStart),
+      ]);
 
     return {
       sites: sites.length,
@@ -724,7 +798,37 @@ export class BillingService {
       seats,
       formSubmissions,
       pages,
+      domains,
+      translationCharactersThisMonth: translationUsage,
     };
+  }
+
+  private async getTranslationUsageForMonth(
+    tenantId: string,
+    monthStart: Date,
+  ): Promise<number> {
+    // Safe no-op if the TranslationUsage model is not yet present on the client.
+    const client = this.prisma as unknown as {
+      translationUsage?: {
+        aggregate: (args: {
+          where: { tenantId: string; periodStart: { gte: Date } };
+          _sum: { characters: true };
+        }) => Promise<{ _sum: { characters: number | null } }>;
+      };
+    };
+    if (!client.translationUsage) {
+      return 0;
+    }
+
+    try {
+      const aggregate = await client.translationUsage.aggregate({
+        where: { tenantId, periodStart: { gte: monthStart } },
+        _sum: { characters: true },
+      });
+      return aggregate._sum.characters ?? 0;
+    } catch {
+      return 0;
+    }
   }
 
   private async findCurrentSubscription(
@@ -748,16 +852,12 @@ export class BillingService {
     });
   }
 
-  private buildDefaultTrialSnapshot(
+  private buildFreePlanSnapshot(
     tenantId: string,
-    tenantCreatedAt: Date,
     usage: BillingUsageTotals,
   ): TenantBillingSnapshot {
-    const plan = getBillingPlan("starter_stay");
-    const renewsAt = new Date(tenantCreatedAt);
-    renewsAt.setUTCDate(renewsAt.getUTCDate() + BILLING_DEFAULT_TRIAL_DAYS);
-    const status: BillingPublicStatus =
-      renewsAt > new Date() ? "trialing" : "inactive";
+    const plan = getBillingPlan(BILLING_DEFAULT_PLAN_KEY);
+    const status: BillingPublicStatus = "active";
 
     return {
       tenantId,
@@ -766,18 +866,19 @@ export class BillingService {
       description: plan.description,
       provider: BILLING_PROVIDER,
       status,
-      renewsAt,
-      currentPeriodStart: tenantCreatedAt,
+      renewsAt: null,
+      currentPeriodStart: null,
       gracePeriodEndsAt: null,
       limits: plan.limits,
       usage,
-      source: "default_trial",
+      source: "free",
       providerCustomerId: null,
       providerSubscriptionId: null,
       cancelAtPeriodEnd: false,
       actions: this.buildActionState(status, null),
       lastWebhookAt: null,
       subscriptionId: null,
+      isFreePlan: true,
     };
   }
 
@@ -850,6 +951,40 @@ export class BillingService {
       return null;
     }
 
+    const allowedLanguages = Array.isArray(value.allowedLanguages)
+      ? (value.allowedLanguages as unknown[]).filter(
+          (entry): entry is string => typeof entry === "string",
+        )
+      : ["en"];
+
+    const translationCharactersPerMonth =
+      typeof value.translationCharactersPerMonth === "number"
+        ? value.translationCharactersPerMonth
+        : 0;
+    const deploymentRetention =
+      typeof value.deploymentRetention === "number"
+        ? value.deploymentRetention
+        : 10;
+    const rollbackEnabled =
+      typeof value.rollbackEnabled === "boolean" ? value.rollbackEnabled : true;
+    const analyticsEnabled =
+      typeof value.analyticsEnabled === "boolean"
+        ? value.analyticsEnabled
+        : true;
+    const exportEnabled =
+      typeof value.exportEnabled === "boolean" ? value.exportEnabled : true;
+    const scheduledExports =
+      typeof value.scheduledExports === "boolean"
+        ? value.scheduledExports
+        : false;
+    const supportTier: BillingSupportTier =
+      value.supportTier === "docs" ||
+      value.supportTier === "email" ||
+      value.supportTier === "priority" ||
+      value.supportTier === "white_glove"
+        ? value.supportTier
+        : "email";
+
     return {
       sites: value.sites,
       locales: value.locales,
@@ -857,6 +992,14 @@ export class BillingService {
       formSubmissions: value.formSubmissions,
       pages: value.pages as number | null,
       domains: value.domains,
+      allowedLanguages,
+      translationCharactersPerMonth,
+      deploymentRetention,
+      rollbackEnabled,
+      analyticsEnabled,
+      exportEnabled,
+      scheduledExports,
+      supportTier,
     };
   }
 
@@ -976,7 +1119,11 @@ export class BillingService {
   ): BillingPlanKey {
     const metadataPlanKey = stripeSubscription.metadata?.planKey;
 
-    if (metadataPlanKey && isBillingPlanKey(metadataPlanKey)) {
+    if (
+      metadataPlanKey &&
+      isBillingPlanKey(metadataPlanKey) &&
+      isPaidPlanKey(metadataPlanKey)
+    ) {
       return metadataPlanKey;
     }
 
@@ -994,6 +1141,7 @@ export class BillingService {
       (typeof BILLING_PLANS)[BillingPlanKey],
     ][]) {
       if (
+        plan.stripePriceIdEnvVar &&
         this.configService.get<string>(plan.stripePriceIdEnvVar) === priceId
       ) {
         return planKey;
@@ -1106,6 +1254,12 @@ export class BillingService {
 
   private getStripePriceId(planKey: BillingPlanKey): string {
     const plan = getBillingPlan(planKey);
+    if (!plan.stripePriceIdEnvVar) {
+      throw new ServiceUnavailableException({
+        code: "BILLING_CONFIG_ERROR",
+        message: `Plan '${planKey}' is not billable through Stripe`,
+      });
+    }
     const priceId = this.configService.get<string>(plan.stripePriceIdEnvVar);
 
     if (!priceId) {

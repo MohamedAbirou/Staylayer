@@ -18,7 +18,7 @@ import { WorkspaceAccessService } from "../auth/workspace-access.service";
 import { BillingService } from "./billing.service";
 import { CreateCheckoutSessionDto } from "./dto/create-checkout-session.dto";
 import { CreatePortalSessionDto } from "./dto/create-portal-session.dto";
-import { isBillingPlanKey } from "./billing-plans";
+import { BILLING_PLANS, isBillingPlanKey } from "./billing-plans";
 
 @Controller("tenants/:tenantId/billing")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -63,7 +63,19 @@ export class BillingController {
       lastWebhookAt: snapshot.lastWebhookAt?.toISOString() ?? null,
       source: snapshot.source,
       subscriptionId: snapshot.subscriptionId,
+      isFreePlan: snapshot.isFreePlan,
     };
+  }
+
+  @Get("plans")
+  listPlans() {
+    return Object.values(BILLING_PLANS).map((plan) => ({
+      key: plan.key,
+      name: plan.name,
+      description: plan.description,
+      isFree: plan.isFree,
+      limits: plan.limits,
+    }));
   }
 
   @Post("checkout-session")

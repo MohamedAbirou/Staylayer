@@ -13,6 +13,7 @@ import {
   Globe,
   Sparkles,
   Rocket,
+  Gauge,
 } from "lucide-react";
 import {
   BILLING_MEMBERSHIP_ROLES,
@@ -234,7 +235,7 @@ export function Sidebar() {
           </div>
         )}
 
-        {(hasContentAccess && hasActiveSite(session)) || hasBillingAccess ? (
+        {hasContentAccess || hasBillingAccess ? (
           <div>
             <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
               Workspace
@@ -256,6 +257,12 @@ export function Sidebar() {
                 <NavLink to="/domains" className={link}>
                   <Globe className="h-4 w-4" />
                   Domains
+                </NavLink>
+              )}
+              {hasContentAccess && (
+                <NavLink to="/usage" className={link}>
+                  <Gauge className="h-4 w-4" />
+                  Usage
                 </NavLink>
               )}
               {hasBillingAccess && (

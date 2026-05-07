@@ -17,6 +17,7 @@ import PreviewPage from "./pages/PreviewPage";
 import SettingsPage from "./pages/SettingsPage";
 import DashboardHome from "./pages/DashboardHome";
 import OnboardingPage from "./pages/OnboardingPage";
+import UsagePage from "./pages/UsagePage";
 import FormsPage from "./pages/FormsPage";
 import DomainsPage from "./pages/DomainsPage";
 import DeploymentsPage from "./pages/DeploymentsPage";
@@ -144,6 +145,16 @@ export const router = createBrowserRouter([
               >
                 <ErrorBoundary>
                   <DeploymentsPage />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/usage",
+            element: (
+              <ProtectedRoute membershipRoles={CONTENT_MEMBERSHIP_ROLES}>
+                <ErrorBoundary>
+                  <UsagePage />
                 </ErrorBoundary>
               </ProtectedRoute>
             ),

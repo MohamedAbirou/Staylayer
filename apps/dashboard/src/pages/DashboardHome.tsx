@@ -12,22 +12,9 @@ import { getBillingPlan } from "../api/billing";
 import { getDomains } from "../api/domains";
 import { getSubmissions } from "../api/submissions";
 import { getLatestDeployment } from "../api/deployments";
+import { getOnboarding } from "../api/onboarding";
 import type { SiteDeployment } from "../api/deployments";
-import {
-  FileText,
-  Globe,
-  FileEdit,
-  Languages,
-  Plus,
-  ArrowRight,
-  Clock,
-  Inbox,
-  CreditCard,
-  Sparkles,
-  Rocket,
-  ExternalLink,
-  AlertCircle,
-} from "lucide-react";
+import { FileText, Globe, File as FileEdit, Languages, Plus, ArrowRight, Clock, Inbox, CreditCard, Sparkles, Rocket, ExternalLink, CircleAlert as AlertCircle } from "lucide-react";
 
 const POLLING_DEPLOYMENT_STATUSES: SiteDeployment["status"][] = [
   "CREATING_PROJECT",
@@ -63,6 +50,12 @@ export default function DashboardHome() {
     queryKey: ["dashboard-home", "billing", activeTenantId],
     queryFn: () => getBillingPlan(activeTenantId!),
     enabled: !!activeTenantId && canViewBilling,
+    retry: false,
+  });
+  const { data: onboarding } = useQuery({
+    queryKey: ["dashboard-home", "onboarding", activeTenantId],
+    queryFn: () => getOnboarding(activeTenantId!),
+    enabled: !!activeTenantId,
     retry: false,
   });
 
@@ -208,6 +201,43 @@ export default function DashboardHome() {
           color="purple"
         />
       </div>
+
+      {onboarding && !onboarding.completedAt && (
+        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-blue-600">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-blue-900">
+                  Launch checklist ·{" "}
+                  {onboarding.progress.completed}/{onboarding.progress.total}{" "}
+                  complete
+                </p>
+                <p className="text-xs text-blue-800/80">
+                  Finish the remaining steps to reach a launch-ready site.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-40 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-all"
+                  style={{ width: `${onboarding.progress.percent}%` }}
+                />
+              </div>
+              <Link
+                to="/usage"
+                className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+              >
+                View checklist
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Site deployment status */}
       {!deploymentLoading && (

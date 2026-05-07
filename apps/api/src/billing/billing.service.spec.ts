@@ -115,16 +115,19 @@ describe("BillingService", () => {
 
     const snapshot = await service.getTenantPlanSnapshot("tenant-1");
 
-    expect(snapshot.planKey).toBe("starter_stay");
-    expect(snapshot.status).toBe("trialing");
+    expect(snapshot.planKey).toBe("free");
+    expect(snapshot.status).toBe("active");
     expect(snapshot.usage).toEqual({
       sites: 1,
       locales: 1,
       seats: 2,
       formSubmissions: 12,
       pages: 4,
+      domains: 0,
+      translationCharactersThisMonth: 0,
     });
     expect(snapshot.actions.publishingBlocked).toBe(false);
+    expect(snapshot.isFreePlan).toBe(true);
   });
 
   it("blocks locale increases that exceed the current plan capacity", async () => {
@@ -141,7 +144,7 @@ describe("BillingService", () => {
     });
     prisma.subscription.findFirst.mockResolvedValue(buildSubscription());
     prisma.site.findMany.mockResolvedValue([
-      { id: "site-1", enabledLocales: ["en"] },
+      { id: "site-1", enabledLocales: ["en", "es"] },
     ]);
     prisma.tenantMembership.count.mockResolvedValue(2);
     prisma.page.count.mockResolvedValue(4);
@@ -149,7 +152,7 @@ describe("BillingService", () => {
     prisma.domain.count.mockResolvedValue(0);
 
     await expect(
-      service.assertCanUpdateSiteLocales("site-1", ["en", "es"]),
+      service.assertCanUpdateSiteLocales("site-1", ["en", "es", "fr"]),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
@@ -202,7 +205,7 @@ describe("BillingService", () => {
     ]);
     prisma.tenantMembership.count.mockResolvedValue(2);
     prisma.page.count.mockResolvedValue(4);
-    prisma.formSubmission.count.mockResolvedValue(150);
+    prisma.formSubmission.count.mockResolvedValue(250);
     prisma.domain.count.mockResolvedValue(0);
 
     await expect(
