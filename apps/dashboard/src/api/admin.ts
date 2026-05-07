@@ -23,6 +23,35 @@ export type AdminDomainStatus =
   | "ACTIVE"
   | "FAILED";
 
+export interface AdminDeploymentEnvironmentVariable {
+  id: string;
+  key: string;
+  type: "plain" | "encrypted";
+  description: string | null;
+  targets: string[];
+  editable: boolean;
+  source: "customer" | "operator";
+  isValueSet: boolean;
+  value: string | null;
+  valuePreview: string | null;
+  updatedAt: string | null;
+}
+
+export interface AdminDeploymentEnvironmentCatalog {
+  customerEditable: AdminDeploymentEnvironmentVariable[];
+  operatorManaged: AdminDeploymentEnvironmentVariable[];
+}
+
+export interface AdminDomainRecommendedRecord {
+  type: string;
+  name: string;
+  host: string;
+  value: string;
+  acceptedValues: string[];
+  rank: number | null;
+  isMatch: boolean | null;
+}
+
 export interface AdminOverview {
   generatedAt: string;
   scorecards: {
@@ -172,10 +201,21 @@ export interface AdminDomain {
   status: AdminDomainStatus;
   isPrimary: boolean;
   verificationStatus: AdminDomainVerificationStatus;
+  dnsConfigured: boolean;
+  dnsMatchesExpected: boolean | null;
   sslActive: boolean;
   expectedTarget: string | null;
   observedCname: string | null;
   observedAddresses: string[];
+  providerAttachmentStatus: string | null;
+  providerVerificationStatus: string | null;
+  providerError: string | null;
+  providerConfiguredBy: string | null;
+  providerMisconfigured: boolean | null;
+  providerAcceptedChallenges: string[];
+  recommendedRecords: AdminDomainRecommendedRecord[];
+  sslStatus: string | null;
+  nextAction: string;
   lastError: string | null;
   lastCheckedAt: string | null;
   verifiedAt: string | null;
@@ -278,6 +318,42 @@ export async function getAdminDeployments(params?: {
 // POST /api/admin/deployments/:deploymentId/retry
 export async function retryDeployment(deploymentId: string): Promise<void> {
   await client.post(`/admin/deployments/${deploymentId}/retry`);
+}
+
+export async function getAdminDeploymentEnvironment(
+  siteId: string,
+): Promise<AdminDeploymentEnvironmentCatalog> {
+  const { data } = await client.get<AdminDeploymentEnvironmentCatalog>(
+    `/admin/deployments/sites/${siteId}/environment`,
+  );
+
+  return data;
+}
+
+export async function upsertAdminDeploymentEnvironmentVariable(
+  siteId: string,
+  payload: {
+    key: string;
+    value: string;
+    type: "plain" | "encrypted";
+    description?: string;
+  },
+): Promise<AdminDeploymentEnvironmentVariable> {
+  const { data } = await client.put<AdminDeploymentEnvironmentVariable>(
+    `/admin/deployments/sites/${siteId}/environment`,
+    payload,
+  );
+
+  return data;
+}
+
+export async function deleteAdminDeploymentEnvironmentVariable(
+  siteId: string,
+  variableId: string,
+): Promise<void> {
+  await client.delete(
+    `/admin/deployments/sites/${siteId}/environment/${variableId}`,
+  );
 }
 
 // ─── Subscriptions ────────────────────────────────────────────────────────────

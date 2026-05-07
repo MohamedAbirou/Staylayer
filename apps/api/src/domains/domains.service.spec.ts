@@ -90,4 +90,78 @@ describe("DomainsService", () => {
 
     expect(prisma.domain.create).not.toHaveBeenCalled();
   });
+
+  it("includes DNS diagnostics in the admin domain list payload", async () => {
+    prisma.domain.findMany.mockResolvedValue([
+      {
+        id: "domain-1",
+        siteId: "site-1",
+        host: "www.example.com",
+        status: DomainStatus.DNS_REQUIRED,
+        isPrimary: true,
+        lastError: null,
+        lastCheckedAt: new Date("2026-05-07T12:00:00.000Z"),
+        verifiedAt: null,
+        verificationDetails: {
+          expectedTarget: "cname.vercel-dns.com",
+          providerAttachmentStatus: "pending",
+          providerVerificationStatus: "misconfigured",
+          providerError: "Domain missing provider target",
+          providerConfiguredBy: "cname",
+          providerMisconfigured: true,
+          providerAcceptedChallenges: ["cname"],
+          recommendedRecords: [
+            {
+              type: "CNAME",
+              name: "www",
+              host: "www",
+              value: "cname.vercel-dns.com",
+              acceptedValues: ["cname.vercel-dns.com"],
+              rank: 1,
+              isMatch: false,
+            },
+          ],
+          observedCname: "wrong-target.example.net",
+          observedAddresses: [],
+          dnsConfigured: true,
+          dnsMatchesExpected: false,
+          sslStatus: "provisioning",
+          sslActive: false,
+        },
+        site: {
+          name: "Harbor House",
+          tenant: { name: "Northwind" },
+        },
+      },
+    ]);
+    prisma.domain.count.mockResolvedValue(1);
+
+    await expect(service.adminList({})).resolves.toEqual({
+      data: [
+        expect.objectContaining({
+          id: "domain-1",
+          domain: "www.example.com",
+          verificationStatus: "PENDING",
+          dnsConfigured: true,
+          dnsMatchesExpected: false,
+          providerError: "Domain missing provider target",
+          providerConfiguredBy: "cname",
+          providerMisconfigured: true,
+          providerAcceptedChallenges: ["cname"],
+          recommendedRecords: [
+            expect.objectContaining({
+              type: "CNAME",
+              value: "cname.vercel-dns.com",
+              isMatch: false,
+            }),
+          ],
+          observedCname: "wrong-target.example.net",
+          sslStatus: "provisioning",
+          nextAction:
+            "Update your DNS records to point at the deployment target.",
+        }),
+      ],
+      total: 1,
+    });
+  });
 });

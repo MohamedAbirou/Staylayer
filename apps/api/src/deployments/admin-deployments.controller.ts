@@ -1,10 +1,13 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -17,7 +20,13 @@ import { PlatformRoles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { DeploymentsService } from "./deployments.service";
+import {
+  DeploymentEnvironmentService,
+  SiteDeploymentEnvironmentCatalog,
+  SiteDeploymentEnvironmentVariableDto,
+} from "./deployment-environment.service";
 import { AdminDeploymentsQueryDto } from "./dto/admin-deployments-query.dto";
+import { UpsertDeploymentEnvironmentVariableDto } from "./dto/upsert-deployment-environment-variable.dto";
 
 @Controller("admin/deployments")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,6 +38,7 @@ import { AdminDeploymentsQueryDto } from "./dto/admin-deployments-query.dto";
 export class AdminDeploymentsController {
   constructor(
     private readonly deploymentsService: DeploymentsService,
+    private readonly deploymentEnvironmentService: DeploymentEnvironmentService,
     private readonly adminService: AdminService,
   ) {}
 
@@ -44,6 +54,67 @@ export class AdminDeploymentsController {
   @Get(":id")
   async findOne(@Param("id") id: string) {
     return this.deploymentsService.getDeploymentById(id);
+  }
+
+  @Get("sites/:siteId/environment")
+  async listSiteEnvironment(
+    @Param("siteId") siteId: string,
+  ): Promise<SiteDeploymentEnvironmentCatalog> {
+    return this.deploymentEnvironmentService.listForSite(siteId);
+  }
+
+  @Put("sites/:siteId/environment")
+  @PlatformRoles(PlatformRole.PLATFORM_OWNER, PlatformRole.SUPPORT_ADMIN)
+  async upsertSiteEnvironmentVariable(
+    @Param("siteId") siteId: string,
+    @Body() dto: UpsertDeploymentEnvironmentVariableDto,
+    @Req() req: Request,
+  ): Promise<SiteDeploymentEnvironmentVariableDto> {
+    const user = req.user as AuthenticatedRequestUser | undefined;
+    const variable =
+      await this.deploymentEnvironmentService.upsertCustomerVariable(
+        siteId,
+        dto,
+        user?.sub ?? null,
+      );
+
+    await this.adminService.createAuditLogForSite({
+      siteId,
+      actorUserId: user?.sub ?? null,
+      action: "deployment.environment_upserted_by_operator",
+      targetType: "deployment_environment_variable",
+      targetId: variable.id,
+      metadata: {
+        key: variable.key,
+        type: variable.type,
+      },
+    });
+
+    return variable;
+  }
+
+  @Delete("sites/:siteId/environment/:variableId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @PlatformRoles(PlatformRole.PLATFORM_OWNER, PlatformRole.SUPPORT_ADMIN)
+  async removeSiteEnvironmentVariable(
+    @Param("siteId") siteId: string,
+    @Param("variableId") variableId: string,
+    @Req() req: Request,
+  ): Promise<void> {
+    const user = req.user as AuthenticatedRequestUser | undefined;
+
+    await this.deploymentEnvironmentService.removeCustomerVariable(
+      siteId,
+      variableId,
+    );
+    await this.adminService.createAuditLogForSite({
+      siteId,
+      actorUserId: user?.sub ?? null,
+      action: "deployment.environment_removed_by_operator",
+      targetType: "deployment_environment_variable",
+      targetId: variableId,
+      metadata: null,
+    });
   }
 
   @Post(":id/retry")
