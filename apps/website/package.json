@@ -3,10 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "scripts": {
-    "sync-assets": "node scripts/sync-public-assets.js",
-    "predev": "node scripts/sync-public-assets.js",
     "dev": "next dev",
-    "prebuild": "node scripts/sync-public-assets.js",
     "build": "next build",
     "postbuild": "next-sitemap",
     "start": "next start",
