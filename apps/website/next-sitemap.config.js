@@ -13,6 +13,19 @@ class SiteRuntimeConfigError extends Error {
   }
 }
 
+function sanitizeBrandHostname(brandName) {
+  const normalized = String(brandName || "BrandName")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+
+  return normalized || "brandname";
+}
+
 function getConfiguredSiteId() {
   const serverSiteId = (process.env.SITE_ID || "").trim();
   const publicSiteId = (process.env.NEXT_PUBLIC_SITE_ID || "").trim();
@@ -36,19 +49,17 @@ function getConfiguredSiteId() {
 
 function getConfiguredBrandUrl() {
   const configuredBrandUrl = (process.env.NEXT_PUBLIC_BRAND_URL || "").trim();
+  const fallbackBrandUrl = `https://${sanitizeBrandHostname(process.env.NEXT_PUBLIC_BRAND_NAME || "BrandName")}.com`;
 
   if (configuredBrandUrl) {
     try {
       return new URL(configuredBrandUrl).toString().replace(/\/$/, "");
     } catch {
-      throw new SiteRuntimeConfigError(
-        "NEXT_PUBLIC_BRAND_URL must be a valid absolute URL for sitemap generation",
-      );
+      return fallbackBrandUrl;
     }
   }
 
-  const brandName = (process.env.NEXT_PUBLIC_BRAND_NAME || "BrandName").trim();
-  return `https://${brandName.toLowerCase()}.com`;
+  return fallbackBrandUrl;
 }
 
 function getConfiguredLocales() {
