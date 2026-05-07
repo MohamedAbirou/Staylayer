@@ -67,7 +67,6 @@ yarn-error.log*
 next-env.d.ts
 package-lock.json
 
-pnpm-lock.yaml
 public/sitemap-0.xml
 public/sitemap.xml
 public/robots.txt
