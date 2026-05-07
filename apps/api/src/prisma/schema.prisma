@@ -69,6 +69,11 @@ enum DeploymentStatus {
     RETRYING
 }
 
+enum DeploymentEnvironmentVariableType {
+    PLAIN
+    ENCRYPTED
+}
+
 enum DomainStatus {
     PENDING
     DNS_REQUIRED
@@ -233,19 +238,20 @@ model Site {
     createdAt      DateTime   @default(now()) @map("created_at")
     updatedAt      DateTime   @updatedAt @map("updated_at")
 
-    tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    pages              Page[]
-    settings           SiteSettings?
-    deployments        Deployment[]
-    domains            Domain[]
-    formDefinitions    FormDefinition[]
-    formRoutingRules   FormRoutingRule[]
-    formEmailTheme     FormEmailTheme?
-    formEmailTemplates FormEmailTemplate[]
-    formSubmissions    FormSubmission[]
-    formDeliveries     FormDelivery[]
-    alerts             OperationalAlert[]
-    auditLogs          AuditLog[]
+    tenant                         Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    pages                          Page[]
+    settings                       SiteSettings?
+    deployments                    Deployment[]
+    deploymentEnvironmentVariables SiteDeploymentEnvironmentVariable[]
+    domains                        Domain[]
+    formDefinitions                FormDefinition[]
+    formRoutingRules               FormRoutingRule[]
+    formEmailTheme                 FormEmailTheme?
+    formEmailTemplates             FormEmailTemplate[]
+    formSubmissions                FormSubmission[]
+    formDeliveries                 FormDelivery[]
+    alerts                         OperationalAlert[]
+    auditLogs                      AuditLog[]
 
     @@unique([tenantId, slug])
     @@index([tenantId])
@@ -430,6 +436,27 @@ model Deployment {
     @@index([siteId, status])
     @@index([siteId, createdAt])
     @@map("deployments")
+}
+
+model SiteDeploymentEnvironmentVariable {
+    id                   String                            @id @default(cuid())
+    siteId               String                            @map("site_id")
+    key                  String
+    type                 DeploymentEnvironmentVariableType @default(PLAIN)
+    description          String                            @default("")
+    targets              String[]                          @default(["production"])
+    encryptedValue       String                            @map("encrypted_value")
+    initializationVector String                            @map("initialization_vector")
+    authTag              String                            @map("auth_tag")
+    createdAt            DateTime                          @default(now()) @map("created_at")
+    updatedAt            DateTime                          @updatedAt @map("updated_at")
+    updatedBy            String?                           @map("updated_by")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@unique([siteId, key])
+    @@index([siteId, updatedAt])
+    @@map("site_deployment_environment_variables")
 }
 
 // ─── Domain ────────────────────────────────────────────────

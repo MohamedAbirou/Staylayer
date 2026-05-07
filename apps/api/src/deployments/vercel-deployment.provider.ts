@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  DomainDnsConfigSnapshot,
+  DeploymentLogEntry,
   DomainAttachmentSnapshot,
   DeploymentProject,
   DeploymentProjectSettings,
   DeploymentProvider,
   DeploymentProviderError,
   DeploymentStatusSnapshot,
+  DeploymentTimelinePhase,
   EnsureDomainAttachmentInput,
   EnsureDeploymentProjectInput,
   GetDomainAttachmentStatusInput,
@@ -35,6 +38,26 @@ type VercelDeploymentResponse = {
   url?: string;
 };
 
+type VercelDeploymentEventResponse = Array<{
+  type?: string;
+  created?: number | string;
+  payload?: {
+    text?: string;
+    id?: string;
+    created?: number | string;
+    date?: number | string;
+    statusCode?: number | string;
+    info?: {
+      type?: string;
+      name?: string;
+      entrypoint?: string;
+      path?: string;
+      step?: string;
+      readyState?: string;
+    };
+  };
+}>;
+
 type VercelProjectDomainResponse = {
   id?: string;
   name?: string;
@@ -50,6 +73,20 @@ type VercelProjectDomainResponse = {
     code?: string;
     message?: string;
   } | null;
+};
+
+type VercelDomainConfigResponse = {
+  configuredBy?: string | null;
+  acceptedChallenges?: unknown[];
+  recommendedIPv4?: Array<{
+    rank?: number;
+    value?: unknown[];
+  }>;
+  recommendedCNAME?: Array<{
+    rank?: number;
+    value?: string;
+  }>;
+  misconfigured?: boolean;
 };
 
 @Injectable()
@@ -169,14 +206,19 @@ export class VercelDeploymentProvider implements DeploymentProvider {
   async getDeploymentStatus(
     input: GetDeploymentStatusInput,
   ): Promise<DeploymentStatusSnapshot> {
-    const deployment = await this.request<VercelDeploymentResponse>(
-      `/v13/deployments/${encodeURIComponent(input.providerDeployId)}`,
-      {
-        method: "GET",
-      },
-    );
+    const [deployment, events] = await Promise.all([
+      this.request<VercelDeploymentResponse>(
+        `/v13/deployments/${encodeURIComponent(input.providerDeployId)}`,
+        {
+          method: "GET",
+        },
+      ),
+      this.getDeploymentEvents(input.providerDeployId).catch(
+        () => [] as VercelDeploymentEventResponse,
+      ),
+    ]);
 
-    return this.toDeploymentSnapshot(deployment);
+    return this.toDeploymentSnapshot(deployment, events);
   }
 
   async ensureDomainAttachment(
@@ -192,8 +234,9 @@ export class VercelDeploymentProvider implements DeploymentProvider {
           },
         },
       );
+      const config = await this.getDomainConfig(input).catch(() => null);
 
-      return this.toDomainAttachmentSnapshot(input.domain, domain);
+      return this.toDomainAttachmentSnapshot(input.domain, domain, config);
     } catch (error) {
       if (
         error instanceof DeploymentProviderError &&
@@ -209,14 +252,17 @@ export class VercelDeploymentProvider implements DeploymentProvider {
   async getDomainAttachmentStatus(
     input: GetDomainAttachmentStatusInput,
   ): Promise<DomainAttachmentSnapshot> {
-    const domain = await this.request<VercelProjectDomainResponse>(
-      `/v9/projects/${encodeURIComponent(input.projectId)}/domains/${encodeURIComponent(input.domain)}`,
-      {
-        method: "GET",
-      },
-    );
+    const [domain, config] = await Promise.all([
+      this.request<VercelProjectDomainResponse>(
+        `/v9/projects/${encodeURIComponent(input.projectId)}/domains/${encodeURIComponent(input.domain)}`,
+        {
+          method: "GET",
+        },
+      ),
+      this.getDomainConfig(input).catch(() => null),
+    ]);
 
-    return this.toDomainAttachmentSnapshot(input.domain, domain);
+    return this.toDomainAttachmentSnapshot(input.domain, domain, config);
   }
 
   private async request<T>(
@@ -257,6 +303,36 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     }
 
     return payload as T;
+  }
+
+  private async getDeploymentEvents(
+    providerDeployId: string,
+  ): Promise<VercelDeploymentEventResponse> {
+    return this.request<VercelDeploymentEventResponse>(
+      `/v3/deployments/${encodeURIComponent(providerDeployId)}/events`,
+      {
+        method: "GET",
+      },
+      {
+        builds: "1",
+        direction: "asc",
+        limit: "-1",
+      },
+    );
+  }
+
+  private async getDomainConfig(
+    input: EnsureDomainAttachmentInput,
+  ): Promise<VercelDomainConfigResponse> {
+    return this.request<VercelDomainConfigResponse>(
+      `/v6/domains/${encodeURIComponent(input.domain)}/config`,
+      {
+        method: "GET",
+      },
+      {
+        projectIdOrName: input.projectId,
+      },
+    );
   }
 
   private parseJson(text: string): unknown {
@@ -326,17 +402,26 @@ export class VercelDeploymentProvider implements DeploymentProvider {
 
   private toDeploymentSnapshot(
     deployment: VercelDeploymentResponse,
+    events: VercelDeploymentEventResponse = [],
   ): DeploymentStatusSnapshot {
     const readyState = deployment.readyState ?? null;
     const rawStatus = deployment.status ?? null;
+    const errorMessage =
+      deployment.errorMessage ?? deployment.readyStateReason ?? null;
+    const telemetry = this.toDeploymentTelemetry(events, {
+      readyState,
+      rawStatus,
+      errorMessage,
+    });
 
     return {
       providerDeployId: deployment.id,
       url: this.normalizeUrl(deployment.url),
       readyState,
       rawStatus,
-      errorMessage:
-        deployment.errorMessage ?? deployment.readyStateReason ?? null,
+      errorMessage,
+      timeline: telemetry.timeline,
+      logs: telemetry.logs,
       metadata: {
         providerReadyState: readyState,
         providerStatus: rawStatus,
@@ -350,9 +435,292 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     };
   }
 
+  private toDeploymentTelemetry(
+    events: VercelDeploymentEventResponse,
+    status: {
+      readyState: string | null;
+      rawStatus: string | null;
+      errorMessage: string | null;
+    },
+  ): {
+    timeline: DeploymentTimelinePhase[];
+    logs: DeploymentLogEntry[];
+  } {
+    const normalizedEvents = events
+      .map((event, index) => this.normalizeDeploymentEvent(event, index))
+      .filter(
+        (
+          event,
+        ): event is {
+          id: string;
+          createdAt: string;
+          phaseKey: string;
+          label: string;
+          summary: string | null;
+          text: string | null;
+          level: DeploymentLogEntry["level"];
+        } => Boolean(event),
+      )
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+
+    if (normalizedEvents.length === 0) {
+      return {
+        timeline: [this.buildFallbackDeploymentPhase(status)],
+        logs: [],
+      };
+    }
+
+    const timelineMap = new Map<string, DeploymentTimelinePhase>();
+    let lastPhaseKey: string | null = null;
+
+    for (const event of normalizedEvents) {
+      if (lastPhaseKey && lastPhaseKey !== event.phaseKey) {
+        const previous = timelineMap.get(lastPhaseKey);
+        if (previous && previous.status === "active") {
+          previous.status = "completed";
+          previous.completedAt = event.createdAt;
+        }
+      }
+
+      const phase = timelineMap.get(event.phaseKey);
+
+      if (!phase) {
+        timelineMap.set(event.phaseKey, {
+          key: event.phaseKey,
+          label: event.label,
+          status: "active",
+          startedAt: event.createdAt,
+          completedAt: null,
+          summary: event.summary,
+        });
+      } else {
+        phase.summary = event.summary ?? phase.summary ?? null;
+      }
+
+      lastPhaseKey = event.phaseKey;
+    }
+
+    const timeline = Array.from(timelineMap.values());
+    const lastPhase = timeline[timeline.length - 1];
+    const lastEventTimestamp =
+      normalizedEvents[normalizedEvents.length - 1]?.createdAt ?? null;
+
+    if (lastPhase) {
+      if (this.isReady(status)) {
+        lastPhase.status = "completed";
+        lastPhase.completedAt ??= lastEventTimestamp;
+      } else if (this.isFailed(status)) {
+        lastPhase.status = "failed";
+        lastPhase.completedAt ??= lastEventTimestamp;
+        lastPhase.summary = status.errorMessage ?? lastPhase.summary ?? null;
+      }
+    }
+
+    if (
+      this.isReady(status) &&
+      !timeline.some((phase) => phase.key === "provider:ready")
+    ) {
+      const completedAt = lastEventTimestamp ?? new Date().toISOString();
+      timeline.push({
+        key: "provider:ready",
+        label: "Ready",
+        status: "completed",
+        startedAt: completedAt,
+        completedAt,
+        summary: "The deployment is live at the provider.",
+      });
+    }
+
+    return {
+      timeline,
+      logs: normalizedEvents
+        .filter((event) => Boolean(event.text))
+        .slice(-30)
+        .map((event) => ({
+          id: event.id,
+          createdAt: event.createdAt,
+          text: event.text ?? "",
+          phaseKey: event.phaseKey,
+          level: event.level,
+        })),
+    };
+  }
+
+  private normalizeDeploymentEvent(
+    event: VercelDeploymentEventResponse[number],
+    index: number,
+  ): {
+    id: string;
+    createdAt: string;
+    phaseKey: string;
+    label: string;
+    summary: string | null;
+    text: string | null;
+    level: DeploymentLogEntry["level"];
+  } | null {
+    const info =
+      event.payload && typeof event.payload === "object"
+        ? event.payload.info
+        : undefined;
+    const phaseSource =
+      info?.step ??
+      info?.name ??
+      info?.path ??
+      info?.type ??
+      event.type ??
+      "deployment";
+    const createdAt = this.toIsoTimestamp(
+      event.payload?.created ?? event.payload?.date ?? event.created,
+    );
+
+    if (!createdAt) {
+      return null;
+    }
+
+    const text = this.normalizeText(event.payload?.text);
+    const derivedSummary = [info?.readyState, info?.entrypoint]
+      .filter(
+        (value): value is string =>
+          typeof value === "string" && value.length > 0,
+      )
+      .join(" ");
+    const summary = text ?? (derivedSummary.length > 0 ? derivedSummary : null);
+
+    return {
+      id: event.payload?.id ?? `${phaseSource}-${index}`,
+      createdAt,
+      phaseKey: `provider:${this.toIdentifier(phaseSource)}`,
+      label: this.toPhaseLabel(phaseSource),
+      summary,
+      text,
+      level: this.toLogLevel(text, event.payload?.statusCode),
+    };
+  }
+
+  private buildFallbackDeploymentPhase(status: {
+    readyState: string | null;
+    rawStatus: string | null;
+    errorMessage: string | null;
+  }): DeploymentTimelinePhase {
+    return {
+      key: "provider:deployment",
+      label: this.toPhaseLabel(
+        status.readyState ?? status.rawStatus ?? "deployment",
+      ),
+      status: this.isReady(status)
+        ? "completed"
+        : this.isFailed(status)
+          ? "failed"
+          : "active",
+      startedAt: null,
+      completedAt: null,
+      summary:
+        status.errorMessage ??
+        this.normalizeText(
+          status.readyState ?? status.rawStatus ?? "Deployment in progress",
+        ),
+    };
+  }
+
+  private toLogLevel(
+    text: string | null,
+    statusCode?: number | string,
+  ): DeploymentLogEntry["level"] {
+    if (typeof statusCode === "number" && statusCode >= 400) {
+      return "error";
+    }
+
+    if (typeof statusCode === "string" && Number(statusCode) >= 400) {
+      return "error";
+    }
+
+    const normalizedText = text?.toLowerCase() ?? "";
+
+    if (
+      normalizedText.includes("error") ||
+      normalizedText.includes("failed") ||
+      normalizedText.includes("fatal")
+    ) {
+      return "error";
+    }
+
+    if (normalizedText.includes("warn")) {
+      return "warning";
+    }
+
+    return "info";
+  }
+
+  private toIsoTimestamp(value: number | string | undefined): string | null {
+    if (typeof value === "number") {
+      return new Date(value).toISOString();
+    }
+
+    if (typeof value === "string" && value.length > 0) {
+      const numericValue = Number(value);
+      if (!Number.isNaN(numericValue)) {
+        return new Date(numericValue).toISOString();
+      }
+
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString();
+      }
+    }
+
+    return null;
+  }
+
+  private toPhaseLabel(value: string): string {
+    return value
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (match) => match.toUpperCase());
+  }
+
+  private toIdentifier(value: string): string {
+    const normalized = value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    return normalized || "deployment";
+  }
+
+  private normalizeText(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private isReady(status: {
+    readyState: string | null;
+    rawStatus: string | null;
+  }): boolean {
+    return status.readyState === "READY" || status.rawStatus === "READY";
+  }
+
+  private isFailed(status: {
+    readyState: string | null;
+    rawStatus: string | null;
+  }): boolean {
+    return (
+      status.readyState === "ERROR" ||
+      status.readyState === "CANCELED" ||
+      status.rawStatus === "ERROR" ||
+      status.rawStatus === "CANCELED"
+    );
+  }
+
   private toDomainAttachmentSnapshot(
     requestedDomain: string,
     payload: VercelProjectDomainResponse,
+    dnsConfig: VercelDomainConfigResponse | null = null,
   ): DomainAttachmentSnapshot {
     const verification = Array.isArray(payload.verification)
       ? payload.verification
@@ -376,6 +744,11 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       providerStatus: payload.serviceType ?? null,
       verificationStatus:
         payload.verified === true ? "verified" : verificationType || "pending",
+      dnsConfig: this.toDomainDnsConfig(
+        payload.name ?? requestedDomain,
+        payload.apexName ?? null,
+        dnsConfig,
+      ),
       isAssigned: Boolean(payload.id || payload.name),
       isVerified: payload.verified === true,
       isFailed: Boolean(payload.misconfigured || payload.error?.code),
@@ -389,6 +762,95 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         verification,
       },
     };
+  }
+
+  private toDomainDnsConfig(
+    requestedDomain: string,
+    apexName: string | null,
+    dnsConfig: VercelDomainConfigResponse | null,
+  ): DomainDnsConfigSnapshot | null {
+    if (!dnsConfig) {
+      return null;
+    }
+
+    const recordName = this.toRecordName(requestedDomain, apexName);
+    const recommendedA = Array.isArray(dnsConfig.recommendedIPv4)
+      ? dnsConfig.recommendedIPv4.flatMap((entry) => {
+          const acceptedValues = Array.isArray(entry.value)
+            ? entry.value.filter(
+                (value): value is string => typeof value === "string",
+              )
+            : [];
+
+          if (acceptedValues.length === 0) {
+            return [];
+          }
+
+          return [
+            {
+              type: "A" as const,
+              name: recordName,
+              host: requestedDomain,
+              value: acceptedValues[0],
+              acceptedValues,
+              rank: typeof entry.rank === "number" ? entry.rank : null,
+            },
+          ];
+        })
+      : [];
+    const recommendedCname = Array.isArray(dnsConfig.recommendedCNAME)
+      ? dnsConfig.recommendedCNAME.flatMap((entry) => {
+          if (typeof entry.value !== "string" || entry.value.length === 0) {
+            return [];
+          }
+
+          return [
+            {
+              type: "CNAME" as const,
+              name: recordName,
+              host: requestedDomain,
+              value: entry.value,
+              acceptedValues: [entry.value],
+              rank: typeof entry.rank === "number" ? entry.rank : null,
+            },
+          ];
+        })
+      : [];
+
+    return {
+      configuredBy:
+        typeof dnsConfig.configuredBy === "string"
+          ? dnsConfig.configuredBy
+          : null,
+      acceptedChallenges: Array.isArray(dnsConfig.acceptedChallenges)
+        ? dnsConfig.acceptedChallenges.filter(
+            (value): value is string => typeof value === "string",
+          )
+        : [],
+      misconfigured: dnsConfig.misconfigured === true,
+      recommendedRecords: [...recommendedA, ...recommendedCname],
+    };
+  }
+
+  private toRecordName(
+    requestedDomain: string,
+    apexName: string | null,
+  ): string {
+    if (!apexName) {
+      return requestedDomain;
+    }
+
+    if (requestedDomain === apexName) {
+      return "@";
+    }
+
+    const suffix = `.${apexName}`;
+
+    if (requestedDomain.endsWith(suffix)) {
+      return requestedDomain.slice(0, -suffix.length);
+    }
+
+    return requestedDomain;
   }
 
   private normalizeUrl(url: string | undefined): string | null {

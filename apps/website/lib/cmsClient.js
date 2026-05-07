@@ -2,10 +2,8 @@ const CMS_API_URL =
   process.env.NEXT_PUBLIC_CMS_API_URL ||
   process.env.CMS_API_URL ||
   "http://localhost:4000";
-const REQUIRE_CMS_DATA = ["1", "true", "yes", "on"].includes(
-  String(process.env.REQUIRE_CMS_DATA || "")
-    .trim()
-    .toLowerCase(),
+const REQUIRE_CMS_DATA = Boolean(
+  (process.env.SITE_ID || process.env.NEXT_PUBLIC_SITE_ID || "").trim(),
 );
 
 class SiteRuntimeConfigError extends Error {
@@ -135,12 +133,6 @@ export async function getPageData(slug, locale = "en") {
       if (enPage) return enPage;
     }
 
-    if (REQUIRE_CMS_DATA) {
-      throw buildRequiredCmsError(
-        `Dedicated site runtime expected a published page for slug \"${slug}\"`,
-      );
-    }
-
     return null;
   } catch (err) {
     if (isSiteRuntimeConfigError(err)) {
@@ -159,13 +151,7 @@ export async function getPageData(slug, locale = "en") {
       );
     }
 
-    // API down — try static fallback committed to repo
-    try {
-      const fallback = await import(`@/lib/fallbacks/${slug}.json`);
-      return fallback.default;
-    } catch {
-      return null;
-    }
+    return null;
   }
 }
 
@@ -223,7 +209,9 @@ export async function fetchAllPublishedSlugs() {
         headers: { "Content-Type": "application/json" },
       },
     );
-    if (!res.ok) return [];
+    if (!res.ok) {
+      throw new Error(`CMS API error: ${res.status}`);
+    }
     const body = await parseCmsJsonResponse(res, "Published pages fetch");
     return Array.isArray(body) ? body : body.data || [];
   } catch (error) {

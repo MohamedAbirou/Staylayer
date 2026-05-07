@@ -8,7 +8,6 @@ import {
   fetchSettings,
   isHomepageSlug,
 } from "@/lib/cmsClient";
-import { getTranslations } from "@/lib/getTranslations";
 
 function getDefaultLocale() {
   return (process.env.PRIMARY_LOCALE || "en").trim() || "en";
@@ -51,10 +50,9 @@ export async function getStaticProps({ params, locale }) {
     };
   }
 
-  const [page, settings, translations] = await Promise.all([
+  const [page, settings] = await Promise.all([
     getPageData(slug, requestedLocale),
     fetchSettings(),
-    getTranslations(requestedLocale),
   ]);
 
   if (!page) {
@@ -65,7 +63,6 @@ export async function getStaticProps({ params, locale }) {
     props: {
       page,
       settings: settings ?? null,
-      translations,
     },
     revalidate: 60,
   };

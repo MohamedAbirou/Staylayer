@@ -4,6 +4,7 @@ import { AdminModule } from "../admin/admin.module";
 import { DEPLOYMENT_PROVIDER } from "./deployment-provider.port";
 import { AdminDeploymentsController } from "./admin-deployments.controller";
 import { DeploymentsController } from "./deployments.controller";
+import { DeploymentEnvironmentService } from "./deployment-environment.service";
 import { DeploymentsService } from "./deployments.service";
 import { VercelDeploymentProvider } from "./vercel-deployment.provider";
 
@@ -11,6 +12,7 @@ import { VercelDeploymentProvider } from "./vercel-deployment.provider";
   imports: [ConfigModule, AdminModule],
   controllers: [DeploymentsController, AdminDeploymentsController],
   providers: [
+    DeploymentEnvironmentService,
     DeploymentsService,
     VercelDeploymentProvider,
     {

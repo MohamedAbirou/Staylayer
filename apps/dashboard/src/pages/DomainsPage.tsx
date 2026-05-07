@@ -198,7 +198,9 @@ export default function DomainsPage() {
             <p className="mt-1 text-sm text-gray-500">
               When you connect a domain, the platform attaches it at the hosting
               provider, checks DNS against the live deployment target, and waits
-              for HTTPS to become active.
+              for HTTPS to become active. It can inspect and explain DNS issues,
+              but it cannot repair registrar records automatically without a DNS
+              or registrar integration.
             </p>
           </div>
           <Link
@@ -413,7 +415,7 @@ function DomainRow({
   }
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/70 transition-colors">
+    <div className="flex items-start justify-between px-6 py-4 transition-colors hover:bg-gray-50/70">
       <div className="flex items-center gap-3">
         <Globe className="h-4 w-4 text-gray-400 shrink-0" />
         <div>
@@ -492,6 +494,7 @@ function DomainRow({
               )}
             </div>
           )}
+          <DomainDiagnosticsPanel domain={domain} />
         </div>
       </div>
       <div className="flex items-center gap-1">
@@ -579,6 +582,126 @@ function DomainStateChip({
       {label}
     </span>
   );
+}
+
+function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
+  if (
+    domain.recommendedRecords.length === 0 &&
+    !domain.providerConfiguredBy &&
+    !domain.providerError
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+          DNS diagnostics
+        </p>
+        {domain.providerConfiguredBy ? (
+          <DomainStateChip
+            label={`Provider sees ${domain.providerConfiguredBy}`}
+            tone={
+              domain.providerMisconfigured ||
+              domain.dnsMatchesExpected === false
+                ? "warning"
+                : "info"
+            }
+          />
+        ) : null}
+        {domain.providerMisconfigured ? (
+          <DomainStateChip
+            label="Provider marked misconfigured"
+            tone="warning"
+          />
+        ) : null}
+      </div>
+
+      {domain.recommendedRecords.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100 text-left text-sm">
+            <thead className="bg-gray-50 text-xs uppercase tracking-[0.14em] text-gray-400">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Type</th>
+                <th className="px-4 py-3 font-semibold">Name</th>
+                <th className="px-4 py-3 font-semibold">Expected value</th>
+                <th className="px-4 py-3 font-semibold">Observed</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {domain.recommendedRecords.map((record, index) => (
+                <tr
+                  key={`${record.type}-${record.name}-${record.value}-${index}`}
+                >
+                  <td className="px-4 py-3 text-xs font-semibold text-gray-700">
+                    {record.type}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-700">
+                    {record.name}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-900">
+                    {record.value}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                    {getObservedRecordValue(domain, record.type)}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span
+                      className={`rounded-full px-2 py-1 font-semibold ${
+                        record.isMatch === true
+                          ? "bg-emerald-100 text-emerald-700"
+                          : record.isMatch === false
+                            ? "bg-red-100 text-red-700"
+                            : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {record.isMatch === true
+                        ? "Correct"
+                        : record.isMatch === false
+                          ? "Needs update"
+                          : "Unknown"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="px-4 py-3 text-xs text-gray-500">
+          The provider has not returned a DNS recommendation yet.
+        </p>
+      )}
+
+      <div className="space-y-2 border-t border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-500">
+        {domain.providerAcceptedChallenges.length > 0 ? (
+          <p>
+            Accepted certificate challenges:{" "}
+            {domain.providerAcceptedChallenges.join(", ")}
+          </p>
+        ) : null}
+        <p>
+          The platform can inspect provider and DNS state and tell you which
+          record is wrong. It cannot change registrar records automatically.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function getObservedRecordValue(
+  domain: SiteDomain,
+  type: SiteDomain["recommendedRecords"][number]["type"],
+) {
+  if (type === "CNAME") {
+    return domain.observedCname ?? "No CNAME detected";
+  }
+
+  return domain.observedAddresses.length > 0
+    ? domain.observedAddresses.join(", ")
+    : "No A record detected";
 }
 
 function getDomainStatusDetail(domain: SiteDomain) {

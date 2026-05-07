@@ -17,9 +17,14 @@ import {
 import { promises as dns } from "node:dns";
 import {
   DEPLOYMENT_PROVIDER,
+  DomainDnsRecommendedRecord,
   DeploymentProvider,
 } from "../deployments/deployment-provider.port";
 import { PrismaService } from "../prisma/prisma.service";
+
+type DomainRecommendedRecordMatch = DomainDnsRecommendedRecord & {
+  isMatch: boolean | null;
+};
 
 type VerificationTrigger = "created" | "manual" | "scheduled";
 
@@ -48,6 +53,10 @@ interface DomainVerificationDetails {
   providerVerificationStatus: string | null;
   providerAttached: boolean;
   providerVerified: boolean;
+  providerConfiguredBy: string | null;
+  providerAcceptedChallenges: string[];
+  providerMisconfigured: boolean | null;
+  recommendedRecords: DomainRecommendedRecordMatch[];
   observedCname: string | null;
   observedAddresses: string[];
   dnsConfigured: boolean;
@@ -159,6 +168,10 @@ export class DomainVerificationService
       providerVerificationStatus: null,
       providerAttached: false,
       providerVerified: false,
+      providerConfiguredBy: null,
+      providerAcceptedChallenges: [],
+      providerMisconfigured: null,
+      recommendedRecords: [],
       observedCname: null,
       observedAddresses: [],
       dnsConfigured: false,
@@ -190,6 +203,12 @@ export class DomainVerificationService
         providerDomain.verificationStatus ?? null;
       details.providerAttached = providerDomain.isAssigned;
       details.providerVerified = providerDomain.isVerified;
+      details.providerConfiguredBy =
+        providerDomain.dnsConfig?.configuredBy ?? null;
+      details.providerAcceptedChallenges =
+        providerDomain.dnsConfig?.acceptedChallenges ?? [];
+      details.providerMisconfigured =
+        providerDomain.dnsConfig?.misconfigured ?? null;
       details.providerError = providerDomain.errorMessage ?? null;
 
       if (providerDomain.isFailed) {
@@ -203,13 +222,32 @@ export class DomainVerificationService
       details.observedCname = dnsState.cname;
       details.observedAddresses = dnsState.addresses;
       details.dnsConfigured = !!dnsState.cname || dnsState.addresses.length > 0;
-      details.dnsMatchesExpected = dnsState.cname
-        ? this.normalizeHost(dnsState.cname) === expectedTarget
-        : null;
+      details.recommendedRecords = this.resolveRecommendedRecordMatches(
+        providerDomain.dnsConfig?.recommendedRecords ?? [],
+        dnsState,
+      );
+      details.dnsMatchesExpected =
+        details.recommendedRecords.length > 0
+          ? details.recommendedRecords.every(
+              (record) => record.isMatch === true,
+            )
+          : dnsState.cname
+            ? this.normalizeHost(dnsState.cname) === expectedTarget
+            : null;
 
       if (!details.dnsConfigured) {
         nextStatus = DomainStatus.DNS_REQUIRED;
-        lastError = `No DNS record found for ${domain.host}`;
+        lastError =
+          this.describeRecommendedRecordIssue(details.recommendedRecords) ??
+          `No DNS record found for ${domain.host}`;
+      } else if (
+        details.recommendedRecords.length > 0 &&
+        details.recommendedRecords.some((record) => record.isMatch === false)
+      ) {
+        nextStatus = DomainStatus.DNS_REQUIRED;
+        lastError =
+          this.describeRecommendedRecordIssue(details.recommendedRecords) ??
+          `DNS records do not match the provider recommendation for ${domain.host}`;
       } else if (
         dnsState.cname &&
         this.normalizeHost(dnsState.cname) !== expectedTarget
@@ -256,6 +294,62 @@ export class DomainVerificationService
     });
 
     await this.syncFailureAlert(domain, nextStatus, lastError, details, now);
+  }
+
+  private resolveRecommendedRecordMatches(
+    records: DomainDnsRecommendedRecord[],
+    dnsState: {
+      cname: string | null;
+      addresses: string[];
+    },
+  ): DomainRecommendedRecordMatch[] {
+    return records.map((record) => ({
+      ...record,
+      isMatch: this.doesDnsRecordMatch(record, dnsState),
+    }));
+  }
+
+  private doesDnsRecordMatch(
+    record: DomainDnsRecommendedRecord,
+    dnsState: {
+      cname: string | null;
+      addresses: string[];
+    },
+  ): boolean | null {
+    const acceptedValues = record.acceptedValues?.length
+      ? record.acceptedValues
+      : [record.value];
+
+    if (record.type === "CNAME") {
+      if (!dnsState.cname) {
+        return false;
+      }
+
+      const observedCname = dnsState.cname;
+
+      return acceptedValues.some(
+        (value) =>
+          this.normalizeHost(value) === this.normalizeHost(observedCname),
+      );
+    }
+
+    if (dnsState.addresses.length === 0) {
+      return false;
+    }
+
+    return acceptedValues.some((value) => dnsState.addresses.includes(value));
+  }
+
+  private describeRecommendedRecordIssue(
+    records: DomainRecommendedRecordMatch[],
+  ): string | null {
+    const mismatchedRecord = records.find((record) => record.isMatch === false);
+
+    if (!mismatchedRecord) {
+      return null;
+    }
+
+    return `${mismatchedRecord.type} record for ${mismatchedRecord.name} should point to ${mismatchedRecord.value}`;
   }
 
   private runScheduledBatch(): void {

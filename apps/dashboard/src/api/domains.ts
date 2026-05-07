@@ -19,6 +19,16 @@ export type DomainVerificationStatus =
   | "active"
   | "failed";
 
+export interface SiteDomainRecommendedRecord {
+  type: string;
+  name: string;
+  host: string;
+  value: string;
+  acceptedValues: string[];
+  rank: number | null;
+  isMatch: boolean | null;
+}
+
 export interface SiteDomain {
   id: string;
   hostname: string;
@@ -31,6 +41,12 @@ export interface SiteDomain {
   providerAttachmentStatus: string | null;
   providerVerificationStatus: string | null;
   providerError: string | null;
+  providerConfiguredBy: string | null;
+  providerMisconfigured: boolean | null;
+  providerAcceptedChallenges: string[];
+  recommendedRecords: SiteDomainRecommendedRecord[];
+  observedCname: string | null;
+  observedAddresses: string[];
   sslStatus: string | null;
   sslActive: boolean;
   nextAction: string;

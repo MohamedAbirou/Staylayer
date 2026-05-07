@@ -17,6 +17,31 @@ export type DeploymentProjectSettings = {
   nodeVersion?: string;
 };
 
+export type DeploymentTimelinePhaseStatus =
+  | "pending"
+  | "active"
+  | "completed"
+  | "failed";
+
+export type DeploymentTimelinePhase = {
+  key: string;
+  label: string;
+  status: DeploymentTimelinePhaseStatus;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  summary?: string | null;
+};
+
+export type DeploymentLogLevel = "info" | "warning" | "error";
+
+export type DeploymentLogEntry = {
+  id: string;
+  createdAt: string;
+  text: string;
+  phaseKey?: string | null;
+  level: DeploymentLogLevel;
+};
+
 export type SiteDeploymentContext = {
   siteId: string;
   siteSlug: string;
@@ -63,6 +88,8 @@ export type DeploymentStatusSnapshot = {
   rawStatus?: string | null;
   errorMessage?: string | null;
   metadata?: Record<string, unknown>;
+  timeline?: DeploymentTimelinePhase[];
+  logs?: DeploymentLogEntry[];
   isLive: boolean;
   isFailed: boolean;
 };
@@ -79,11 +106,28 @@ export type EnsureDomainAttachmentInput = {
 
 export type GetDomainAttachmentStatusInput = EnsureDomainAttachmentInput;
 
+export type DomainDnsRecommendedRecord = {
+  type: "A" | "CNAME";
+  name: string;
+  host: string;
+  value: string;
+  acceptedValues?: string[];
+  rank?: number | null;
+};
+
+export type DomainDnsConfigSnapshot = {
+  configuredBy?: string | null;
+  acceptedChallenges?: string[];
+  misconfigured: boolean;
+  recommendedRecords: DomainDnsRecommendedRecord[];
+};
+
 export type DomainAttachmentSnapshot = {
   domain: string;
   providerDomainId?: string | null;
   providerStatus?: string | null;
   verificationStatus?: string | null;
+  dnsConfig?: DomainDnsConfigSnapshot | null;
   isAssigned: boolean;
   isVerified: boolean;
   isFailed: boolean;

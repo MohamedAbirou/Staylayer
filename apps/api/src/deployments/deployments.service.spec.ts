@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { DeploymentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { DeploymentProvider } from "./deployment-provider.port";
+import { DeploymentEnvironmentService } from "./deployment-environment.service";
 import { DeploymentsService } from "./deployments.service";
 
 describe("DeploymentsService", () => {
@@ -25,6 +26,9 @@ describe("DeploymentsService", () => {
     };
   };
   let provider: jest.Mocked<DeploymentProvider>;
+  let deploymentEnvironmentService: {
+    listCustomerEnvironmentEntries: jest.Mock;
+  };
   let configService: {
     get: jest.Mock;
   };
@@ -57,6 +61,10 @@ describe("DeploymentsService", () => {
       getDomainAttachmentStatus: jest.fn(),
     };
 
+    deploymentEnvironmentService = {
+      listCustomerEnvironmentEntries: jest.fn().mockResolvedValue([]),
+    };
+
     configService = {
       get: jest.fn((key: string) => {
         const values: Record<string, string> = {
@@ -79,6 +87,7 @@ describe("DeploymentsService", () => {
     service = new DeploymentsService(
       prisma as unknown as PrismaService,
       configService as unknown as ConfigService,
+      deploymentEnvironmentService as unknown as DeploymentEnvironmentService,
       provider,
     );
   });
@@ -100,6 +109,17 @@ describe("DeploymentsService", () => {
 
   it("creates a deployment, syncs env, and stores provider metadata", async () => {
     prisma.deployment.findFirst.mockResolvedValueOnce(null);
+    deploymentEnvironmentService.listCustomerEnvironmentEntries.mockResolvedValue(
+      [
+        {
+          key: "NEXT_PUBLIC_BOOKING_WIDGET_ID",
+          value: "widget_123",
+          type: "plain",
+          target: ["production"],
+          comment: "Customer booking widget key",
+        },
+      ],
+    );
     prisma.site.findUnique.mockResolvedValue({
       id: "site-1",
       tenantId: "tenant-1",
@@ -153,6 +173,25 @@ describe("DeploymentsService", () => {
       url: "https://harbor-house.vercel.app",
       readyState: "BUILDING",
       rawStatus: "QUEUED",
+      timeline: [
+        {
+          key: "provider:build",
+          label: "Build",
+          status: "active",
+          startedAt: "2026-05-07T10:00:00.000Z",
+          completedAt: null,
+          summary: "Installing dependencies",
+        },
+      ],
+      logs: [
+        {
+          id: "log-1",
+          createdAt: "2026-05-07T10:00:05.000Z",
+          text: "Installing dependencies",
+          phaseKey: "provider:build",
+          level: "info",
+        },
+      ],
       isLive: false,
       isFailed: false,
       errorMessage: null,
@@ -190,6 +229,11 @@ describe("DeploymentsService", () => {
             value: "secret-123",
             type: "encrypted",
           }),
+          expect.objectContaining({
+            key: "NEXT_PUBLIC_BOOKING_WIDGET_ID",
+            value: "widget_123",
+            type: "plain",
+          }),
         ]),
       }),
     );
@@ -203,6 +247,27 @@ describe("DeploymentsService", () => {
       providerProjectId: "prj_1",
       providerDeployId: "dpl_1",
     });
+    expect(prisma.deployment.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { id: "dep-1" },
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            providerTimeline: [
+              expect.objectContaining({
+                key: "provider:build",
+                label: "Build",
+              }),
+            ],
+            providerLogs: [
+              expect.objectContaining({
+                id: "log-1",
+                phaseKey: "provider:build",
+              }),
+            ],
+          }),
+        }),
+      }),
+    );
   });
 
   it("sanitizes legacy site slugs before sending project and env names to Vercel", async () => {

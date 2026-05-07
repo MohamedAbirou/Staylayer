@@ -4,6 +4,7 @@ import { ForbiddenException } from "@nestjs/common";
 import { Request } from "express";
 import { AdminService } from "../admin/admin.service";
 import { WorkspaceAccessService } from "../auth/workspace-access.service";
+import { DeploymentEnvironmentService } from "./deployment-environment.service";
 import { DeploymentsController } from "./deployments.controller";
 import { DeploymentsService } from "./deployments.service";
 
@@ -29,6 +30,11 @@ describe("DeploymentsController", () => {
   let workspaceAccessService: {
     ensureSiteAccess: jest.Mock;
   };
+  let deploymentEnvironmentService: {
+    listForSite: jest.Mock;
+    removeCustomerVariable: jest.Mock;
+    upsertCustomerVariable: jest.Mock;
+  };
   let adminService: {
     createAuditLogForSite: jest.Mock;
   };
@@ -45,12 +51,18 @@ describe("DeploymentsController", () => {
     workspaceAccessService = {
       ensureSiteAccess: jest.fn(),
     };
+    deploymentEnvironmentService = {
+      listForSite: jest.fn(),
+      removeCustomerVariable: jest.fn(),
+      upsertCustomerVariable: jest.fn(),
+    };
     adminService = {
       createAuditLogForSite: jest.fn(),
     };
 
     controller = new DeploymentsController(
       deploymentsService as unknown as DeploymentsService,
+      deploymentEnvironmentService as unknown as DeploymentEnvironmentService,
       workspaceAccessService as unknown as WorkspaceAccessService,
       adminService as unknown as AdminService,
     );
@@ -76,6 +88,8 @@ describe("DeploymentsController", () => {
       providerUrl: null,
       errorMessage: null,
       providerDeployId: null,
+      timeline: [],
+      recentLogs: [],
       createdAt: new Date("2026-05-04T08:00:00.000Z"),
       updatedAt: new Date("2026-05-04T08:00:00.000Z"),
     });
@@ -114,6 +128,8 @@ describe("DeploymentsController", () => {
       providerUrl: "https://preview.vercel.app",
       errorMessage: "provider deploy failed",
       providerDeployId: "dpl_1",
+      timeline: [],
+      recentLogs: [],
       createdAt,
       updatedAt,
     });
@@ -128,6 +144,8 @@ describe("DeploymentsController", () => {
       providerUrl: "https://preview.vercel.app",
       errorMessage: "provider deploy failed",
       providerDeployId: "dpl_1",
+      timeline: [],
+      recentLogs: [],
       createdAt: createdAt.toISOString(),
       updatedAt: updatedAt.toISOString(),
     });
@@ -181,6 +199,8 @@ describe("DeploymentsController", () => {
       providerUrl: null,
       errorMessage: null,
       providerDeployId: null,
+      timeline: [],
+      recentLogs: [],
       createdAt: new Date("2026-05-04T08:00:00.000Z"),
       updatedAt: new Date("2026-05-04T08:00:00.000Z"),
     });
@@ -210,6 +230,8 @@ describe("DeploymentsController", () => {
       providerUrl: null,
       errorMessage: null,
       providerDeployId: null,
+      timeline: [],
+      recentLogs: [],
       createdAt: new Date("2026-05-04T08:00:00.000Z"),
       updatedAt: new Date("2026-05-04T08:00:00.000Z"),
     });

@@ -53,6 +53,7 @@ describe("DomainVerificationService", () => {
       providerDomainId: "vercel-domain-1",
       providerStatus: "vercel",
       verificationStatus: "verified",
+      dnsConfig: null,
       isAssigned: true,
       isVerified: true,
       isFailed: false,
@@ -159,6 +160,7 @@ describe("DomainVerificationService", () => {
       providerDomainId: "vercel-domain-1",
       providerStatus: "vercel",
       verificationStatus: "pending",
+      dnsConfig: null,
       isAssigned: true,
       isVerified: false,
       isFailed: false,
@@ -195,6 +197,77 @@ describe("DomainVerificationService", () => {
           status: DomainStatus.PROVIDER_ATTACH_PENDING,
           lastError:
             "Provider attachment is still pending for stay.example.com",
+        }),
+      }),
+    );
+  });
+
+  it("records the exact provider-recommended DNS record when configuration is wrong", async () => {
+    deploymentProvider.ensureDomainAttachment.mockResolvedValueOnce({
+      domain: "stay.example.com",
+      providerDomainId: "vercel-domain-1",
+      providerStatus: "vercel",
+      verificationStatus: "pending",
+      dnsConfig: {
+        configuredBy: "A",
+        acceptedChallenges: ["dns-01"],
+        misconfigured: true,
+        recommendedRecords: [
+          {
+            type: "A",
+            name: "@",
+            host: "stay.example.com",
+            value: "216.198.79.1",
+            acceptedValues: ["216.198.79.1"],
+            rank: 1,
+          },
+        ],
+      },
+      isAssigned: true,
+      isVerified: false,
+      isFailed: false,
+      errorMessage: null,
+      metadata: {},
+    });
+    prisma.domain.findUnique.mockResolvedValue({
+      id: "domain-1",
+      siteId: "site-1",
+      host: "stay.example.com",
+      status: DomainStatus.PENDING,
+      createdAt: new Date("2026-05-05T10:00:00.000Z"),
+      verificationRequestedAt: new Date("2026-05-05T10:00:00.000Z"),
+      verifiedAt: null,
+      site: {
+        deployments: [
+          {
+            providerProjectId: "prj-1",
+            url: "https://stay-demo.vercel.app",
+          },
+        ],
+      },
+    });
+    jest.spyOn(service as never, "resolveDnsState").mockResolvedValue({
+      cname: null,
+      addresses: ["76.76.21.21"],
+    } as never);
+
+    await service.verifyDomain("domain-1", "manual");
+
+    expect(prisma.domain.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: DomainStatus.DNS_REQUIRED,
+          lastError: "A record for @ should point to 216.198.79.1",
+          verificationDetails: expect.objectContaining({
+            providerConfiguredBy: "A",
+            recommendedRecords: [
+              expect.objectContaining({
+                type: "A",
+                name: "@",
+                isMatch: false,
+              }),
+            ],
+          }),
         }),
       }),
     );

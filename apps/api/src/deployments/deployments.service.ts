@@ -14,19 +14,26 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import {
   DEPLOYMENT_PROVIDER,
+  DeploymentLogEntry,
   DeploymentProjectSettings,
   DeploymentProvider,
   DeploymentProviderEnvironment,
   DeploymentProviderError,
   DeploymentStatusSnapshot,
+  DeploymentTimelinePhase,
+  DeploymentTimelinePhaseStatus,
   SiteDeploymentContext,
 } from "./deployment-provider.port";
 import {
   ACTIVE_PROVISIONING_STATUSES,
   asDeploymentMetadata,
+  asDeploymentLogs,
+  asDeploymentTimeline,
   SiteRevalidationTarget,
   TRACKABLE_DEPLOYMENT_STATUSES,
 } from "./deployments.types";
+import { buildOperatorManagedEnvironmentContract } from "./deployment-environment.contract";
+import { DeploymentEnvironmentService } from "./deployment-environment.service";
 
 type SiteProvisioningRecord = {
   id: string;
@@ -62,6 +69,8 @@ export type CustomerSiteDeployment = {
   providerUrl: string | null;
   errorMessage: string | null;
   providerDeployId: string | null;
+  timeline: DeploymentTimelinePhase[];
+  recentLogs: DeploymentLogEntry[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -71,6 +80,7 @@ export class DeploymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly deploymentEnvironmentService: DeploymentEnvironmentService,
     @Inject(DEPLOYMENT_PROVIDER)
     private readonly deploymentProvider: DeploymentProvider,
   ) {}
@@ -342,7 +352,7 @@ export class DeploymentsService {
   ): Promise<Deployment> {
     const siteContext = this.toSiteContext(site);
     const projectName = this.buildProjectName(site);
-    const environment = this.buildEnvironmentContract(siteContext);
+    const environment = await this.buildEnvironmentContract(siteContext);
     const projectSettings = this.buildProjectSettings();
     let currentMetadata = deployment.metadata;
 
@@ -465,6 +475,9 @@ export class DeploymentsService {
         providerReadyState: snapshot.readyState ?? null,
         providerStatus: snapshot.rawStatus ?? null,
         providerMetadata: snapshot.metadata ?? null,
+        providerTimeline: snapshot.timeline ?? null,
+        providerLogs: snapshot.logs ?? null,
+        providerTimelineUpdatedAt: new Date().toISOString(),
       }),
     });
   }
@@ -604,6 +617,9 @@ export class DeploymentsService {
     deployment: Deployment,
     primaryDomain: string | null,
   ): CustomerSiteDeployment {
+    const metadata = asDeploymentMetadata(deployment.metadata);
+    const providerTimeline = asDeploymentTimeline(metadata.providerTimeline);
+    const recentLogs = asDeploymentLogs(metadata.providerLogs);
     const providerUrl = deployment.url
       ? this.normalizeUrl(deployment.url)
       : null;
@@ -620,83 +636,176 @@ export class DeploymentsService {
       providerUrl,
       errorMessage: deployment.errorMessage,
       providerDeployId: deployment.providerDeployId,
+      timeline: this.buildCustomerDeploymentTimeline(
+        deployment,
+        providerTimeline,
+      ),
+      recentLogs,
       createdAt: deployment.createdAt,
       updatedAt: deployment.updatedAt,
     };
   }
 
-  private buildEnvironmentContract(
-    site: SiteDeploymentContext,
-  ): DeploymentProviderEnvironment[] {
-    const cmsApiUrl = this.getRequiredRuntimeConfig("DEPLOYMENTS_CMS_API_URL");
-    const revalidateSecret = this.getRequiredRuntimeConfig(
-      "DEPLOYMENTS_REVALIDATE_SECRET",
-    );
-
-    const environment: DeploymentProviderEnvironment[] = [
+  private buildCustomerDeploymentTimeline(
+    deployment: Deployment,
+    providerTimeline: DeploymentTimelinePhase[],
+  ): DeploymentTimelinePhase[] {
+    const phases: DeploymentTimelinePhase[] = [
       {
-        key: "CMS_API_URL",
-        value: cmsApiUrl,
+        key: "system:project",
+        label: "Project setup",
+        status: this.getProjectPhaseStatus(deployment),
+        summary: "Preparing or reusing the hosting project.",
       },
       {
-        key: "NEXT_PUBLIC_CMS_API_URL",
-        value: cmsApiUrl,
-      },
-      {
-        key: "REQUIRE_CMS_DATA",
-        value: "1",
-      },
-      {
-        key: "SITE_ID",
-        value: site.siteId,
-      },
-      {
-        key: "NEXT_PUBLIC_SITE_ID",
-        value: site.siteId,
-      },
-      {
-        key: "SITE_SLUG",
-        value: site.siteSlug,
-      },
-      {
-        key: "REVALIDATE_SECRET",
-        value: revalidateSecret,
-        type: "encrypted",
-      },
-      {
-        key: "REVALIDATION_SECRET",
-        value: revalidateSecret,
-        type: "encrypted",
-      },
-      {
-        key: "PRIMARY_LOCALE",
-        value: site.primaryLocale,
-      },
-      {
-        key: "ENABLE_EXPERIMENTAL_COREPACK",
-        value: "1",
-      },
-      {
-        key: "ENABLED_LOCALES",
-        value: this.normalizeLocales(
-          site.enabledLocales,
-          site.primaryLocale,
-        ).join(","),
-      },
-      {
-        key: "NEXT_PUBLIC_BRAND_NAME",
-        value: site.siteName,
+        key: "system:environment",
+        label: "Environment sync",
+        status: this.getEnvironmentPhaseStatus(deployment),
+        summary: "Syncing the deployment environment contract.",
       },
     ];
 
-    if (site.primaryDomain) {
-      environment.push({
-        key: "NEXT_PUBLIC_BRAND_URL",
-        value: `https://${site.primaryDomain}`,
+    if (providerTimeline.length > 0) {
+      phases.push(...providerTimeline);
+    } else {
+      phases.push({
+        key: "provider:build",
+        label: "Build and deploy",
+        status: this.getBuildPhaseStatus(deployment),
+        summary: this.getBuildPhaseSummary(deployment),
       });
     }
 
-    return environment;
+    phases.push({
+      key: "system:live",
+      label: "Live routing",
+      status:
+        deployment.status === DeploymentStatus.LIVE ? "completed" : "pending",
+      summary:
+        deployment.status === DeploymentStatus.LIVE
+          ? "Customer traffic is serving from the live target."
+          : "Waiting for the deployment to become live.",
+    });
+
+    return phases;
+  }
+
+  private getProjectPhaseStatus(
+    deployment: Deployment,
+  ): DeploymentTimelinePhaseStatus {
+    if (deployment.status === DeploymentStatus.CREATING_PROJECT) {
+      return "active";
+    }
+
+    if (deployment.status === DeploymentStatus.FAILED) {
+      return deployment.providerProjectId ? "completed" : "failed";
+    }
+
+    if (
+      deployment.providerProjectId ||
+      deployment.status === DeploymentStatus.SYNCING_ENV ||
+      deployment.status === DeploymentStatus.DEPLOYING ||
+      deployment.status === DeploymentStatus.RETRYING ||
+      deployment.status === DeploymentStatus.LIVE
+    ) {
+      return "completed";
+    }
+
+    return deployment.status === DeploymentStatus.PENDING
+      ? "pending"
+      : "active";
+  }
+
+  private getEnvironmentPhaseStatus(
+    deployment: Deployment,
+  ): DeploymentTimelinePhaseStatus {
+    if (deployment.status === DeploymentStatus.SYNCING_ENV) {
+      return "active";
+    }
+
+    if (deployment.status === DeploymentStatus.FAILED) {
+      if (deployment.providerDeployId) {
+        return "completed";
+      }
+
+      return deployment.providerProjectId ? "failed" : "pending";
+    }
+
+    if (
+      deployment.providerDeployId ||
+      deployment.status === DeploymentStatus.DEPLOYING ||
+      deployment.status === DeploymentStatus.RETRYING ||
+      deployment.status === DeploymentStatus.LIVE
+    ) {
+      return "completed";
+    }
+
+    if (deployment.status === DeploymentStatus.CREATING_PROJECT) {
+      return "pending";
+    }
+
+    return deployment.status === DeploymentStatus.PENDING
+      ? "pending"
+      : "active";
+  }
+
+  private getBuildPhaseStatus(
+    deployment: Deployment,
+  ): DeploymentTimelinePhaseStatus {
+    if (deployment.status === DeploymentStatus.LIVE) {
+      return "completed";
+    }
+
+    if (deployment.status === DeploymentStatus.FAILED) {
+      return deployment.providerDeployId ? "failed" : "pending";
+    }
+
+    if (
+      deployment.status === DeploymentStatus.DEPLOYING ||
+      deployment.status === DeploymentStatus.RETRYING ||
+      deployment.providerDeployId
+    ) {
+      return "active";
+    }
+
+    return "pending";
+  }
+
+  private getBuildPhaseSummary(deployment: Deployment): string {
+    if (deployment.status === DeploymentStatus.LIVE) {
+      return "The provider build completed successfully.";
+    }
+
+    if (deployment.status === DeploymentStatus.FAILED) {
+      return deployment.errorMessage ?? "The provider build failed.";
+    }
+
+    if (
+      deployment.status === DeploymentStatus.DEPLOYING ||
+      deployment.status === DeploymentStatus.RETRYING
+    ) {
+      return "The provider is currently building and promoting the deployment.";
+    }
+
+    return "Waiting for the provider build to start.";
+  }
+
+  private async buildEnvironmentContract(
+    site: SiteDeploymentContext,
+  ): Promise<DeploymentProviderEnvironment[]> {
+    const operatorManaged = buildOperatorManagedEnvironmentContract({
+      site,
+      cmsApiUrl: this.getRequiredRuntimeConfig("DEPLOYMENTS_CMS_API_URL"),
+      revalidateSecret: this.getRequiredRuntimeConfig(
+        "DEPLOYMENTS_REVALIDATE_SECRET",
+      ),
+    });
+    const customerManaged =
+      await this.deploymentEnvironmentService.listCustomerEnvironmentEntries(
+        site.siteId,
+      );
+
+    return [...operatorManaged, ...customerManaged];
   }
 
   private buildProjectSettings(): DeploymentProjectSettings {

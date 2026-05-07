@@ -11,6 +11,42 @@ export type SiteDeploymentStatus =
   | "FAILED"
   | "RETRYING";
 
+export interface SiteDeploymentTimelinePhase {
+  key: string;
+  label: string;
+  status: "pending" | "active" | "completed" | "failed";
+  startedAt: string | null;
+  completedAt: string | null;
+  summary: string | null;
+}
+
+export interface SiteDeploymentLogEntry {
+  id: string;
+  createdAt: string;
+  text: string;
+  phaseKey: string | null;
+  level: "info" | "warning" | "error";
+}
+
+export interface SiteDeploymentEnvironmentVariable {
+  id: string;
+  key: string;
+  type: "plain" | "encrypted";
+  description: string | null;
+  targets: string[];
+  editable: boolean;
+  source: "customer" | "operator";
+  isValueSet: boolean;
+  value: string | null;
+  valuePreview: string | null;
+  updatedAt: string | null;
+}
+
+export interface SiteDeploymentEnvironmentCatalog {
+  customerEditable: SiteDeploymentEnvironmentVariable[];
+  operatorManaged: SiteDeploymentEnvironmentVariable[];
+}
+
 export interface SiteDeployment {
   id: string;
   siteId: string;
@@ -19,6 +55,8 @@ export interface SiteDeployment {
   providerUrl: string | null;
   errorMessage: string | null;
   providerDeployId: string | null;
+  timeline: SiteDeploymentTimelinePhase[];
+  recentLogs: SiteDeploymentLogEntry[];
   createdAt: string;
   updatedAt: string;
 }
@@ -66,4 +104,46 @@ export async function retryDeployment(
     { params: { siteId } },
   );
   return data;
+}
+
+export async function getDeploymentEnvironment(
+  siteId: string,
+): Promise<SiteDeploymentEnvironmentCatalog> {
+  const { data } = await client.get<SiteDeploymentEnvironmentCatalog>(
+    "/deployments/environment",
+    {
+      params: { siteId },
+    },
+  );
+
+  return data;
+}
+
+export async function upsertDeploymentEnvironmentVariable(
+  siteId: string,
+  payload: {
+    key: string;
+    value: string;
+    type: "plain" | "encrypted";
+    description?: string;
+  },
+): Promise<SiteDeploymentEnvironmentVariable> {
+  const { data } = await client.put<SiteDeploymentEnvironmentVariable>(
+    "/deployments/environment",
+    payload,
+    {
+      params: { siteId },
+    },
+  );
+
+  return data;
+}
+
+export async function deleteDeploymentEnvironmentVariable(
+  siteId: string,
+  variableId: string,
+): Promise<void> {
+  await client.delete(`/deployments/environment/${variableId}`, {
+    params: { siteId },
+  });
 }

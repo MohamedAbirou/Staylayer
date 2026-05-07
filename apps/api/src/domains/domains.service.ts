@@ -260,12 +260,18 @@ export class DomainsService {
       status: domain.status,
       verificationStatus: this.mapCustomerStatus(domain.status),
       isPrimary: domain.isPrimary,
-      dnsTarget: details.expectedTarget,
+      dnsTarget: details.recommendedRecords[0]?.value ?? details.expectedTarget,
       dnsConfigured: details.dnsConfigured,
       dnsMatchesExpected: details.dnsMatchesExpected,
       providerAttachmentStatus: details.providerAttachmentStatus,
       providerVerificationStatus: details.providerVerificationStatus,
       providerError: details.providerError,
+      providerConfiguredBy: details.providerConfiguredBy,
+      providerMisconfigured: details.providerMisconfigured,
+      providerAcceptedChallenges: details.providerAcceptedChallenges,
+      recommendedRecords: details.recommendedRecords,
+      observedCname: details.observedCname,
+      observedAddresses: details.observedAddresses,
       sslStatus: details.sslStatus,
       sslActive: details.sslActive,
       nextAction: this.getCustomerNextAction(domain.status),
@@ -306,6 +312,18 @@ export class DomainsService {
         providerAttachmentStatus: null,
         providerVerificationStatus: null,
         providerError: null,
+        providerConfiguredBy: null,
+        providerMisconfigured: null,
+        providerAcceptedChallenges: [] as string[],
+        recommendedRecords: [] as Array<{
+          type: string;
+          name: string;
+          host: string;
+          value: string;
+          acceptedValues: string[];
+          rank: number | null;
+          isMatch: boolean | null;
+        }>,
         observedCname: null,
         observedAddresses: [] as string[],
         dnsConfigured: false,
@@ -335,6 +353,56 @@ export class DomainsService {
         typeof details.providerError === "string"
           ? details.providerError
           : null,
+      providerConfiguredBy:
+        typeof details.providerConfiguredBy === "string"
+          ? details.providerConfiguredBy
+          : null,
+      providerMisconfigured:
+        typeof details.providerMisconfigured === "boolean"
+          ? details.providerMisconfigured
+          : null,
+      providerAcceptedChallenges: Array.isArray(
+        details.providerAcceptedChallenges,
+      )
+        ? details.providerAcceptedChallenges.filter(
+            (entry): entry is string => typeof entry === "string",
+          )
+        : [],
+      recommendedRecords: Array.isArray(details.recommendedRecords)
+        ? details.recommendedRecords
+            .filter(
+              (entry): entry is Record<string, unknown> =>
+                !!entry && typeof entry === "object" && !Array.isArray(entry),
+            )
+            .flatMap((entry) => {
+              const type = typeof entry.type === "string" ? entry.type : null;
+              const name = typeof entry.name === "string" ? entry.name : null;
+              const host = typeof entry.host === "string" ? entry.host : null;
+              const value =
+                typeof entry.value === "string" ? entry.value : null;
+
+              if (!type || !name || !host || !value) {
+                return [];
+              }
+
+              return [
+                {
+                  type,
+                  name,
+                  host,
+                  value,
+                  acceptedValues: Array.isArray(entry.acceptedValues)
+                    ? entry.acceptedValues.filter(
+                        (value): value is string => typeof value === "string",
+                      )
+                    : [],
+                  rank: typeof entry.rank === "number" ? entry.rank : null,
+                  isMatch:
+                    typeof entry.isMatch === "boolean" ? entry.isMatch : null,
+                },
+              ];
+            })
+        : [],
       observedCname:
         typeof details.observedCname === "string"
           ? details.observedCname

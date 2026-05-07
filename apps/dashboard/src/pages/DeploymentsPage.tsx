@@ -6,8 +6,13 @@ import {
   AlertCircle,
   Clock4,
   Globe,
+  KeyRound,
+  LockKeyhole,
+  Pencil,
+  Plus,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import {
   BILLING_MEMBERSHIP_ROLES,
@@ -18,10 +23,14 @@ import { useAuth } from "../auth/useAuth";
 import { getBillingPlan } from "../api/billing";
 import { getDomains } from "../api/domains";
 import {
+  deleteDeploymentEnvironmentVariable,
   getDeployments,
+  getDeploymentEnvironment,
   provisionDeployment,
   retryDeployment,
   type SiteDeployment,
+  type SiteDeploymentEnvironmentVariable,
+  upsertDeploymentEnvironmentVariable,
 } from "../api/deployments";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeploymentStatusBadge } from "../components/DeploymentStatusBadge";
@@ -49,6 +58,16 @@ export default function DeploymentsPage() {
 
   const [provisionConfirmOpen, setProvisionConfirmOpen] = useState(false);
   const [retryTarget, setRetryTarget] = useState<string | null>(null);
+  const [environmentFormOpen, setEnvironmentFormOpen] = useState(false);
+  const [editingEnvironmentVariable, setEditingEnvironmentVariable] =
+    useState<SiteDeploymentEnvironmentVariable | null>(null);
+  const [environmentError, setEnvironmentError] = useState<string | null>(null);
+  const [environmentDraft, setEnvironmentDraft] = useState({
+    key: "",
+    value: "",
+    type: "encrypted" as "plain" | "encrypted",
+    description: "",
+  });
 
   const {
     data: deployments = [],
@@ -80,6 +99,17 @@ export default function DeploymentsPage() {
     queryKey: ["deployments-page", "billing", tenantId],
     queryFn: () => getBillingPlan(tenantId!),
     enabled: Boolean(tenantId && canViewBilling),
+    retry: false,
+  });
+
+  const {
+    data: environmentCatalog,
+    isError: isEnvironmentError,
+    isLoading: isEnvironmentLoading,
+  } = useQuery({
+    queryKey: ["deployments-page", "environment", siteId],
+    queryFn: () => getDeploymentEnvironment(siteId!),
+    enabled: !!siteId,
     retry: false,
   });
 
@@ -116,6 +146,97 @@ export default function DeploymentsPage() {
     },
   });
 
+  const upsertEnvironmentMutation = useMutation({
+    mutationFn: (payload: {
+      key: string;
+      value: string;
+      type: "plain" | "encrypted";
+      description?: string;
+    }) => upsertDeploymentEnvironmentVariable(siteId!, payload),
+    onSuccess: () => {
+      setEnvironmentError(null);
+      resetEnvironmentForm();
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["deployments-page", "environment", siteId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["deployments", siteId] }),
+      ]);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ??
+        "Could not save this environment variable. Check the key and value and try again.";
+      setEnvironmentError(message);
+    },
+  });
+
+  const deleteEnvironmentMutation = useMutation({
+    mutationFn: (variableId: string) =>
+      deleteDeploymentEnvironmentVariable(siteId!, variableId),
+    onSuccess: () => {
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["deployments-page", "environment", siteId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["deployments", siteId] }),
+      ]);
+    },
+  });
+
+  function resetEnvironmentForm() {
+    setEnvironmentFormOpen(false);
+    setEditingEnvironmentVariable(null);
+    setEnvironmentDraft({
+      key: "",
+      value: "",
+      type: "encrypted",
+      description: "",
+    });
+  }
+
+  function startEnvironmentEdit(variable: SiteDeploymentEnvironmentVariable) {
+    setEnvironmentError(null);
+    setEditingEnvironmentVariable(variable);
+    setEnvironmentFormOpen(true);
+    setEnvironmentDraft({
+      key: variable.key,
+      value: variable.type === "plain" ? (variable.value ?? "") : "",
+      type: variable.type,
+      description: variable.description ?? "",
+    });
+  }
+
+  function startEnvironmentCreate() {
+    setEnvironmentError(null);
+    setEditingEnvironmentVariable(null);
+    setEnvironmentFormOpen(true);
+    setEnvironmentDraft({
+      key: "",
+      value: "",
+      type: "encrypted",
+      description: "",
+    });
+  }
+
+  function submitEnvironmentVariable() {
+    const key = environmentDraft.key.trim().toUpperCase();
+    const value = environmentDraft.value;
+
+    if (!key || !value) {
+      setEnvironmentError("Key and value are required.");
+      return;
+    }
+
+    upsertEnvironmentMutation.mutate({
+      key,
+      value,
+      type: environmentDraft.type,
+      description: environmentDraft.description.trim() || undefined,
+    });
+  }
+
   if (!hasActiveSite(session)) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
@@ -128,6 +249,8 @@ export default function DeploymentsPage() {
   }
 
   const latest = deployments[0] ?? null;
+  const customerEnvironment = environmentCatalog?.customerEditable ?? [];
+  const operatorManagedEnvironment = environmentCatalog?.operatorManaged ?? [];
   const activePrimaryDomain = domains.find(
     (domain) => domain.isPrimary && domain.status === "ACTIVE",
   );
@@ -273,6 +396,216 @@ export default function DeploymentsPage() {
         </div>
       </div>
 
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Customer Environment
+              </p>
+              <h2 className="mt-2 text-lg font-semibold text-gray-900">
+                Customer-editable variables
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Store site-specific runtime variables here. These values are
+                encrypted at rest and synced during deployment, so customers do
+                not need direct provider access.
+              </p>
+            </div>
+            {canManageDeployments ? (
+              <button
+                onClick={startEnvironmentCreate}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add variable
+              </button>
+            ) : null}
+          </div>
+
+          {!canManageDeployments ? (
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+              Only site admins can add, replace, or remove customer-managed
+              deployment variables.
+            </div>
+          ) : null}
+
+          {environmentFormOpen ? (
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                    Key
+                  </span>
+                  <input
+                    type="text"
+                    value={environmentDraft.key}
+                    onChange={(event) =>
+                      setEnvironmentDraft((current) => ({
+                        ...current,
+                        key: event.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="NEXT_PUBLIC_BOOKING_WIDGET_ID"
+                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                    Type
+                  </span>
+                  <select
+                    value={environmentDraft.type}
+                    onChange={(event) =>
+                      setEnvironmentDraft((current) => ({
+                        ...current,
+                        type: event.target.value as "plain" | "encrypted",
+                      }))
+                    }
+                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="encrypted">Secret</option>
+                    <option value="plain">Plain text</option>
+                  </select>
+                </label>
+                <label className="space-y-1 md:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                    Value
+                  </span>
+                  <textarea
+                    value={environmentDraft.value}
+                    onChange={(event) =>
+                      setEnvironmentDraft((current) => ({
+                        ...current,
+                        value: event.target.value,
+                      }))
+                    }
+                    rows={
+                      editingEnvironmentVariable?.type === "encrypted" ? 4 : 3
+                    }
+                    placeholder={
+                      editingEnvironmentVariable?.type === "encrypted"
+                        ? "Enter a new value to replace the current secret"
+                        : "Enter the value to sync during deployment"
+                    }
+                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  />
+                </label>
+                <label className="space-y-1 md:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                    Description
+                  </span>
+                  <input
+                    type="text"
+                    value={environmentDraft.description}
+                    onChange={(event) =>
+                      setEnvironmentDraft((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
+                    }
+                    placeholder="What this variable is used for"
+                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  />
+                </label>
+              </div>
+              {environmentError ? (
+                <p className="mt-3 text-xs text-red-600">{environmentError}</p>
+              ) : null}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={submitEnvironmentVariable}
+                  disabled={upsertEnvironmentMutation.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {upsertEnvironmentMutation.isPending ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : null}
+                  {editingEnvironmentVariable
+                    ? "Save changes"
+                    : "Save variable"}
+                </button>
+                <button
+                  onClick={resetEnvironmentForm}
+                  className="rounded-lg border border-blue-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-white"
+                >
+                  Cancel
+                </button>
+                <p className="text-xs text-gray-500">
+                  Reserved platform keys such as SITE_ID or REVALIDATE_SECRET
+                  cannot be overridden here.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {isEnvironmentError ? (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+              Could not load the deployment environment catalog.
+            </div>
+          ) : null}
+
+          <div className="mt-4 space-y-3">
+            {isEnvironmentLoading ? (
+              <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Loading customer-managed variables…
+              </div>
+            ) : customerEnvironment.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center">
+                <KeyRound className="mx-auto h-5 w-5 text-gray-300" />
+                <p className="mt-2 text-sm font-semibold text-gray-800">
+                  No customer-managed variables yet
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Add site-specific keys here instead of editing provider envs
+                  directly.
+                </p>
+              </div>
+            ) : (
+              customerEnvironment.map((variable) => (
+                <EnvironmentVariableRow
+                  key={variable.id}
+                  variable={variable}
+                  canManage={canManageDeployments}
+                  onEdit={() => startEnvironmentEdit(variable)}
+                  onDelete={() => deleteEnvironmentMutation.mutate(variable.id)}
+                  isDeleting={deleteEnvironmentMutation.isPending}
+                />
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+              Operator Environment
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-gray-900">
+              Platform-managed variables
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              These keys are generated and synced by the platform on every
+              deployment. Customers can inspect them here, but they should not
+              be changed at the provider.
+            </p>
+          </div>
+          <div className="mt-4 space-y-3">
+            {operatorManagedEnvironment.map((variable) => (
+              <EnvironmentVariableRow
+                key={variable.id}
+                variable={variable}
+                canManage={false}
+                onEdit={() => undefined}
+                onDelete={() => undefined}
+                isDeleting={false}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-sm text-gray-400">
@@ -334,6 +667,8 @@ export default function DeploymentsPage() {
                       </div>
                     </div>
                   )}
+                  <DeploymentTimeline phases={deployment.timeline} />
+                  <DeploymentLogs logs={deployment.recentLogs} />
                   <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                     {deployment.providerDeployId ? (
                       <span>
@@ -488,6 +823,258 @@ function SignalTile({
       <p className="mt-2 text-xs text-gray-500">{detail}</p>
     </div>
   );
+}
+
+function EnvironmentVariableRow({
+  variable,
+  canManage,
+  onEdit,
+  onDelete,
+  isDeleting,
+}: {
+  variable: SiteDeploymentEnvironmentVariable;
+  canManage: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-gray-900">
+              {variable.key}
+            </p>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                variable.type === "encrypted"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-sky-100 text-sky-700"
+              }`}
+            >
+              {variable.type === "encrypted" ? "Secret" : "Plain"}
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                variable.source === "operator"
+                  ? "bg-slate-200 text-slate-700"
+                  : "bg-emerald-100 text-emerald-700"
+              }`}
+            >
+              {variable.source === "operator" ? "Managed" : "Customer"}
+            </span>
+          </div>
+          {variable.description ? (
+            <p className="mt-1 text-xs text-gray-500">{variable.description}</p>
+          ) : null}
+          <div className="mt-3 rounded-lg border border-white bg-white px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+              Current value
+            </p>
+            <p className="mt-1 break-all text-sm text-gray-700">
+              {variable.valuePreview ?? "Stored securely"}
+            </p>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+            <span>Targets: {variable.targets.join(", ")}</span>
+            {variable.updatedAt ? (
+              <span title={formatDate(variable.updatedAt)}>
+                Updated {formatRelativeTime(variable.updatedAt)}
+              </span>
+            ) : (
+              <span>Synced automatically on deployment</span>
+            )}
+          </div>
+        </div>
+        {canManage ? (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onEdit}
+              className="rounded-lg p-2 text-gray-400 hover:bg-white hover:text-gray-700"
+              title="Edit variable"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+              title="Delete variable"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-500">
+            {variable.type === "encrypted" ? (
+              <span className="inline-flex items-center gap-1">
+                <LockKeyhole className="h-3.5 w-3.5" />
+                Platform secret
+              </span>
+            ) : (
+              <span>Read only</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DeploymentTimeline({
+  phases,
+}: {
+  phases: SiteDeployment["timeline"];
+}) {
+  if (phases.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+          Deployment phases
+        </p>
+        <p className="text-xs text-gray-400">
+          {phases.filter((phase) => phase.status === "completed").length}/
+          {phases.length} complete
+        </p>
+      </div>
+      <div className="mt-3 space-y-3">
+        {phases.map((phase) => {
+          const tone = getTimelinePhaseTone(phase.status);
+
+          return (
+            <div
+              key={phase.key}
+              className="grid gap-2 rounded-lg border border-white bg-white/80 px-3 py-3 sm:grid-cols-[auto_1fr_auto] sm:items-start"
+            >
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
+                <span className={`text-xs font-semibold ${tone.label}`}>
+                  {formatTimelineStatus(phase.status)}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {phase.label}
+                </p>
+                {phase.summary ? (
+                  <p className="mt-1 text-xs text-gray-500">{phase.summary}</p>
+                ) : null}
+              </div>
+              <div className="text-xs text-gray-400 sm:text-right">
+                {phase.completedAt ? (
+                  <span title={formatDate(phase.completedAt)}>
+                    Finished {formatRelativeTime(phase.completedAt)}
+                  </span>
+                ) : phase.startedAt ? (
+                  <span title={formatDate(phase.startedAt)}>
+                    Started {formatRelativeTime(phase.startedAt)}
+                  </span>
+                ) : (
+                  <span>Waiting</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DeploymentLogs({ logs }: { logs: SiteDeployment["recentLogs"] }) {
+  if (logs.length === 0) {
+    return null;
+  }
+
+  return (
+    <details className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-gray-950 text-gray-100">
+      <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-300">
+        Recent provider logs
+      </summary>
+      <div className="max-h-72 space-y-2 overflow-auto border-t border-gray-800 px-4 py-3">
+        {logs.map((entry) => (
+          <div
+            key={entry.id}
+            className="grid gap-1 text-xs sm:grid-cols-[72px_88px_1fr] sm:items-start"
+          >
+            <span className="font-mono text-gray-500">
+              {formatLogTime(entry.createdAt)}
+            </span>
+            <span className={`font-semibold ${getLogTone(entry.level)}`}>
+              {entry.level.toUpperCase()}
+            </span>
+            <span className="font-mono text-gray-200">{entry.text}</span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function getTimelinePhaseTone(
+  status: SiteDeployment["timeline"][number]["status"],
+) {
+  switch (status) {
+    case "completed":
+      return {
+        dot: "bg-emerald-500",
+        label: "text-emerald-700",
+      };
+    case "active":
+      return {
+        dot: "bg-blue-500",
+        label: "text-blue-700",
+      };
+    case "failed":
+      return {
+        dot: "bg-red-500",
+        label: "text-red-700",
+      };
+    default:
+      return {
+        dot: "bg-gray-300",
+        label: "text-gray-500",
+      };
+  }
+}
+
+function formatTimelineStatus(
+  status: SiteDeployment["timeline"][number]["status"],
+) {
+  switch (status) {
+    case "completed":
+      return "Complete";
+    case "active":
+      return "Running";
+    case "failed":
+      return "Failed";
+    default:
+      return "Pending";
+  }
+}
+
+function getLogTone(level: SiteDeployment["recentLogs"][number]["level"]) {
+  switch (level) {
+    case "error":
+      return "text-red-300";
+    case "warning":
+      return "text-amber-300";
+    default:
+      return "text-sky-300";
+  }
+}
+
+function formatLogTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(value));
 }
 
 function describeDeployment(deployment: SiteDeployment) {
