@@ -178,10 +178,13 @@ export class AuthService {
     const memberships = this.buildMembershipSummaries(user);
 
     if (!user.platformRole && memberships.length === 0) {
-      throw new ForbiddenException({
-        code: "NO_WORKSPACE_ACCESS",
-        message: "This account has no platform role or tenant memberships",
-      });
+      // throw new ForbiddenException({
+      //   code: "NO_WORKSPACE_ACCESS",
+      //   message: "This account has no platform role or tenant memberships",
+      // });
+      this.logger.log(
+        `Allowing sign-in for bare customer ${user.email} (no platform role or tenant memberships)`,
+      );
     }
 
     const activeMembership = this.resolveActiveMembership(memberships, context);
