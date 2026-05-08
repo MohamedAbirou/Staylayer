@@ -53,8 +53,8 @@ export function Sidebar() {
     session?.activeSite?.name ||
     settings?.siteName ||
     (hasPlatformRole(session, PLATFORM_ROLES)
-      ? "MyAllocator Operator"
-      : "MyAllocator");
+      ? "StayLayer Operator"
+      : "StayLayer");
   const logoUrl = settings?.logoUrl || "";
 
   const handleLogout = async () => {
