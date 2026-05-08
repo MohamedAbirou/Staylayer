@@ -1,5 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Rocket, ExternalLink, CircleAlert as AlertCircle, Clock4, Globe, KeyRound, LockKeyhole, Pencil, Plus, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  RefreshCw,
+  Rocket,
+  ExternalLink,
+  CircleAlert as AlertCircle,
+  Clock4,
+  Globe,
+  KeyRound,
+  LockKeyhole,
+  Pencil,
+  Plus,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import {
   BILLING_MEMBERSHIP_ROLES,
   hasActiveSite,
@@ -401,6 +415,151 @@ export default function DeploymentsPage() {
         </div>
       </div>
 
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16 text-sm text-gray-400">
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            Loading deployment history…
+          </div>
+        ) : deployments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
+              <Rocket className="h-7 w-7 text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">
+                No deployment history yet
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Provision a deployment to create the dedicated customer runtime.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {deployments.map((deployment) => (
+              <div
+                key={deployment.id}
+                className="flex flex-col justify-between gap-4 px-6 py-5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <DeploymentStatusBadge status={deployment.status} />
+                      <span
+                        className="text-xs text-gray-400"
+                        title={formatDate(deployment.createdAt)}
+                      >
+                        Created {formatRelativeTime(deployment.createdAt)}
+                      </span>
+                      <span
+                        className="text-xs text-gray-400"
+                        title={formatDate(deployment.updatedAt)}
+                      >
+                        Updated {formatRelativeTime(deployment.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      {describeDeployment(deployment)}
+                    </p>
+                    {deployment.errorMessage ? (
+                      <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{deployment.errorMessage}</span>
+                      </div>
+                    ) : null}
+                    {deployment.status === "FAILED" && (
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                        <div>
+                          <span className="font-semibold">Next step: </span>
+                          {getFailedNextAction(deployment.errorMessage)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {deployment.url ? (
+                      <a
+                        href={deployment.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Open live site
+                      </a>
+                    ) : null}
+                    {deployment.providerUrl &&
+                    deployment.providerUrl !== deployment.url ? (
+                      <a
+                        href={deployment.providerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Provider target
+                      </a>
+                    ) : null}
+                    {canManageDeployments && deployment.status === "FAILED" ? (
+                      <button
+                        onClick={() => setRetryTarget(deployment.id)}
+                        disabled={retryMutation.isPending}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                      >
+                        {retryMutation.isPending ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Clock4 className="h-3.5 w-3.5" />
+                        )}
+                        Retry
+                      </button>
+                    ) : null}
+                    {canManageDeployments &&
+                    deployment.status === "LIVE" &&
+                    deployment.id !== deployments[0]?.id ? (
+                      <button
+                        onClick={() => setRollbackTarget(deployment.id)}
+                        disabled={rollbackMutation.isPending}
+                        className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                      >
+                        {rollbackMutation.isPending ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Clock4 className="h-3.5 w-3.5" />
+                        )}
+                        Rollback to this
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <DeploymentTimeline phases={deployment.timeline} />
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                      {deployment.providerDeployId ? (
+                        <span>
+                          Provider deployment: {deployment.providerDeployId}
+                        </span>
+                      ) : null}
+                      {deployment.url ? (
+                        <span>Public URL: {deployment.url}</span>
+                      ) : null}
+                      {deployment.providerUrl &&
+                      deployment.providerUrl !== deployment.url ? (
+                        <span>Provider URL: {deployment.providerUrl}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <DeploymentLogs logs={deployment.recentLogs} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4">
@@ -596,7 +755,7 @@ export default function DeploymentsPage() {
               be changed at the provider.
             </p>
           </div>
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-3 overflow-auto max-h-100">
             {operatorManagedEnvironment.map((variable) => (
               <EnvironmentVariableRow
                 key={variable.id}
@@ -609,143 +768,6 @@ export default function DeploymentsPage() {
             ))}
           </div>
         </section>
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-16 text-sm text-gray-400">
-            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            Loading deployment history…
-          </div>
-        ) : deployments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
-              <Rocket className="h-7 w-7 text-gray-300" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-800">
-                No deployment history yet
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Provision a deployment to create the dedicated customer runtime.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {deployments.map((deployment) => (
-              <div
-                key={deployment.id}
-                className="flex items-start justify-between gap-4 px-6 py-5"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <DeploymentStatusBadge status={deployment.status} />
-                    <span
-                      className="text-xs text-gray-400"
-                      title={formatDate(deployment.createdAt)}
-                    >
-                      Created {formatRelativeTime(deployment.createdAt)}
-                    </span>
-                    <span
-                      className="text-xs text-gray-400"
-                      title={formatDate(deployment.updatedAt)}
-                    >
-                      Updated {formatRelativeTime(deployment.updatedAt)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    {describeDeployment(deployment)}
-                  </p>
-                  {deployment.errorMessage ? (
-                    <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>{deployment.errorMessage}</span>
-                    </div>
-                  ) : null}
-                  {deployment.status === "FAILED" && (
-                    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                      <div>
-                        <span className="font-semibold">Next step: </span>
-                        {getFailedNextAction(deployment.errorMessage)}
-                      </div>
-                    </div>
-                  )}
-                  <DeploymentTimeline phases={deployment.timeline} />
-                  <DeploymentLogs logs={deployment.recentLogs} />
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                    {deployment.providerDeployId ? (
-                      <span>
-                        Provider deployment: {deployment.providerDeployId}
-                      </span>
-                    ) : null}
-                    {deployment.url ? (
-                      <span>Public URL: {deployment.url}</span>
-                    ) : null}
-                    {deployment.providerUrl &&
-                    deployment.providerUrl !== deployment.url ? (
-                      <span>Provider URL: {deployment.providerUrl}</span>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {deployment.url ? (
-                    <a
-                      href={deployment.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      Open live site
-                    </a>
-                  ) : null}
-                  {deployment.providerUrl &&
-                  deployment.providerUrl !== deployment.url ? (
-                    <a
-                      href={deployment.providerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      Provider target
-                    </a>
-                  ) : null}
-                  {canManageDeployments && deployment.status === "FAILED" ? (
-                    <button
-                      onClick={() => setRetryTarget(deployment.id)}
-                      disabled={retryMutation.isPending}
-                      className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                    >
-                      {retryMutation.isPending ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Clock4 className="h-3.5 w-3.5" />
-                      )}
-                      Retry
-                    </button>
-                  ) : null}
-                  {canManageDeployments &&
-                  deployment.status === "LIVE" &&
-                  deployment.id !== deployments[0]?.id ? (
-                    <button
-                      onClick={() => setRollbackTarget(deployment.id)}
-                      disabled={rollbackMutation.isPending}
-                      className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
-                    >
-                      {rollbackMutation.isPending ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Clock4 className="h-3.5 w-3.5" />
-                      )}
-                      Rollback to this
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <ConfirmDialog
@@ -774,7 +796,9 @@ export default function DeploymentsPage() {
         message="This will revert the live site to the state of the selected previous deployment. The rollback verifies the target is still available at the provider before activating it."
         confirmLabel="Confirm rollback"
         isPending={rollbackMutation.isPending}
-        onConfirm={() => rollbackTarget && rollbackMutation.mutate(rollbackTarget)}
+        onConfirm={() =>
+          rollbackTarget && rollbackMutation.mutate(rollbackTarget)
+        }
         onCancel={() => setRollbackTarget(null)}
       />
     </div>
@@ -1018,30 +1042,33 @@ function DeploymentTimeline({
 }
 
 function DeploymentLogs({ logs }: { logs: SiteDeployment["recentLogs"] }) {
-  if (logs.length === 0) {
-    return null;
-  }
-
   return (
-    <details className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-gray-950 text-gray-100">
+    <details
+      className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-gray-950 text-gray-100"
+      open
+    >
       <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-300">
         Recent provider logs
       </summary>
       <div className="max-h-72 space-y-2 overflow-auto border-t border-gray-800 px-4 py-3">
-        {logs.map((entry) => (
-          <div
-            key={entry.id}
-            className="grid gap-1 text-xs sm:grid-cols-[72px_88px_1fr] sm:items-start"
-          >
-            <span className="font-mono text-gray-500">
-              {formatLogTime(entry.createdAt)}
-            </span>
-            <span className={`font-semibold ${getLogTone(entry.level)}`}>
-              {entry.level.toUpperCase()}
-            </span>
-            <span className="font-mono text-gray-200">{entry.text}</span>
-          </div>
-        ))}
+        {logs.length === 0 ? (
+          <p className="text-xs text-gray-500">No recent logs available.</p>
+        ) : (
+          logs.map((entry) => (
+            <div
+              key={entry.id}
+              className="grid gap-1 text-xs sm:grid-cols-[72px_88px_1fr] sm:items-start"
+            >
+              <span className="font-mono text-gray-500">
+                {formatLogTime(entry.createdAt)}
+              </span>
+              <span className={`font-semibold ${getLogTone(entry.level)}`}>
+                {entry.level.toUpperCase()}
+              </span>
+              <span className="font-mono text-gray-200">{entry.text}</span>
+            </div>
+          ))
+        )}
       </div>
     </details>
   );
