@@ -106,8 +106,7 @@ export const router = createBrowserRouter([
           {
             path: "/onboarding",
             element: (
-              // <ProtectedRoute membershipRoles={CONTENT_MEMBERSHIP_ROLES}>
-              <ProtectedRoute>
+              <ProtectedRoute membershipRoles={CONTENT_MEMBERSHIP_ROLES}>
                 <ErrorBoundary>
                   <OnboardingPage />
                 </ErrorBoundary>
