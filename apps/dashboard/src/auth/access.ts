@@ -60,7 +60,8 @@ export function getDefaultAuthenticatedPath(
     return "/admin";
   }
 
-  return "/login";
+  // return "/login";
+  return "/onboarding";
 }
 
 export function describePlatformRole(role: PlatformRole): string {
