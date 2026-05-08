@@ -98,7 +98,7 @@ export function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100/20 hover:text-white cursor-pointer"
         title="Notifications"
       >
         <Bell className="h-5 w-5" />
@@ -110,7 +110,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-96 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 top-full z-50 mt-2 w-96 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <p className="text-sm font-semibold text-gray-900">Notifications</p>
             <div className="flex items-center gap-2">
@@ -141,7 +141,9 @@ export function NotificationBell() {
             ) : notifications.length === 0 ? (
               <div className="px-4 py-8 text-center">
                 <Bell className="mx-auto h-6 w-6 text-gray-200" />
-                <p className="mt-2 text-sm text-gray-500">No notifications yet</p>
+                <p className="mt-2 text-sm text-gray-500">
+                  No notifications yet
+                </p>
               </div>
             ) : (
               notifications.map((n) => (

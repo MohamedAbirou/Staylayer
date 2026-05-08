@@ -56,6 +56,8 @@ export default function BillingPage() {
     retry: false,
   });
 
+  console.log("PLAN: ", plan);
+
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       if (!tenantId || !plan) {
@@ -475,7 +477,8 @@ export default function BillingPage() {
 
 function canStartCheckout(plan: BillingPlanSnapshot): boolean {
   return (
-    plan.source === "default_trial" ||
+    // plan.source === "default_trial" ||
+    plan.source === "free" ||
     plan.status === "inactive" ||
     plan.status === "canceled"
   );
