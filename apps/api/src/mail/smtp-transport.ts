@@ -23,37 +23,21 @@ function buildIpv4SocketFactory(
   }
 
   return (options, callback) => {
-    const host = options.host ?? "";
+    const host = options.host?.trim();
     const port = Number(options.port ?? (options.secure ? 465 : 587));
 
-    const lookup: net.LookupFunction = (
-      hostname,
-      _lookupOptions,
-      lookupCallback,
-    ) => {
-      dns.lookup(hostname, { family: 4 }, lookupCallback);
-    };
-
-    const connectOptions: net.TcpNetConnectOpts = {
-      host,
-      port,
-      localAddress: options.localAddress,
-      lookup,
-    };
-
-    const socket = options.secure
-      ? tls.connect({
-          ...connectOptions,
-          servername: options.tls?.servername ?? host,
-          ...(options.tls ?? {}),
-        })
-      : net.connect(connectOptions);
+    if (!host || !Number.isFinite(port)) {
+      callback(new Error("SMTP host or port is not configured"), {});
+      return;
+    }
 
     let settled = false;
 
+    let socket: net.Socket | tls.TLSSocket;
+
     const cleanup = () => {
-      socket.removeListener("error", onError);
-      socket.removeListener(
+      socket?.removeListener("error", onError);
+      socket?.removeListener(
         options.secure ? "secureConnect" : "connect",
         onConnect,
       );
@@ -80,8 +64,33 @@ function buildIpv4SocketFactory(
       callback(null, { connection: socket });
     };
 
-    socket.once("error", onError);
-    socket.once(options.secure ? "secureConnect" : "connect", onConnect);
+    dns.resolve4(host, (resolveError, addresses) => {
+      if (resolveError || !addresses.length) {
+        callback(
+          resolveError ?? new Error(`No IPv4 address found for ${host}`),
+          {},
+        );
+        return;
+      }
+
+      const ipAddress = addresses[0];
+      const connectOptions: net.TcpNetConnectOpts = {
+        host: ipAddress,
+        port,
+        localAddress: options.localAddress,
+      };
+
+      socket = options.secure
+        ? tls.connect({
+            ...connectOptions,
+            servername: options.tls?.servername ?? host,
+            ...(options.tls ?? {}),
+          })
+        : net.connect(connectOptions);
+
+      socket.once("error", onError);
+      socket.once(options.secure ? "secureConnect" : "connect", onConnect);
+    });
   };
 }
 
