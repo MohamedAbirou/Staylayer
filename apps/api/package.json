@@ -4,7 +4,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "pnpm run db:generate && nest build",
+    "build": "pnpm run db:generate && pnpm run db:migrate && nest build",
     "dev": "nest start --watch",
     "start": "pnpm run db:seed && node dist/main",
     "start:prod": "node dist/main",
