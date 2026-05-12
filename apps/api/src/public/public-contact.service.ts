@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import nodemailer, { type Transporter } from "nodemailer";
+import { type Transporter } from "nodemailer";
+import { buildSmtpTransport } from "../mail/smtp-transport";
 import { CreatePublicContactInquiryDto } from "./dto/create-public-contact-inquiry.dto";
 
 @Injectable()
@@ -141,24 +142,7 @@ export class PublicContactService {
       return this.mailTransport;
     }
 
-    const host = this.configService.get<string>("SMTP_HOST")?.trim();
-    const port = Number(this.configService.get<string>("SMTP_PORT") ?? "587");
-    const user = this.configService.get<string>("SMTP_USER")?.trim();
-    const pass = this.configService.get<string>("SMTP_PASS")?.trim();
-
-    if (!host || !Number.isFinite(port)) {
-      this.mailTransport = null;
-      return this.mailTransport;
-    }
-
-    this.mailTransport = nodemailer.createTransport({
-      host,
-      port,
-      secure:
-        String(this.configService.get<string>("SMTP_SECURE") ?? "false") ===
-        "true",
-      auth: user && pass ? { user, pass } : undefined,
-    });
+    this.mailTransport = buildSmtpTransport(this.configService);
 
     return this.mailTransport;
   }
