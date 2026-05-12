@@ -1,9 +1,15 @@
-import dns from "node:dns";
+import dns from "node:dns/promises";
 import net from "node:net";
-import tls from "node:tls";
 import { ConfigService } from "@nestjs/config";
 import nodemailer, { type Transporter } from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
+
+type SmtpTransportCandidate = {
+  host: string;
+  port: number;
+  secure: boolean;
+  requireTLS?: boolean;
+};
 
 function resolveSmtpDnsResultOrder(
   configService: ConfigService,
@@ -15,82 +21,116 @@ function resolveSmtpDnsResultOrder(
   return configuredOrder === "verbatim" ? "verbatim" : "ipv4first";
 }
 
-function buildIpv4SocketFactory(
-  configService: ConfigService,
-): SMTPTransport.Options["getSocket"] | undefined {
-  if (resolveSmtpDnsResultOrder(configService) !== "ipv4first") {
-    return undefined;
+function getBooleanEnv(configService: ConfigService, key: string) {
+  return configService.get<string>(key)?.trim().toLowerCase() === "true";
+}
+
+function getOptionalNumberEnv(configService: ConfigService, key: string) {
+  const rawValue = configService.get<string>(key)?.trim();
+
+  if (!rawValue) {
+    return null;
   }
 
-  return (options, callback) => {
-    const host = options.host?.trim();
-    const port = Number(options.port ?? (options.secure ? 465 : 587));
+  const parsedValue = Number(rawValue);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+}
 
-    if (!host || !Number.isFinite(port)) {
-      callback(new Error("SMTP host or port is not configured"), {});
-      return;
-    }
+function buildSmtpCandidates(
+  configService: ConfigService,
+  primary: SmtpTransportCandidate,
+): SmtpTransportCandidate[] {
+  const candidates: SmtpTransportCandidate[] = [primary];
+  const fallbackPort = getOptionalNumberEnv(
+    configService,
+    "SMTP_FALLBACK_PORT",
+  );
 
-    let settled = false;
-
-    let socket: net.Socket | tls.TLSSocket;
-
-    const cleanup = () => {
-      socket?.removeListener("error", onError);
-      socket?.removeListener(
-        options.secure ? "secureConnect" : "connect",
-        onConnect,
-      );
-    };
-
-    const onError = (error: Error) => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      cleanup();
-      callback(error, {});
-    };
-
-    const onConnect = () => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      cleanup();
-      socket.setKeepAlive(true);
-      callback(null, { connection: socket });
-    };
-
-    dns.resolve4(host, (resolveError, addresses) => {
-      if (resolveError || !addresses.length) {
-        callback(
-          resolveError ?? new Error(`No IPv4 address found for ${host}`),
-          {},
-        );
-        return;
-      }
-
-      const ipAddress = addresses[0];
-      const connectOptions: net.TcpNetConnectOpts = {
-        host: ipAddress,
-        port,
-        localAddress: options.localAddress,
-      };
-
-      socket = options.secure
-        ? tls.connect({
-            ...connectOptions,
-            servername: options.tls?.servername ?? host,
-            ...(options.tls ?? {}),
-          })
-        : net.connect(connectOptions);
-
-      socket.once("error", onError);
-      socket.once(options.secure ? "secureConnect" : "connect", onConnect);
+  if (fallbackPort && fallbackPort !== primary.port) {
+    candidates.push({
+      host: primary.host,
+      port: fallbackPort,
+      secure: getBooleanEnv(configService, "SMTP_FALLBACK_SECURE"),
+      requireTLS: getBooleanEnv(configService, "SMTP_FALLBACK_REQUIRE_TLS"),
     });
+  } else if (
+    primary.host === "smtp.gmail.com" &&
+    primary.port === 465 &&
+    primary.secure
+  ) {
+    candidates.push({
+      host: primary.host,
+      port: 587,
+      secure: false,
+      requireTLS: true,
+    });
+  }
+
+  return candidates;
+}
+
+async function resolveTransportHost(
+  host: string,
+  dnsResultOrder: "ipv4first" | "verbatim",
+) {
+  if (dnsResultOrder !== "ipv4first" || net.isIP(host)) {
+    return { connectHost: host, servername: net.isIP(host) ? undefined : host };
+  }
+
+  try {
+    const addresses = await dns.resolve4(host);
+
+    if (addresses.length > 0) {
+      return { connectHost: addresses[0], servername: host };
+    }
+  } catch {
+    // Fall back to the hostname so the underlying transport can make one last attempt.
+  }
+
+  return { connectHost: host, servername: host };
+}
+
+function shouldTryNextCandidate(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const code = (error as NodeJS.ErrnoException).code;
+  return [
+    "ETIMEDOUT",
+    "ESOCKET",
+    "ECONNREFUSED",
+    "EHOSTUNREACH",
+    "ENETUNREACH",
+    "ECONNRESET",
+  ].includes(code ?? "");
+}
+
+async function buildTransportOptions(
+  candidate: SmtpTransportCandidate,
+  configService: ConfigService,
+): Promise<SMTPTransport.Options> {
+  const user = configService.get<string>("SMTP_USER")?.trim();
+  const pass = configService.get<string>("SMTP_PASS")?.trim();
+  const connectionTimeout = getOptionalNumberEnv(
+    configService,
+    "SMTP_CONNECTION_TIMEOUT_MS",
+  );
+  const resolvedHost = await resolveTransportHost(
+    candidate.host,
+    resolveSmtpDnsResultOrder(configService),
+  );
+
+  return {
+    host: resolvedHost.connectHost,
+    port: candidate.port,
+    secure: candidate.secure,
+    requireTLS: candidate.requireTLS,
+    auth: user && pass ? { user, pass } : undefined,
+    connectionTimeout: connectionTimeout ?? undefined,
+    tls: resolvedHost.servername
+      ? { servername: resolvedHost.servername }
+      : undefined,
   };
 }
 
@@ -106,14 +146,59 @@ export function buildSmtpTransport(
     return null;
   }
 
-  const options: SMTPTransport.Options = {
+  const primaryCandidate: SmtpTransportCandidate = {
     host,
     port,
     secure:
       String(configService.get<string>("SMTP_SECURE") ?? "false") === "true",
+  };
+  const transport = nodemailer.createTransport({
+    host,
+    port,
+    secure: primaryCandidate.secure,
     auth: user && pass ? { user, pass } : undefined,
-    getSocket: buildIpv4SocketFactory(configService),
+  });
+  const candidates = buildSmtpCandidates(configService, primaryCandidate);
+
+  const sendWithFallback = async (mailOptions: unknown) => {
+    let lastError: unknown = null;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+
+      try {
+        const candidateTransport = nodemailer.createTransport(
+          await buildTransportOptions(candidate, configService),
+        );
+
+        return await candidateTransport.sendMail(mailOptions as never);
+      } catch (error) {
+        lastError = error;
+
+        if (index === candidates.length - 1 || !shouldTryNextCandidate(error)) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError;
   };
 
-  return nodemailer.createTransport(options);
+  transport.sendMail = ((mailOptions: unknown, callback?: unknown) => {
+    if (typeof callback === "function") {
+      sendWithFallback(mailOptions)
+        .then((result) => {
+          (callback as (error: null, info: unknown) => void)(null, result);
+        })
+        .catch((error) => {
+          (callback as (error: unknown) => void)(error);
+        });
+
+      return transport;
+    }
+
+    return sendWithFallback(mailOptions);
+  }) as Transporter["sendMail"];
+
+  return transport;
 }

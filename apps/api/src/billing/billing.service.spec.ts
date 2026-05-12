@@ -291,6 +291,7 @@ describe("BillingService", () => {
     prisma.subscription.findUnique.mockResolvedValue(null);
     prisma.subscription.findFirst.mockResolvedValue(null);
     prisma.subscription.create.mockResolvedValue({ id: "db-sub-2" });
+    prisma.tenant.findUnique.mockResolvedValue({ id: "tenant-1" });
 
     (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
       jest.fn().mockReturnValue({
@@ -469,6 +470,7 @@ describe("BillingService", () => {
       gracePeriodEndsAt: null,
     });
     prisma.subscription.update.mockResolvedValue({ id: "db-sub-existing" });
+    prisma.tenant.findUnique.mockResolvedValue({ id: "tenant-2" });
 
     (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
       jest.fn().mockReturnValue({
@@ -498,5 +500,66 @@ describe("BillingService", () => {
       }),
     );
     expect(prisma.subscription.create).not.toHaveBeenCalled();
+  });
+
+  it("ignores a Stripe subscription webhook when the referenced tenant no longer exists", async () => {
+    const stripeEvent = {
+      id: "evt_stale_tenant",
+      type: "customer.subscription.updated",
+      created: 1_777_000_000,
+      data: {
+        object: {
+          id: "sub_stripe_stale",
+          customer: "cus_stale",
+          metadata: {
+            tenantId: "tenant-missing",
+            planKey: "starter_stay",
+          },
+          status: "active",
+          items: {
+            data: [{ price: { id: "price_starter_123" } }],
+          },
+          current_period_start: 1_777_000_000,
+          current_period_end: 1_779_592_000,
+          cancel_at_period_end: false,
+        },
+      },
+    };
+
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.billingWebhookEvent.create.mockResolvedValue({
+      id: "receipt-stale",
+    });
+    prisma.subscription.findUnique.mockResolvedValue(null);
+    prisma.subscription.findFirst.mockResolvedValue(null);
+    prisma.tenant.findUnique.mockResolvedValue(null);
+
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        webhooks: {
+          constructEvent: jest.fn().mockReturnValue(stripeEvent),
+        },
+      });
+
+    const result = await service.handleStripeWebhook(
+      "sig_test",
+      Buffer.from("{}"),
+    );
+
+    expect(result).toEqual({
+      received: true,
+      duplicate: false,
+      eventType: "customer.subscription.updated",
+    });
+    expect(prisma.subscription.create).not.toHaveBeenCalled();
+    expect(prisma.subscription.update).not.toHaveBeenCalled();
+    expect(prisma.billingWebhookEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "receipt-stale" },
+        data: expect.objectContaining({
+          processedAt: expect.any(Date),
+        }),
+      }),
+    );
   });
 });

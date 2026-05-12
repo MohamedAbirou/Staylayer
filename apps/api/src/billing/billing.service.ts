@@ -664,6 +664,14 @@ export class BillingService {
       existingByProviderId?.tenantId,
       providerCustomerId,
     );
+
+    if (!tenantId) {
+      this.logger.warn(
+        `Ignoring Stripe subscription ${stripeSubscription.id} because no active tenant could be resolved`,
+      );
+      return {};
+    }
+
     const planKey =
       this.resolvePlanKeyForStripeSubscription(stripeSubscription);
     const plan = getBillingPlan(planKey);
@@ -1218,15 +1226,20 @@ export class BillingService {
     stripeSubscription: StripeSubscriptionRecord,
     existingTenantId: string | undefined,
     providerCustomerId: string | null,
-  ): Promise<string> {
-    const metadataTenantId = stripeSubscription.metadata?.tenantId;
+  ): Promise<string | null> {
+    const metadataTenantId = await this.resolveExistingTenantId(
+      stripeSubscription.metadata?.tenantId,
+    );
 
     if (metadataTenantId) {
       return metadataTenantId;
     }
 
-    if (existingTenantId) {
-      return existingTenantId;
+    const resolvedExistingTenantId =
+      await this.resolveExistingTenantId(existingTenantId);
+
+    if (resolvedExistingTenantId) {
+      return resolvedExistingTenantId;
     }
 
     if (providerCustomerId) {
@@ -1239,22 +1252,27 @@ export class BillingService {
         select: { tenantId: true },
       });
 
-      if (previousSubscription) {
-        return previousSubscription.tenantId;
+      const resolvedPreviousTenantId = await this.resolveExistingTenantId(
+        previousSubscription?.tenantId,
+      );
+
+      if (resolvedPreviousTenantId) {
+        return resolvedPreviousTenantId;
       }
     }
 
-    throw new BadRequestException({
-      code: "TENANT_ID_REQUIRED",
-      message: "Stripe subscription metadata did not include a tenant id",
-    });
+    return null;
   }
 
   private async resolveTenantIdForInvoice(
     invoice: StripeInvoiceRecord,
   ): Promise<string | null> {
-    if (invoice.metadata?.tenantId) {
-      return invoice.metadata.tenantId;
+    const metadataTenantId = await this.resolveExistingTenantId(
+      invoice.metadata?.tenantId,
+    );
+
+    if (metadataTenantId) {
+      return metadataTenantId;
     }
 
     const subscriptionId =
@@ -1271,8 +1289,12 @@ export class BillingService {
         select: { tenantId: true },
       });
 
-      if (subscription) {
-        return subscription.tenantId;
+      const resolvedSubscriptionTenantId = await this.resolveExistingTenantId(
+        subscription?.tenantId,
+      );
+
+      if (resolvedSubscriptionTenantId) {
+        return resolvedSubscriptionTenantId;
       }
     }
 
@@ -1290,7 +1312,22 @@ export class BillingService {
       select: { tenantId: true },
     });
 
-    return subscription?.tenantId ?? null;
+    return this.resolveExistingTenantId(subscription?.tenantId);
+  }
+
+  private async resolveExistingTenantId(
+    tenantId: string | null | undefined,
+  ): Promise<string | null> {
+    if (!tenantId) {
+      return null;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true },
+    });
+
+    return tenant?.id ?? null;
   }
 
   private resolvePlanKeyForStripeSubscription(
