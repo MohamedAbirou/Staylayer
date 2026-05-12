@@ -1,4 +1,5 @@
 import dns from "node:dns/promises";
+import { randomUUID } from "node:crypto";
 import net from "node:net";
 import { ConfigService } from "@nestjs/config";
 import nodemailer, { type Transporter } from "nodemailer";
@@ -9,6 +10,25 @@ type SmtpTransportCandidate = {
   port: number;
   secure: boolean;
   requireTLS?: boolean;
+};
+
+type MailAddressObject = {
+  address?: string | null;
+};
+
+type MailOptionsLike = {
+  from?: string | MailAddressObject | null;
+  to?: string | MailAddressObject | Array<string | MailAddressObject> | null;
+  cc?: string | MailAddressObject | Array<string | MailAddressObject> | null;
+  bcc?: string | MailAddressObject | Array<string | MailAddressObject> | null;
+  replyTo?:
+    | string
+    | MailAddressObject
+    | Array<string | MailAddressObject>
+    | null;
+  subject?: string | null;
+  text?: string | null;
+  html?: string | null;
 };
 
 function resolveSmtpDnsResultOrder(
@@ -23,6 +43,163 @@ function resolveSmtpDnsResultOrder(
 
 function getBooleanEnv(configService: ConfigService, key: string) {
   return configService.get<string>(key)?.trim().toLowerCase() === "true";
+}
+
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/$/, "");
+}
+
+function getResendApiKey(configService: ConfigService) {
+  return configService.get<string>("RESEND_API_KEY")?.trim() ?? null;
+}
+
+function getResendApiBaseUrl(configService: ConfigService) {
+  return trimTrailingSlash(
+    configService.get<string>("RESEND_API_URL")?.trim() ||
+      "https://api.resend.com",
+  );
+}
+
+function normalizeAddress(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "address" in value &&
+    typeof (value as MailAddressObject).address === "string"
+  ) {
+    const trimmed = (value as MailAddressObject).address?.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  return null;
+}
+
+function normalizeRecipients(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => normalizeRecipients(entry));
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  const singleAddress = normalizeAddress(value);
+  return singleAddress ? [singleAddress] : [];
+}
+
+function toResendRecipientValue(recipients: string[]) {
+  if (recipients.length === 0) {
+    return undefined;
+  }
+
+  return recipients.length === 1 ? recipients[0] : recipients;
+}
+
+async function sendWithResend(
+  mailOptions: MailOptionsLike,
+  configService: ConfigService,
+) {
+  const apiKey = getResendApiKey(configService);
+
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  const from = normalizeAddress(mailOptions.from);
+  const to = normalizeRecipients(mailOptions.to);
+  const cc = normalizeRecipients(mailOptions.cc);
+  const bcc = normalizeRecipients(mailOptions.bcc);
+  const replyTo = normalizeRecipients(mailOptions.replyTo);
+
+  if (!from) {
+    throw new Error("Email delivery requires a from address");
+  }
+
+  if (to.length === 0) {
+    throw new Error("Email delivery requires at least one recipient");
+  }
+
+  const payload = {
+    from,
+    to: toResendRecipientValue(to),
+    cc: toResendRecipientValue(cc),
+    bcc: toResendRecipientValue(bcc),
+    reply_to: toResendRecipientValue(replyTo),
+    subject: mailOptions.subject ?? "",
+    text: mailOptions.text ?? undefined,
+    html: mailOptions.html ?? undefined,
+  };
+
+  const response = await fetch(`${getResendApiBaseUrl(configService)}/emails`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Resend email send failed (${response.status}): ${responseText}`,
+    );
+  }
+
+  let messageId: string = randomUUID();
+
+  try {
+    const parsed = JSON.parse(responseText) as { id?: string };
+
+    if (parsed.id) {
+      messageId = parsed.id;
+    }
+  } catch {
+    // Keep the generated message id when the provider response is not JSON.
+  }
+
+  return {
+    messageId,
+    accepted: [...to, ...cc, ...bcc],
+    rejected: [],
+    pending: [],
+    response: response.status.toString(),
+  };
+}
+
+function buildResendTransport(configService: ConfigService): Transporter {
+  const transport = nodemailer.createTransport({ jsonTransport: true });
+
+  transport.sendMail = ((mailOptions: unknown, callback?: unknown) => {
+    const sendPromise = sendWithResend(
+      mailOptions as MailOptionsLike,
+      configService,
+    );
+
+    if (typeof callback === "function") {
+      sendPromise
+        .then((result) => {
+          (callback as (error: null, info: unknown) => void)(null, result);
+        })
+        .catch((error) => {
+          (callback as (error: unknown) => void)(error);
+        });
+
+      return transport;
+    }
+
+    return sendPromise;
+  }) as Transporter["sendMail"];
+
+  return transport;
 }
 
 function getOptionalNumberEnv(configService: ConfigService, key: string) {
@@ -137,6 +314,10 @@ async function buildTransportOptions(
 export function buildSmtpTransport(
   configService: ConfigService,
 ): Transporter | null {
+  if (getResendApiKey(configService)) {
+    return buildResendTransport(configService);
+  }
+
   const host = configService.get<string>("SMTP_HOST")?.trim();
   const port = Number(configService.get<string>("SMTP_PORT") ?? "587");
   const user = configService.get<string>("SMTP_USER")?.trim();

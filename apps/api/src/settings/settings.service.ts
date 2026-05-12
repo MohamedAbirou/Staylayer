@@ -397,10 +397,10 @@ export class SettingsService {
           ? "Email delivery is not required because no email routing is configured."
           : smtpConfigured && internalTemplateConfigured && site.formEmailTheme
             ? guestTemplateConfigured
-              ? "SMTP delivery infrastructure and branded email templates are configured, including guest confirmations."
-              : "SMTP delivery infrastructure and branded internal notification templates are configured."
+              ? "Email delivery infrastructure and branded email templates are configured, including guest confirmations."
+              : "Email delivery infrastructure and branded internal notification templates are configured."
             : !smtpConfigured
-              ? "Email routing is configured, but SMTP delivery infrastructure is missing."
+              ? "Email routing is configured, but no supported delivery provider is configured."
               : !site.formEmailTheme
                 ? "Email routing is configured, but the branded email theme has not been saved yet."
                 : "Email routing is configured, but the branded internal notification template is missing or disabled.",
@@ -408,7 +408,7 @@ export class SettingsService {
           (smtpConfigured && internalTemplateConfigured && site.formEmailTheme)
           ? null
           : !smtpConfigured
-            ? "Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and INQUIRY_EMAIL_FROM."
+            ? "Configure RESEND_API_KEY and TRANSACTIONAL_EMAIL_FROM, or configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and INQUIRY_EMAIL_FROM."
             : !site.formEmailTheme
               ? "Save the branded email theme in the email studio before go-live."
               : "Enable an internal notification email template in the email studio before go-live.",
@@ -639,6 +639,13 @@ export class SettingsService {
   }
 
   private isSmtpConfigured() {
+    if (Boolean(this.configService.get<string>("RESEND_API_KEY")?.trim())) {
+      return Boolean(
+        this.configService.get<string>("TRANSACTIONAL_EMAIL_FROM")?.trim() ||
+        this.configService.get<string>("INQUIRY_EMAIL_FROM")?.trim(),
+      );
+    }
+
     return ["SMTP_HOST", "SMTP_PORT", "INQUIRY_EMAIL_FROM"].every((key) =>
       Boolean(this.configService.get<string>(key)?.trim()),
     );
