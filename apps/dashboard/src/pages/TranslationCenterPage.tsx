@@ -67,7 +67,7 @@ export default function TranslationCenterPage() {
   const [sourceLocale, setSourceLocale] = useState("");
   const [targetLocale, setTargetLocale] = useState("");
   const [overwrite, setOverwrite] = useState(false);
-  const [autoPublish, setAutoPublish] = useState(false);
+  const [autoPublish, setAutoPublish] = useState(true);
 
   const { data: completeness = [] } = useQuery({
     queryKey: ["translation", "completeness", siteId],
@@ -106,7 +106,7 @@ export default function TranslationCenterPage() {
       setSourceLocale("");
       setTargetLocale("");
       setOverwrite(false);
-      setAutoPublish(false);
+      setAutoPublish(true);
     },
   });
 
@@ -379,8 +379,12 @@ export default function TranslationCenterPage() {
                 onChange={(e) => setAutoPublish(e.target.checked)}
                 className="rounded border-gray-300"
               />
-              Auto-publish after translation
+              Publish translated pages when the job completes
             </label>
+          </div>
+          <div className="mt-2 text-xs text-gray-600">
+            Leave this on to make translated pages available on the live site as
+            soon as the job finishes.
           </div>
           {createMutation.isError && (
             <p className="mt-3 text-xs text-red-600">
@@ -494,6 +498,7 @@ function JobRow({
             {job.completedPages}/{job.totalPages} pages
             {job.charactersUsed > 0 &&
               ` · ${job.charactersUsed.toLocaleString()} chars`}
+            {job.autoPublish ? " · published live" : " · saved as drafts"}
           </p>
         </div>
       </div>

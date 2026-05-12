@@ -1879,6 +1879,11 @@ function LocalizationTab() {
         </div>
       )}
 
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        Saving locale changes triggers a fresh site deployment so the public
+        site picks up new language routes and switcher options automatically.
+      </div>
+
       {/* Default locale */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="border-b border-gray-100 bg-gray-50 px-5 py-3.5 flex items-center gap-2">

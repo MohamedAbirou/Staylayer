@@ -9,6 +9,7 @@ import { createHash } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
 import { DeepLService } from "./deepl.service";
+import { RevalidationService } from "../revalidation/revalidation.service";
 import {
   extractTranslatableText,
   injectTranslatedText,
@@ -56,6 +57,7 @@ export class TranslationService {
     private readonly prisma: PrismaService,
     private readonly billing: BillingService,
     private readonly deepl: DeepLService,
+    private readonly revalidation: RevalidationService,
   ) {}
 
   async createJob(
@@ -116,7 +118,7 @@ export class TranslationService {
         targetLocale: input.targetLocale,
         totalPages: sourcePages.length,
         overwrite: input.overwrite ?? false,
-        autoPublish: input.autoPublish ?? false,
+        autoPublish: input.autoPublish ?? true,
         pageIds: (input.pageIds as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         createdBy: input.createdBy,
       },
@@ -519,6 +521,10 @@ export class TranslationService {
           translationJobId: jobId,
         },
       });
+
+      if (job.autoPublish) {
+        await this.revalidateTranslatedPage(job.siteId, sourcePage.slug);
+      }
     } else {
       const newPage = await this.prisma.page.create({
         data: {
@@ -543,6 +549,10 @@ export class TranslationService {
           translationJobId: jobId,
         },
       });
+
+      if (job.autoPublish) {
+        await this.revalidateTranslatedPage(job.siteId, sourcePage.slug);
+      }
     }
 
     return (
@@ -590,5 +600,18 @@ export class TranslationService {
       createdAt: job.createdAt.toISOString(),
       createdBy: job.createdBy,
     };
+  }
+
+  private async revalidateTranslatedPage(
+    siteId: string,
+    slug: string,
+  ): Promise<void> {
+    try {
+      await this.revalidation.revalidatePage(siteId, slug);
+    } catch (error) {
+      this.logger.warn(
+        `Revalidation failed for translated page ${slug}: ${(error as Error).message}`,
+      );
+    }
   }
 }

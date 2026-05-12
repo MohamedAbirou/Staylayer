@@ -1,8 +1,7 @@
 import { Render } from "@puckeditor/core";
-import { puckConfig, Navbar } from "@myallocator/puck-components";
+import { puckConfig } from "@myallocator/puck-components";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import LanguageSelector from "@/components/LanguageSelector";
 import { EMAIL_CONTACT } from "@/lib/brand";
 
 const ContactForm = dynamic(() => import("@/components/contactForm"), {
@@ -94,26 +93,11 @@ function ContactSectionWithRealForm(props) {
   );
 }
 
-/**
- * Navbar with LanguageSelector injected into the CTA area.
- * This is a render override — it receives all puck-stored props and
- * passes them straight through, adding the LanguageSelector via the
- * `rightExtra` slot added to the Navbar component.
- * No page data changes are required.
- */
-function NavbarWithLanguageSelector(props) {
-  return <Navbar {...props} rightExtra={<LanguageSelector />} />;
-}
-
 // Build a config that swaps form sections for the real component versions
 const websiteConfig = {
   ...puckConfig,
   components: {
     ...puckConfig.components,
-    Navbar: {
-      ...puckConfig.components.Navbar,
-      render: NavbarWithLanguageSelector,
-    },
     ContactSection: {
       ...puckConfig.components.ContactSection,
       render: ContactSectionWithRealForm,

@@ -14,6 +14,14 @@ const LanguageSelector = ({ className = "" }) => {
   const { locale, locales, asPath } = router;
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const availableLocales = Array.isArray(locales)
+    ? locales.filter(Boolean)
+    : [];
+  const currentLocale = locale || availableLocales[0] || "en";
+
+  if (availableLocales.length < 2) {
+    return null;
+  }
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -38,8 +46,8 @@ const LanguageSelector = ({ className = "" }) => {
         className="flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         aria-label="Change language"
       >
-        <span>{FLAG_EMOJI[locale] || "🌐"}</span>
-        <span className="hidden sm:inline">{locale.toUpperCase()}</span>
+        <span>{FLAG_EMOJI[currentLocale] || "🌐"}</span>
+        <span className="hidden sm:inline">{currentLocale.toUpperCase()}</span>
         <svg
           className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
@@ -56,23 +64,21 @@ const LanguageSelector = ({ className = "" }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-          {locales
-            .filter((l) => l !== "de")
-            .map((loc) => (
-              <button
-                key={loc}
-                onClick={() => switchLocale(loc)}
-                className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                  locale === loc
-                    ? "bg-blue-50 font-medium text-blue-700"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <span>{FLAG_EMOJI[loc]}</span>
-                <span>{LANG_NAMES[loc]}</span>
-              </button>
-            ))}
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-35 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+          {availableLocales.map((loc) => (
+            <button
+              key={loc}
+              onClick={() => switchLocale(loc)}
+              className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                currentLocale === loc
+                  ? "bg-blue-50 font-medium text-blue-700"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span>{FLAG_EMOJI[loc] || "🌐"}</span>
+              <span>{LANG_NAMES[loc] || loc.toUpperCase()}</span>
+            </button>
+          ))}
         </div>
       )}
     </div>

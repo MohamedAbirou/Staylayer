@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -12,6 +13,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateSettingsDto } from "./dto/update-settings.dto";
 import { BillingService } from "../billing/billing.service";
+import { DeploymentsService } from "../deployments/deployments.service";
 
 type ReadinessSeverity = "ready" | "warning" | "blocking";
 
@@ -25,10 +27,13 @@ type ReadinessCheck = {
 
 @Injectable()
 export class SettingsService {
+  private readonly logger = new Logger(SettingsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly configService: ConfigService,
+    private readonly deploymentsService: DeploymentsService,
   ) {}
 
   async get(siteId: string) {
@@ -104,6 +109,9 @@ export class SettingsService {
       ? Array.from(new Set(dto.activeLocales))
       : site.enabledLocales;
     const nextDefaultLocale = dto.defaultLocale ?? site.primaryLocale;
+    const localeConfigurationChanged =
+      !this.sameLocaleSet(site.enabledLocales, nextActiveLocales) ||
+      site.primaryLocale !== nextDefaultLocale;
 
     if (!nextActiveLocales.includes(nextDefaultLocale)) {
       throw new BadRequestException({
@@ -149,7 +157,13 @@ export class SettingsService {
           },
         });
       })
-      .then((settings) => this.toDto(settings));
+      .then(async (settings) => {
+        if (localeConfigurationChanged) {
+          await this.triggerLocaleDeployment(siteId);
+        }
+
+        return this.toDto(settings);
+      });
   }
 
   async getReadiness(siteId: string) {
@@ -500,6 +514,33 @@ export class SettingsService {
       updatedAt: settings.updatedAt,
       updatedBy: settings.updatedBy,
     };
+  }
+
+  private sameLocaleSet(current: string[], next: string[]): boolean {
+    if (current.length !== next.length) {
+      return false;
+    }
+
+    return current.every((locale) => next.includes(locale));
+  }
+
+  private async triggerLocaleDeployment(siteId: string): Promise<void> {
+    const existingDeployment = await this.prisma.deployment.findFirst({
+      where: { siteId },
+      select: { id: true },
+    });
+
+    if (!existingDeployment) {
+      return;
+    }
+
+    try {
+      await this.deploymentsService.provisionSite(siteId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to trigger deployment after locale update for site ${siteId}: ${(error as Error).message}`,
+      );
+    }
   }
 
   private makeCheck(
