@@ -19,7 +19,7 @@ export class FormEmailThemeDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500)
+  @MaxLength(200000)
   logoUrl?: string;
 
   @IsOptional()

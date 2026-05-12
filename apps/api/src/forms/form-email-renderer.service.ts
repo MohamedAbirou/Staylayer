@@ -57,22 +57,32 @@ type TemplateBundle = {
 };
 
 const DEFAULT_INTERNAL_BLOCKS = [
-  { type: "brand_header", title: "New form submission" },
+  {
+    type: "brand_header",
+    variant: "minimal",
+    title: "New form submission",
+    showSummary: false,
+  },
   {
     type: "rich_text",
     text: "A new {{formName}} submission arrived for {{siteName}}.",
   },
-  { type: "field_list", title: "Submitted fields" },
-  { type: "footer", text: "Delivered by MyAllocator CMS" },
+  { type: "field_list", variant: "minimal", title: "Submitted fields" },
+  { type: "footer", text: "Delivered by StayLayer." },
 ];
 
 const DEFAULT_GUEST_BLOCKS = [
-  { type: "brand_header", title: "Thanks for contacting {{siteName}}" },
+  {
+    type: "brand_header",
+    variant: "signature",
+    title: "Thanks for contacting {{siteName}}",
+    showSummary: true,
+  },
   {
     type: "rich_text",
     text: "We received your {{formName}} submission and will reply soon.",
   },
-  { type: "field_list", title: "Your submission" },
+  { type: "field_list", variant: "striped", title: "Your submission" },
   {
     type: "footer",
     text: "This is an automated confirmation from {{siteName}}.",
@@ -576,36 +586,114 @@ export class FormEmailRendererService {
 
     switch (type) {
       case "brand_header": {
+        const variant = String(block.variant ?? "signature");
         const title = this.escapeHtml(
           this.interpolate(String(block.title ?? context.formName), tokens),
         );
         const subtitle = String(block.subtitle ?? "");
+        const showSummary = block.showSummary !== false;
         const resolvedSubtitle = subtitle
-          ? `<p style=\"margin:12px 0 0;color:${this.escapeHtml(tokens.textColor)};font-size:15px;line-height:1.7;opacity:0.84;\">${this.escapeHtml(this.interpolate(subtitle, tokens))}</p>`
+          ? this.escapeHtml(this.interpolate(subtitle, tokens))
           : "";
         const logo =
           context.brandName && tokens.logoUrl
             ? `<img src=\"${this.escapeHtml(tokens.logoUrl)}\" alt=\"${this.escapeHtml(context.brandName)}\" style=\"max-height:44px;max-width:180px;display:block;margin:0 0 20px;\" />`
             : "";
         const badge = `<div style=\"display:inline-block;margin:0 0 14px;padding:6px 12px;border-radius:999px;background:${this.escapeHtml(this.withAlpha(tokens.primaryColor, "16"))};color:${this.escapeHtml(tokens.primaryColor)};font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;\">${this.escapeHtml(context.brandName || context.siteName)}</div>`;
-        const summary = this.renderContextSummaryHtml(context, tokens);
+        const summary = showSummary
+          ? this.renderContextSummaryHtml(context, tokens)
+          : "";
 
-        return `${badge}${logo}<h1 style=\"margin:0;font-size:34px;line-height:1.15;letter-spacing:-0.02em;color:${this.escapeHtml(tokens.accentColor)};\">${title}</h1>${resolvedSubtitle}${summary}`;
+        switch (variant) {
+          case "spotlight": {
+            const heroLogo =
+              context.brandName && tokens.logoUrl
+                ? `<div style=\"display:inline-flex;align-items:center;padding:10px 14px;border-radius:18px;background:${this.escapeHtml(this.withAlpha("#ffffff", "1f"))};margin:0 0 18px;\"><img src=\"${this.escapeHtml(tokens.logoUrl)}\" alt=\"${this.escapeHtml(context.brandName)}\" style=\"max-height:32px;max-width:160px;display:block;\" /></div>`
+                : "";
+            const heroSubtitle = resolvedSubtitle
+              ? `<p style=\"margin:14px 0 0;color:#ffffff;font-size:15px;line-height:1.7;opacity:0.88;\">${resolvedSubtitle}</p>`
+              : "";
+            const heroSummary = showSummary
+              ? this.renderContextSummaryHtml(context, {
+                  ...tokens,
+                  primaryColor: "#ffffff",
+                  accentColor: "#ffffff",
+                  textColor: "#ffffff",
+                })
+              : "";
+
+            return `${badge}<div style=\"margin-top:18px;padding:28px;border-radius:28px;background:${this.escapeHtml(tokens.primaryColor)};color:#ffffff;\">${heroLogo}<h1 style=\"margin:0;font-size:34px;line-height:1.1;letter-spacing:-0.02em;color:#ffffff;\">${title}</h1>${heroSubtitle}${heroSummary}</div>`;
+          }
+          case "concierge": {
+            const conciergeLogo =
+              context.brandName && tokens.logoUrl
+                ? `<img src=\"${this.escapeHtml(tokens.logoUrl)}\" alt=\"${this.escapeHtml(context.brandName)}\" style=\"max-height:40px;max-width:180px;display:block;margin:0 0 18px;\" />`
+                : "";
+            const conciergeSubtitle = resolvedSubtitle
+              ? `<p style=\"margin:12px 0 0;color:${this.escapeHtml(tokens.textColor)};font-size:15px;line-height:1.7;opacity:0.84;\">${resolvedSubtitle}</p>`
+              : "";
+
+            return `${badge}<div style=\"margin-top:18px;padding:22px 24px;border:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "12"))};border-left:6px solid ${this.escapeHtml(tokens.primaryColor)};border-radius:24px;background:${this.escapeHtml(this.withAlpha(tokens.primaryColor, "06"))};\">${conciergeLogo}<h1 style=\"margin:0;font-size:32px;line-height:1.12;letter-spacing:-0.02em;color:${this.escapeHtml(tokens.accentColor)};\">${title}</h1>${conciergeSubtitle}${summary}</div>`;
+          }
+          case "minimal": {
+            const minimalLogo =
+              context.brandName && tokens.logoUrl
+                ? `<img src=\"${this.escapeHtml(tokens.logoUrl)}\" alt=\"${this.escapeHtml(context.brandName)}\" style=\"max-height:28px;max-width:150px;display:block;margin:0 0 14px;\" />`
+                : "";
+            const minimalSubtitle = resolvedSubtitle
+              ? `<p style=\"margin:10px 0 0;color:${this.escapeHtml(tokens.textColor)};font-size:14px;line-height:1.7;opacity:0.84;\">${resolvedSubtitle}</p>`
+              : "";
+
+            return `${minimalLogo}<h1 style=\"margin:0;font-size:28px;line-height:1.18;letter-spacing:-0.02em;color:${this.escapeHtml(tokens.accentColor)};\">${title}</h1>${minimalSubtitle}${summary}`;
+          }
+          default: {
+            const defaultSubtitle = resolvedSubtitle
+              ? `<p style=\"margin:12px 0 0;color:${this.escapeHtml(tokens.textColor)};font-size:15px;line-height:1.7;opacity:0.84;\">${resolvedSubtitle}</p>`
+              : "";
+
+            return `${badge}${logo}<h1 style=\"margin:0;font-size:34px;line-height:1.15;letter-spacing:-0.02em;color:${this.escapeHtml(tokens.accentColor)};\">${title}</h1>${defaultSubtitle}${summary}`;
+          }
+        }
       }
       case "rich_text":
         return `<p style=\"margin:24px 0 0;font-size:16px;line-height:1.75;color:${this.escapeHtml(tokens.textColor)};\">${this.escapeHtml(this.interpolate(String(block.text ?? ""), tokens))}</p>`;
       case "field_list": {
+        const variant = String(block.variant ?? "striped");
         const title = block.title
           ? `<div style=\"margin:32px 0 14px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${this.escapeHtml(tokens.primaryColor)};\">${this.escapeHtml(this.interpolate(String(block.title), tokens))}</div>`
           : "";
-        const rows = this.renderFieldRows(context, fieldOrder)
+        const rows = this.renderFieldRows(context, fieldOrder);
+
+        if (rows.length === 0) {
+          return title;
+        }
+
+        if (variant === "cards") {
+          return `${title}<div style=\"display:grid;gap:12px;\">${rows
+            .map(
+              (row) =>
+                `<div style=\"padding:16px 18px;border:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "14"))};border-radius:18px;background:${this.escapeHtml(this.withAlpha(tokens.primaryColor, "05"))};\"><div style=\"font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${this.escapeHtml(tokens.primaryColor)};\">${this.escapeHtml(row.label)}</div><div style=\"padding-top:8px;font-size:15px;line-height:1.7;color:${this.escapeHtml(tokens.textColor)};\">${this.escapeHtml(row.value)}</div></div>`,
+            )
+            .join("")}</div>`;
+        }
+
+        if (variant === "minimal") {
+          return `${title}<div style=\"margin-top:18px;border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "14"))};\">${rows
+            .map(
+              (row, index) =>
+                `<div style=\"padding:12px 0;${index > 0 ? `border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "10"))};` : ""}\"><div style=\"font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${this.escapeHtml(tokens.primaryColor)};\">${this.escapeHtml(row.label)}</div><div style=\"padding-top:4px;font-size:15px;line-height:1.7;color:${this.escapeHtml(tokens.textColor)};\">${this.escapeHtml(row.value)}</div></div>`,
+            )
+            .join("")}</div>`;
+        }
+
+        const tableRows = rows
           .map(
             (row, index) =>
               `<tr><td style=\"padding:14px 16px;width:34%;font-weight:700;vertical-align:top;color:${this.escapeHtml(tokens.accentColor)};background:${this.escapeHtml(index % 2 === 0 ? this.withAlpha(tokens.primaryColor, "08") : tokens.surfaceColor)};${index > 0 ? `border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "12"))};` : ""}\">${this.escapeHtml(row.label)}</td><td style=\"padding:14px 16px;color:${this.escapeHtml(tokens.textColor)};background:${this.escapeHtml(index % 2 === 0 ? this.withAlpha(tokens.primaryColor, "04") : tokens.surfaceColor)};${index > 0 ? `border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "12"))};` : ""}\">${this.escapeHtml(row.value)}</td></tr>`,
           )
           .join("");
 
-        return `${title}<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:separate;border-spacing:0;border:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "16"))};border-radius:20px;overflow:hidden;background:${this.escapeHtml(tokens.surfaceColor)};\">${rows}</table>`;
+        return `${title}<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:separate;border-spacing:0;border:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "16"))};border-radius:20px;overflow:hidden;background:${this.escapeHtml(tokens.surfaceColor)};\">${tableRows}</table>`;
       }
       case "cta": {
         const label = this.escapeHtml(
@@ -618,6 +706,8 @@ export class FormEmailRendererService {
       }
       case "footer":
         return `<div style=\"margin:32px 0 0;padding-top:18px;border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "16"))};font-size:13px;line-height:1.8;color:${this.escapeHtml(tokens.textColor)};opacity:0.72;\">${this.escapeHtml(this.interpolate(String(block.text ?? ""), tokens))}</div>`;
+      case "custom_html":
+        return this.interpolate(String(block.html ?? ""), tokens);
       default:
         return "";
     }
@@ -638,14 +728,19 @@ export class FormEmailRendererService {
           tokens,
         );
         const subtitle = String(block.subtitle ?? "");
+        const showSummary = block.showSummary !== false;
 
         return [
           title,
           subtitle ? this.interpolate(subtitle, tokens) : "",
-          `Form: ${context.formName}`,
-          context.pageSlug ? `Page: /${context.pageSlug}` : "",
-          `Locale: ${context.locale}`,
-          `Submitted: ${this.formatSubmittedAt(context.submittedAtIso)}`,
+          ...(showSummary
+            ? [
+                `Form: ${context.formName}`,
+                context.pageSlug ? `Page: /${context.pageSlug}` : "",
+                `Locale: ${context.locale}`,
+                `Submitted: ${this.formatSubmittedAt(context.submittedAtIso)}`,
+              ]
+            : []),
         ]
           .filter(Boolean)
           .join("\n");
@@ -659,6 +754,8 @@ export class FormEmailRendererService {
       case "cta":
         return `${this.interpolate(String(block.label ?? "Open link"), tokens)}: ${this.interpolate(String(block.url ?? "#"), tokens)}`;
       case "footer":
+        return this.interpolate(String(block.text ?? ""), tokens);
+      case "custom_html":
         return this.interpolate(String(block.text ?? ""), tokens);
       default:
         return "";

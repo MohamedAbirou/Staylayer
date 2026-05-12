@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth/useAuth";
@@ -35,6 +35,7 @@ import {
   updateFormEmailStudio,
   updateSiteRoutingRules,
   type FormDefinition,
+  type UpdateFormEmailStudioPayload,
   type FormEmailStudioResponse,
   type FormEmailTemplateType,
   type FormFieldDefinition,
@@ -64,6 +65,13 @@ type FieldEditor = {
   isPlatformManaged: boolean;
 };
 
+type DeliveryIntegrationPresetId =
+  | "none"
+  | "automation"
+  | "crm"
+  | "pms"
+  | "custom";
+
 type RoutingRuleEditor = {
   id?: string;
   name: string;
@@ -71,6 +79,7 @@ type RoutingRuleEditor = {
   locale: string;
   priority: number;
   emailRecipientsText: string;
+  integrationPresetId: DeliveryIntegrationPresetId;
   webhookUrl: string;
   webhookSecret: string;
   sendConfirmationEmail: boolean;
@@ -91,6 +100,8 @@ type FormEditorState = {
   routingRules: RoutingRuleEditor[];
 };
 
+type EmailLayoutId = "signature" | "concierge" | "spotlight" | "minimal";
+
 type EmailTemplateEditor = {
   id?: string;
   templateType: FormEmailTemplateType;
@@ -100,7 +111,13 @@ type EmailTemplateEditor = {
   previewText: string;
   introText: string;
   footerText: string;
-  fieldOrderText: string;
+  fieldOrder: string[];
+  layoutId: EmailLayoutId;
+  showContextSummary: boolean;
+  showFieldList: boolean;
+  showFooter: boolean;
+  advancedMode: boolean;
+  advancedBlocksText: string;
 };
 
 type EmailStudioEditor = {
@@ -112,6 +129,30 @@ type EmailStudioEditor = {
   textColor: string;
   typographyFamily: string;
   templates: EmailTemplateEditor[];
+};
+
+type EmailLayoutPreset = {
+  id: EmailLayoutId;
+  label: string;
+  description: string;
+  fieldListVariant: "striped" | "cards" | "minimal";
+  defaults: {
+    showContextSummary: boolean;
+    showFieldList: boolean;
+    showFooter: boolean;
+  };
+};
+
+type DeliveryIntegrationPreset = {
+  id: DeliveryIntegrationPresetId;
+  label: string;
+  description: string;
+  endpointLabel: string;
+  endpointPlaceholder: string;
+  endpointHelp: string;
+  secretLabel: string;
+  secretPlaceholder: string;
+  secretHelp: string;
 };
 
 const FORM_FIELD_TYPES: Array<{ value: FormFieldType; label: string }> = [
@@ -135,9 +176,147 @@ const STUDIO_FORM_TYPES: Array<{ value: StudioFormType; label: string }> = [
 ];
 
 const EMAIL_TEMPLATE_LABELS: Record<FormEmailTemplateType, string> = {
-  INTERNAL_NOTIFICATION: "Internal notification",
+  INTERNAL_NOTIFICATION: "Team notification",
   GUEST_CONFIRMATION: "Guest confirmation",
 };
+
+const EMAIL_TEMPLATE_DESCRIPTIONS: Record<FormEmailTemplateType, string> = {
+  INTERNAL_NOTIFICATION:
+    "Sent to your team when a guest submits a contact or stay inquiry.",
+  GUEST_CONFIRMATION:
+    "Optional auto-reply that confirms the guest message was received.",
+};
+
+const SAFE_EMAIL_FONTS: Array<{ value: string; label: string }> = [
+  { value: "Arial", label: "Arial" },
+  { value: "Helvetica", label: "Helvetica" },
+  { value: "Verdana", label: "Verdana" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Tahoma", label: "Tahoma" },
+];
+
+const EMAIL_LAYOUT_PRESETS: EmailLayoutPreset[] = [
+  {
+    id: "signature",
+    label: "Signature",
+    description: "Balanced brand-first layout for polished guest replies.",
+    fieldListVariant: "striped",
+    defaults: {
+      showContextSummary: true,
+      showFieldList: true,
+      showFooter: true,
+    },
+  },
+  {
+    id: "concierge",
+    label: "Concierge",
+    description:
+      "Higher-touch presentation for hospitality and reservations teams.",
+    fieldListVariant: "cards",
+    defaults: {
+      showContextSummary: true,
+      showFieldList: true,
+      showFooter: true,
+    },
+  },
+  {
+    id: "spotlight",
+    label: "Spotlight",
+    description:
+      "Bold hero header for branded confirmations and campaign-style replies.",
+    fieldListVariant: "striped",
+    defaults: {
+      showContextSummary: false,
+      showFieldList: true,
+      showFooter: true,
+    },
+  },
+  {
+    id: "minimal",
+    label: "Minimal",
+    description: "Compact utility layout for readable staff notifications.",
+    fieldListVariant: "minimal",
+    defaults: {
+      showContextSummary: false,
+      showFieldList: true,
+      showFooter: true,
+    },
+  },
+];
+
+const DELIVERY_INTEGRATION_PRESETS: DeliveryIntegrationPreset[] = [
+  {
+    id: "none",
+    label: "Email only",
+    description:
+      "Keep delivery simple and send inquiries only to the inboxes above.",
+    endpointLabel: "",
+    endpointPlaceholder: "",
+    endpointHelp: "",
+    secretLabel: "",
+    secretPlaceholder: "",
+    secretHelp: "",
+  },
+  {
+    id: "automation",
+    label: "Automation workflow",
+    description:
+      "Send inquiries into Zapier, Make, n8n, Pipedream, or another workflow tool.",
+    endpointLabel: "Workflow endpoint",
+    endpointPlaceholder: "https://hooks.zapier.com/hooks/catch/...",
+    endpointHelp:
+      "Paste the catch-hook URL from your automation platform.",
+    secretLabel: "Verification token",
+    secretPlaceholder: "Optional token or shared secret",
+    secretHelp:
+      "Optional. Use this when your workflow expects a token outside the URL.",
+  },
+  {
+    id: "crm",
+    label: "CRM handoff",
+    description:
+      "Forward structured inquiries into HubSpot, Salesforce, or another sales pipeline.",
+    endpointLabel: "CRM intake endpoint",
+    endpointPlaceholder: "https://crm.example.com/api/inquiries",
+    endpointHelp:
+      "Paste the CRM workflow or middleware endpoint that accepts inquiry payloads.",
+    secretLabel: "CRM signing secret",
+    secretPlaceholder: "Optional HMAC or shared secret",
+    secretHelp:
+      "Use this when your CRM bridge validates signed inquiry traffic.",
+  },
+  {
+    id: "pms",
+    label: "PMS / reservations",
+    description:
+      "Route inquiries into a PMS, reservations desk workflow, or hospitality ops service.",
+    endpointLabel: "Reservations endpoint",
+    endpointPlaceholder: "https://ops.example.com/pms/inquiries",
+    endpointHelp:
+      "Paste the endpoint that should receive reservation-ready inquiry data.",
+    secretLabel: "Shared signing secret",
+    secretPlaceholder: "Optional shared secret",
+    secretHelp:
+      "Add a secret if the PMS or middleware verifies signed requests.",
+  },
+  {
+    id: "custom",
+    label: "Custom webhook",
+    description:
+      "Bring your own endpoint when none of the presets match your delivery flow.",
+    endpointLabel: "Webhook URL",
+    endpointPlaceholder: "https://example.com/hooks/inquiry",
+    endpointHelp:
+      "Paste the full endpoint URL for your custom integration.",
+    secretLabel: "Webhook secret",
+    secretPlaceholder: "whsec_...",
+    secretHelp:
+      "Optional HMAC secret used to sign outgoing inquiry delivery payloads.",
+  },
+];
+
+const DEFAULT_EMAIL_FIELD_KEYS = ["name", "email", "message"];
+const MAX_EMAIL_LOGO_FILE_SIZE = 120 * 1024;
 
 const STATUS_LABELS: Record<SubmissionStatus, string> = {
   RECEIVED: "New",
@@ -185,7 +364,7 @@ export default function FormsPage() {
   const [emailStudioEditor, setEmailStudioEditor] = useState<EmailStudioEditor>(
     createBlankEmailStudioEditor(),
   );
-  const [previewTemplateType, setPreviewTemplateType] =
+  const [activeEmailTemplateType, setActiveEmailTemplateType] =
     useState<FormEmailTemplateType>("INTERNAL_NOTIFICATION");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [previewText, setPreviewText] = useState<string>("");
@@ -270,64 +449,27 @@ export default function FormsPage() {
 
   const saveEmailStudioMutation = useMutation({
     mutationFn: () =>
-      updateFormEmailStudio(siteId!, {
-        theme: {
-          brandName: emailStudioEditor.brandName,
-          logoUrl: emailStudioEditor.logoUrl,
-          primaryColor: emailStudioEditor.primaryColor,
-          accentColor: emailStudioEditor.accentColor,
-          surfaceColor: emailStudioEditor.surfaceColor,
-          textColor: emailStudioEditor.textColor,
-          typographyFamily: emailStudioEditor.typographyFamily,
-          footerContent: {
-            text: emailStudioEditor.templates.find(
-              (template) => template.templateType === "INTERNAL_NOTIFICATION",
-            )?.footerText,
-          },
-        },
-        templates: emailStudioEditor.templates.map((template) => ({
-          id: template.id,
-          templateType: template.templateType,
-          name: template.name,
-          enabled: template.enabled,
-          subjectTemplate: template.subjectTemplate,
-          previewText: template.previewText,
-          blocks: [
-            {
-              type: "brand_header",
-              title:
-                template.templateType === "GUEST_CONFIRMATION"
-                  ? "Thanks for contacting {{siteName}}"
-                  : "New {{formName}} submission",
-            },
-            { type: "rich_text", text: template.introText },
-            {
-              type: "field_list",
-              title:
-                template.templateType === "GUEST_CONFIRMATION"
-                  ? "Your submission"
-                  : "Submitted fields",
-            },
-            { type: "footer", text: template.footerText },
-          ],
-          fieldOrder: splitCommaList(template.fieldOrderText),
-        })),
-      }),
+      updateFormEmailStudio(
+        siteId!,
+        serializeEmailStudioEditor(emailStudioEditor),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["form-email-studio", siteId],
       });
       toast.success("Email studio saved");
     },
-    onError: () => {
-      toast.error("Failed to save email studio");
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save email studio",
+      );
     },
   });
 
   const previewEmailMutation = useMutation({
     mutationFn: () =>
       previewFormEmail(siteId!, {
-        templateType: previewTemplateType,
+        templateType: activeEmailTemplateType,
         formDefinitionId:
           selectedFormId && selectedFormId !== "new"
             ? selectedFormId
@@ -345,7 +487,7 @@ export default function FormsPage() {
   const sendTestEmailMutation = useMutation({
     mutationFn: () =>
       sendTestFormEmail(siteId!, {
-        templateType: previewTemplateType,
+        templateType: activeEmailTemplateType,
         formDefinitionId:
           selectedFormId && selectedFormId !== "new"
             ? selectedFormId
@@ -364,6 +506,39 @@ export default function FormsPage() {
   const submissions: Submission[] = data?.data ?? [];
   const formStudio = formStudioQuery.data ?? null;
   const emailStudio = emailStudioQuery.data ?? null;
+  const activeEmailTemplate =
+    emailStudioEditor.templates.find(
+      (template) => template.templateType === activeEmailTemplateType,
+    ) ?? emailStudioEditor.templates[0];
+  const emailFieldSuggestions = useMemo(() => {
+    const keys = new Set<string>(DEFAULT_EMAIL_FIELD_KEYS);
+    const selectedDefinition =
+      selectedFormId && selectedFormId !== "new"
+        ? formStudio?.definitions.find(
+            (definition) => definition.id === selectedFormId,
+          )
+        : formStudio?.definitions[0];
+
+    selectedDefinition?.fields.forEach((field) => keys.add(field.key));
+    emailStudioEditor.templates.forEach((template) => {
+      template.fieldOrder.forEach((fieldKey) => keys.add(fieldKey));
+    });
+
+    return Array.from(keys);
+  }, [formStudio, selectedFormId, emailStudioEditor.templates]);
+
+  const updateActiveEmailTemplate = (
+    updater: (template: EmailTemplateEditor) => EmailTemplateEditor,
+  ) => {
+    setEmailStudioEditor((current) => ({
+      ...current,
+      templates: current.templates.map((template) =>
+        template.templateType === activeEmailTemplateType
+          ? updater(template)
+          : template,
+      ),
+    }));
+  };
 
   useEffect(() => {
     if (!formStudio?.definitions.length) {
@@ -407,6 +582,14 @@ export default function FormsPage() {
 
     setEmailStudioEditor(mapEmailStudioToEditor(emailStudio));
   }, [emailStudio]);
+
+  useEffect(() => {
+    if (tab !== "email" || !siteId || !emailStudio || !activeEmailTemplate) {
+      return;
+    }
+
+    previewEmailMutation.mutate();
+  }, [tab, siteId, emailStudio, activeEmailTemplateType, activeEmailTemplate]);
 
   const handleExport = () => {
     if (submissions.length === 0) {
@@ -469,10 +652,10 @@ export default function FormsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inquiry Studio</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Inquiries</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage submissions, subscriber-owned form schemas, routing rules,
-            and branded inquiry emails in one place.
+            Review guest inquiries, manage form coverage, and control how each
+            submission is delivered.
           </p>
         </div>
         {tab === "inbox" ? (
@@ -490,8 +673,8 @@ export default function FormsPage() {
       <div className="flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
         {[
           { id: "inbox", label: "Inbox", icon: Inbox },
-          { id: "studio", label: "Form Studio", icon: Settings2 },
-          { id: "email", label: "Email Studio", icon: Paintbrush2 },
+          { id: "studio", label: "Forms", icon: Settings2 },
+          { id: "email", label: "Emails", icon: Paintbrush2 },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -583,7 +766,7 @@ export default function FormsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900">
-                    Reusable Forms
+                    Forms library
                   </h2>
                   <p className="mt-1 text-xs text-gray-500">
                     Create separate inquiry flows for contact, availability, and
@@ -652,11 +835,12 @@ export default function FormsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900">
-                    Site Fallback Routing
+                    Default delivery
                   </h2>
                   <p className="mt-1 text-xs text-gray-500">
-                    Used when a form has no more specific route. Keep at least
-                    one email recipient or webhook destination configured.
+                    Used when a form has no more specific route. Most sites only
+                    need inbox delivery; webhooks stay tucked under Advanced
+                    delivery.
                   </p>
                 </div>
                 <button
@@ -665,7 +849,7 @@ export default function FormsPage() {
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700"
                 >
                   <Save className="h-4 w-4" />
-                  Save fallback
+                  Save delivery
                 </button>
               </div>
 
@@ -864,7 +1048,7 @@ export default function FormsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-900">
-                  Per-form routing overrides
+                  Delivery overrides
                 </h3>
                 <button
                   onClick={() =>
@@ -924,16 +1108,16 @@ export default function FormsPage() {
       ) : null}
 
       {tab === "email" ? (
-        <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
+        <div className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
           <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Branded Email Studio
+                  Email templates
                 </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  Customize internal notification emails and guest confirmations
-                  with safe theme tokens and structured blocks.
+                  Start from tested layouts, brand them safely, and edit only
+                  the copy and field order your team actually needs.
                 </p>
               </div>
               <button
@@ -942,254 +1126,409 @@ export default function FormsPage() {
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
               >
                 <Save className="h-4 w-4" />
-                Save email studio
+                Save templates
               </button>
             </div>
 
             {emailStudioQuery.isLoading ? (
               <StudioLoadingCard />
-            ) : (
-              <>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <LabeledInput
-                    label="Brand name"
-                    value={emailStudioEditor.brandName}
-                    onChange={(value) =>
-                      setEmailStudioEditor((current) => ({
-                        ...current,
-                        brandName: value,
-                      }))
-                    }
-                  />
-                  <LabeledInput
-                    label="Logo URL"
-                    value={emailStudioEditor.logoUrl}
-                    onChange={(value) =>
-                      setEmailStudioEditor((current) => ({
-                        ...current,
-                        logoUrl: value,
-                      }))
-                    }
-                    placeholder="https://cdn.example.com/logo.png"
-                  />
-                  <LabeledInput
-                    label="Primary color"
-                    value={emailStudioEditor.primaryColor}
-                    onChange={(value) =>
-                      setEmailStudioEditor((current) => ({
-                        ...current,
-                        primaryColor: value,
-                      }))
-                    }
-                    placeholder="#2563eb"
-                  />
-                  <LabeledInput
-                    label="Accent color"
-                    value={emailStudioEditor.accentColor}
-                    onChange={(value) =>
-                      setEmailStudioEditor((current) => ({
-                        ...current,
-                        accentColor: value,
-                      }))
-                    }
-                    placeholder="#0f172a"
-                  />
-                  <LabeledInput
-                    label="Surface color"
-                    value={emailStudioEditor.surfaceColor}
-                    onChange={(value) =>
-                      setEmailStudioEditor((current) => ({
-                        ...current,
-                        surfaceColor: value,
-                      }))
-                    }
-                    placeholder="#ffffff"
-                  />
-                  <LabeledInput
-                    label="Text color"
-                    value={emailStudioEditor.textColor}
-                    onChange={(value) =>
-                      setEmailStudioEditor((current) => ({
-                        ...current,
-                        textColor: value,
-                      }))
-                    }
-                    placeholder="#0f172a"
-                  />
-                  <div className="md:col-span-2">
-                    <LabeledInput
-                      label="Typography family"
-                      value={emailStudioEditor.typographyFamily}
-                      onChange={(value) =>
-                        setEmailStudioEditor((current) => ({
-                          ...current,
-                          typographyFamily: value,
-                        }))
-                      }
-                      placeholder="Arial"
-                    />
+            ) : activeEmailTemplate ? (
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr),minmax(0,1.05fr)]">
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-gray-200 p-5">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Brand kit
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Keep logos, colors, and fonts inside a safe set that
+                        renders consistently across inboxes.
+                      </p>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <LabeledInput
+                        label="Brand name"
+                        value={emailStudioEditor.brandName}
+                        onChange={(value) =>
+                          setEmailStudioEditor((current) => ({
+                            ...current,
+                            brandName: value,
+                          }))
+                        }
+                      />
+                      <LabeledSelect
+                        label="Safe font"
+                        value={emailStudioEditor.typographyFamily}
+                        options={SAFE_EMAIL_FONTS}
+                        onChange={(value) =>
+                          setEmailStudioEditor((current) => ({
+                            ...current,
+                            typographyFamily: value,
+                          }))
+                        }
+                      />
+                      <div className="md:col-span-2">
+                        <LogoUploader
+                          value={emailStudioEditor.logoUrl}
+                          onChange={(value) =>
+                            setEmailStudioEditor((current) => ({
+                              ...current,
+                              logoUrl: value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <LabeledColorInput
+                        label="Brand accent"
+                        value={emailStudioEditor.primaryColor}
+                        onChange={(value) =>
+                          setEmailStudioEditor((current) => ({
+                            ...current,
+                            primaryColor: value,
+                          }))
+                        }
+                        help="Used for badges, highlights, and the top accent bar."
+                      />
+                      <LabeledColorInput
+                        label="Headline ink"
+                        value={emailStudioEditor.accentColor}
+                        onChange={(value) =>
+                          setEmailStudioEditor((current) => ({
+                            ...current,
+                            accentColor: value,
+                          }))
+                        }
+                        help="Used for headlines and structural borders."
+                      />
+                      <LabeledColorInput
+                        label="Card background"
+                        value={emailStudioEditor.surfaceColor}
+                        onChange={(value) =>
+                          setEmailStudioEditor((current) => ({
+                            ...current,
+                            surfaceColor: value,
+                          }))
+                        }
+                        help="Main canvas color inside the email card."
+                      />
+                      <LabeledColorInput
+                        label="Body text"
+                        value={emailStudioEditor.textColor}
+                        onChange={(value) =>
+                          setEmailStudioEditor((current) => ({
+                            ...current,
+                            textColor: value,
+                          }))
+                        }
+                        help="Main copy color for readable text blocks."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 p-5">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Template focus
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Configure one email at a time so the copy, layout, and
+                        preview stay aligned.
+                      </p>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {emailStudioEditor.templates.map((template) => (
+                        <button
+                          key={template.templateType}
+                          type="button"
+                          onClick={() =>
+                            setActiveEmailTemplateType(template.templateType)
+                          }
+                          className={`rounded-2xl border p-4 text-left transition-colors ${
+                            activeEmailTemplateType === template.templateType
+                              ? "border-blue-300 bg-blue-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {EMAIL_TEMPLATE_LABELS[template.templateType]}
+                              </div>
+                              <div className="mt-1 text-xs text-gray-500">
+                                {
+                                  EMAIL_TEMPLATE_DESCRIPTIONS[
+                                    template.templateType
+                                  ]
+                                }
+                              </div>
+                            </div>
+                            <span
+                              className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                                template.enabled
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {template.enabled ? "Live" : "Off"}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Tested layouts
+                        </h3>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Presets keep branding polished without opening raw
+                          HTML or freeform template structure by default.
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-600">
+                        {
+                          EMAIL_TEMPLATE_LABELS[
+                            activeEmailTemplate.templateType
+                          ]
+                        }
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {EMAIL_LAYOUT_PRESETS.map((preset) => (
+                        <EmailLayoutPresetCard
+                          key={preset.id}
+                          preset={preset}
+                          selected={activeEmailTemplate.layoutId === preset.id}
+                          primaryColor={emailStudioEditor.primaryColor}
+                          accentColor={emailStudioEditor.accentColor}
+                          onSelect={() =>
+                            updateActiveEmailTemplate((template) =>
+                              applyEmailLayoutPreset(template, preset.id),
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {emailStudioEditor.templates.map((template, index) => (
-                    <div
-                      key={template.templateType}
-                      className="rounded-2xl border border-gray-200 p-5"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">
-                            {EMAIL_TEMPLATE_LABELS[template.templateType]}
-                          </div>
-                          <div className="mt-1 text-xs text-gray-500">
-                            Customize copy, preview text, and field order
-                            without editing raw HTML.
-                          </div>
-                        </div>
-                        <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={template.enabled}
-                            onChange={(event) =>
-                              setEmailStudioEditor((current) => ({
-                                ...current,
-                                templates: current.templates.map(
-                                  (item, itemIndex) =>
-                                    itemIndex === index
-                                      ? {
-                                          ...item,
-                                          enabled: event.target.checked,
-                                        }
-                                      : item,
-                                ),
-                              }))
-                            }
-                          />
-                          Enabled
-                        </label>
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-gray-200 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Message settings
+                        </h3>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Change the subject, preview text, intro, footer, and a
+                          few safe block toggles without drifting into a custom
+                          template system.
+                        </p>
                       </div>
-
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <LabeledInput
-                          label="Template name"
-                          value={template.name}
-                          onChange={(value) =>
-                            setEmailStudioEditor((current) => ({
-                              ...current,
-                              templates: current.templates.map(
-                                (item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, name: value }
-                                    : item,
-                              ),
+                      <label className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={activeEmailTemplate.enabled}
+                          onChange={(event) =>
+                            updateActiveEmailTemplate((template) => ({
+                              ...template,
+                              enabled: event.target.checked,
                             }))
                           }
                         />
-                        <LabeledInput
-                          label="Preview text"
-                          value={template.previewText}
-                          onChange={(value) =>
-                            setEmailStudioEditor((current) => ({
-                              ...current,
-                              templates: current.templates.map(
-                                (item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, previewText: value }
-                                    : item,
-                              ),
-                            }))
-                          }
-                        />
-                        <div className="md:col-span-2">
-                          <LabeledInput
-                            label="Subject template"
-                            value={template.subjectTemplate}
-                            onChange={(value) =>
-                              setEmailStudioEditor((current) => ({
-                                ...current,
-                                templates: current.templates.map(
-                                  (item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, subjectTemplate: value }
-                                      : item,
-                                ),
-                              }))
-                            }
-                            help="Tokens such as {{siteName}}, {{formName}}, {{name}}, and {{email}} are supported."
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Intro copy
-                          </label>
-                          <textarea
-                            value={template.introText}
-                            onChange={(event) =>
-                              setEmailStudioEditor((current) => ({
-                                ...current,
-                                templates: current.templates.map(
-                                  (item, itemIndex) =>
-                                    itemIndex === index
-                                      ? {
-                                          ...item,
-                                          introText: event.target.value,
-                                        }
-                                      : item,
-                                ),
-                              }))
-                            }
-                            className="mt-2 min-h-24 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Footer copy
-                          </label>
-                          <textarea
-                            value={template.footerText}
-                            onChange={(event) =>
-                              setEmailStudioEditor((current) => ({
-                                ...current,
-                                templates: current.templates.map(
-                                  (item, itemIndex) =>
-                                    itemIndex === index
-                                      ? {
-                                          ...item,
-                                          footerText: event.target.value,
-                                        }
-                                      : item,
-                                ),
-                              }))
-                            }
-                            className="mt-2 min-h-20 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <LabeledInput
-                            label="Field order"
-                            value={template.fieldOrderText}
-                            onChange={(value) =>
-                              setEmailStudioEditor((current) => ({
-                                ...current,
-                                templates: current.templates.map(
-                                  (item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, fieldOrderText: value }
-                                      : item,
-                                ),
-                              }))
-                            }
-                            placeholder="name, email, message"
-                            help="Comma-separated field keys in the order they should appear in the email."
-                          />
-                        </div>
-                      </div>
+                        Enabled
+                      </label>
                     </div>
-                  ))}
+
+                    <div className="mt-4 space-y-4">
+                      <LabeledInput
+                        label="Subject line"
+                        value={activeEmailTemplate.subjectTemplate}
+                        onChange={(value) =>
+                          updateActiveEmailTemplate((template) => ({
+                            ...template,
+                            subjectTemplate: value,
+                          }))
+                        }
+                        help="Supported tokens include {{siteName}}, {{formName}}, {{name}}, and {{email}}."
+                      />
+                      <LabeledInput
+                        label="Preview text"
+                        value={activeEmailTemplate.previewText}
+                        onChange={(value) =>
+                          updateActiveEmailTemplate((template) => ({
+                            ...template,
+                            previewText: value,
+                          }))
+                        }
+                      />
+                      <label className="block">
+                        <span className="text-sm font-medium text-gray-700">
+                          Intro copy
+                        </span>
+                        <textarea
+                          value={activeEmailTemplate.introText}
+                          onChange={(event) =>
+                            updateActiveEmailTemplate((template) => ({
+                              ...template,
+                              introText: event.target.value,
+                            }))
+                          }
+                          className="mt-2 min-h-28 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-sm font-medium text-gray-700">
+                          Footer note
+                        </span>
+                        <textarea
+                          value={activeEmailTemplate.footerText}
+                          onChange={(event) =>
+                            updateActiveEmailTemplate((template) => ({
+                              ...template,
+                              footerText: event.target.value,
+                            }))
+                          }
+                          className="mt-2 min-h-24 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                      <EmailToggleCard
+                        label="Submission summary"
+                        description="Page, locale, and timestamp chips beneath the heading."
+                        checked={activeEmailTemplate.showContextSummary}
+                        onChange={(checked) =>
+                          updateActiveEmailTemplate((template) => ({
+                            ...template,
+                            showContextSummary: checked,
+                          }))
+                        }
+                      />
+                      <EmailToggleCard
+                        label="Submitted fields"
+                        description="Show the guest data list inside the email body."
+                        checked={activeEmailTemplate.showFieldList}
+                        onChange={(checked) =>
+                          updateActiveEmailTemplate((template) => ({
+                            ...template,
+                            showFieldList: checked,
+                          }))
+                        }
+                      />
+                      <EmailToggleCard
+                        label="Footer note"
+                        description="Keep a branded sign-off or operational note at the end."
+                        checked={activeEmailTemplate.showFooter}
+                        onChange={(checked) =>
+                          updateActiveEmailTemplate((template) => ({
+                            ...template,
+                            showFooter: checked,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 p-5">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Field order
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Choose the fields that appear in the email and arrange
+                        them in the order recipients scan first.
+                      </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <FieldOrderComposer
+                        value={activeEmailTemplate.fieldOrder}
+                        suggestedKeys={emailFieldSuggestions}
+                        onChange={(fieldOrder) =>
+                          updateActiveEmailTemplate((template) => ({
+                            ...template,
+                            fieldOrder,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <details className="rounded-2xl border border-gray-200 p-5">
+                    <summary className="flex cursor-pointer list-none items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Advanced blocks
+                        </h3>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Available for higher-touch accounts that need custom
+                          HTML or unsupported block combinations.
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-600">
+                        {activeEmailTemplate.advancedMode
+                          ? "Advanced on"
+                          : "Preset mode"}
+                      </span>
+                    </summary>
+
+                    <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+                      <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={activeEmailTemplate.advancedMode}
+                          onChange={(event) =>
+                            updateActiveEmailTemplate((template) =>
+                              setEmailTemplateAdvancedMode(
+                                template,
+                                event.target.checked,
+                              ),
+                            )
+                          }
+                        />
+                        Enable advanced blocks mode
+                      </label>
+
+                      {activeEmailTemplate.advancedMode ? (
+                        <label className="block">
+                          <span className="text-sm font-medium text-gray-700">
+                            Blocks JSON
+                          </span>
+                          <textarea
+                            value={activeEmailTemplate.advancedBlocksText}
+                            onChange={(event) =>
+                              updateActiveEmailTemplate((template) => ({
+                                ...template,
+                                advancedBlocksText: event.target.value,
+                              }))
+                            }
+                            className="mt-2 min-h-56 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-xs text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                          />
+                          <span className="mt-2 block text-xs text-gray-500">
+                            Supported blocks include brand_header, rich_text,
+                            field_list, footer, and custom_html.
+                          </span>
+                        </label>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-xs text-gray-600">
+                          Keep preset mode on for most customers. Switching to
+                          advanced mode exposes raw blocks and lets you insert
+                          custom_html blocks when you need an exception.
+                        </div>
+                      )}
+                    </div>
+                  </details>
                 </div>
-              </>
-            )}
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -1198,32 +1537,31 @@ export default function FormsPage() {
                 Preview and test
               </h2>
               <p className="mt-1 text-sm text-gray-500">
-                Preview the saved template output and send it to your local SMTP
-                sink or test inbox.
+                Preview the last saved template output and send it to your local
+                SMTP sink or a test inbox.
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <LabeledSelect
-                label="Template"
-                value={previewTemplateType}
-                options={Object.entries(EMAIL_TEMPLATE_LABELS).map(
-                  ([value, label]) => ({
-                    value,
-                    label,
-                  }),
-                )}
-                onChange={(value) =>
-                  setPreviewTemplateType(value as FormEmailTemplateType)
-                }
-              />
-              <LabeledInput
-                label="Test recipient"
-                value={testRecipientEmail}
-                onChange={setTestRecipientEmail}
-                placeholder="preview@mailpit.local"
-              />
-            </div>
+            {activeEmailTemplate ? (
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Previewing
+                </div>
+                <div className="mt-1 text-sm font-semibold text-gray-900">
+                  {EMAIL_TEMPLATE_LABELS[activeEmailTemplateType]}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {EMAIL_TEMPLATE_DESCRIPTIONS[activeEmailTemplateType]}
+                </p>
+              </div>
+            ) : null}
+
+            <LabeledInput
+              label="Test recipient"
+              value={testRecipientEmail}
+              onChange={setTestRecipientEmail}
+              placeholder="preview@mailpit.local"
+            />
 
             <div className="flex flex-wrap gap-3">
               <button
@@ -1254,8 +1592,7 @@ export default function FormsPage() {
                 />
               ) : (
                 <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-8 text-center text-sm text-gray-500">
-                  Save your email studio, then refresh the preview to inspect
-                  the rendered output.
+                  Save your template changes to refresh the live preview.
                 </div>
               )}
             </div>
@@ -1309,6 +1646,7 @@ function createBlankRoutingRuleEditor(): RoutingRuleEditor {
     locale: "",
     priority: 0,
     emailRecipientsText: "",
+    integrationPresetId: "none",
     webhookUrl: "",
     webhookSecret: "",
     sendConfirmationEmail: false,
@@ -1361,31 +1699,90 @@ function createBlankEmailStudioEditor(): EmailStudioEditor {
     accentColor: "#0f172a",
     surfaceColor: "#ffffff",
     textColor: "#0f172a",
-    typographyFamily: "Arial",
+    typographyFamily: normalizeEmailFont("Arial"),
     templates: [
-      {
-        templateType: "INTERNAL_NOTIFICATION",
-        name: "Default internal notification",
-        enabled: true,
-        subjectTemplate: "[{{siteName}}] New {{formName}} from {{name}}",
-        previewText: "A new inquiry has been submitted.",
-        introText: "A new {{formName}} submission arrived for {{siteName}}.",
-        footerText: "Delivered by MyAllocator CMS",
-        fieldOrderText: "name, email, message",
-      },
-      {
-        templateType: "GUEST_CONFIRMATION",
-        name: "Default guest confirmation",
-        enabled: false,
-        subjectTemplate: "Thanks for contacting {{siteName}}",
-        previewText: "We received your message.",
-        introText:
-          "We received your {{formName}} submission and will reply soon.",
-        footerText: "This is an automated confirmation from {{siteName}}.",
-        fieldOrderText: "name, message",
-      },
+      createDefaultEmailTemplateEditor("INTERNAL_NOTIFICATION"),
+      createDefaultEmailTemplateEditor("GUEST_CONFIRMATION"),
     ],
   };
+}
+
+function createDefaultEmailTemplateEditor(
+  templateType: FormEmailTemplateType,
+): EmailTemplateEditor {
+  const layoutId = getDefaultEmailLayoutId(templateType);
+  const preset = getEmailLayoutPreset(layoutId);
+  const template: EmailTemplateEditor =
+    templateType === "GUEST_CONFIRMATION"
+      ? {
+          templateType,
+          name: "Guest confirmation",
+          enabled: false,
+          subjectTemplate: "Thanks for contacting {{siteName}}",
+          previewText: "We received your message.",
+          introText:
+            "We received your {{formName}} submission and will reply soon.",
+          footerText: "This is an automated confirmation from {{siteName}}.",
+          fieldOrder: ["name", "message"],
+          layoutId,
+          showContextSummary: preset.defaults.showContextSummary,
+          showFieldList: preset.defaults.showFieldList,
+          showFooter: preset.defaults.showFooter,
+          advancedMode: false,
+          advancedBlocksText: "",
+        }
+      : {
+          templateType,
+          name: "Team notification",
+          enabled: true,
+          subjectTemplate: "[{{siteName}}] New {{formName}} from {{name}}",
+          previewText: "A new inquiry has been submitted.",
+          introText: "A new {{formName}} submission arrived for {{siteName}}.",
+          footerText: "Delivered by StayLayer.",
+          fieldOrder: ["name", "email", "message"],
+          layoutId,
+          showContextSummary: preset.defaults.showContextSummary,
+          showFieldList: preset.defaults.showFieldList,
+          showFooter: preset.defaults.showFooter,
+          advancedMode: false,
+          advancedBlocksText: "",
+        };
+
+  return {
+    ...template,
+    advancedBlocksText: formatEmailBlocks(buildStandardEmailBlocks(template)),
+  };
+}
+
+function getDefaultEmailLayoutId(
+  templateType: FormEmailTemplateType,
+): EmailLayoutId {
+  return templateType === "GUEST_CONFIRMATION" ? "signature" : "minimal";
+}
+
+function getDefaultEmailHeading(templateType: FormEmailTemplateType) {
+  return templateType === "GUEST_CONFIRMATION"
+    ? "Thanks for contacting {{siteName}}"
+    : "New {{formName}} submission";
+}
+
+function getDefaultEmailFieldListTitle(templateType: FormEmailTemplateType) {
+  return templateType === "GUEST_CONFIRMATION"
+    ? "Your submission"
+    : "Submitted fields";
+}
+
+function getEmailTemplateSavedName(template: EmailTemplateEditor) {
+  return template.advancedMode
+    ? `${EMAIL_TEMPLATE_LABELS[template.templateType]} - Advanced`
+    : `${EMAIL_TEMPLATE_LABELS[template.templateType]} - ${getEmailLayoutPreset(template.layoutId).label}`;
+}
+
+function getEmailLayoutPreset(layoutId: EmailLayoutId): EmailLayoutPreset {
+  return (
+    EMAIL_LAYOUT_PRESETS.find((preset) => preset.id === layoutId) ??
+    EMAIL_LAYOUT_PRESETS[0]
+  );
 }
 
 function mapDefinitionToEditor(definition: FormDefinition): FormEditorState {
@@ -1424,6 +1821,7 @@ function mapRoutingRuleToEditor(rule: FormRoutingRule): RoutingRuleEditor {
     locale: rule.locale ?? "",
     priority: rule.priority,
     emailRecipientsText: rule.emailRecipients.join(", "),
+    integrationPresetId: inferDeliveryIntegrationPresetId(rule.webhookUrl),
     webhookUrl: rule.webhookUrl,
     webhookSecret: rule.webhookSecret,
     sendConfirmationEmail: rule.sendConfirmationEmail,
@@ -1443,26 +1841,309 @@ function mapEmailStudioToEditor(
   return {
     brandName: studio.theme.brandName,
     logoUrl: studio.theme.logoUrl,
-    primaryColor: studio.theme.primaryColor,
-    accentColor: studio.theme.accentColor,
-    surfaceColor: studio.theme.surfaceColor,
-    textColor: studio.theme.textColor,
-    typographyFamily: studio.theme.typographyFamily,
+    primaryColor: normalizeHexColor(studio.theme.primaryColor, "#2563eb"),
+    accentColor: normalizeHexColor(studio.theme.accentColor, "#0f172a"),
+    surfaceColor: normalizeHexColor(studio.theme.surfaceColor, "#ffffff"),
+    textColor: normalizeHexColor(studio.theme.textColor, "#0f172a"),
+    typographyFamily: normalizeEmailFont(studio.theme.typographyFamily),
     templates:
       siteLevelTemplates.length > 0
-        ? siteLevelTemplates.map((template) => ({
-            id: template.id,
-            templateType: template.templateType,
-            name: template.name,
-            enabled: template.enabled,
-            subjectTemplate: template.subjectTemplate,
-            previewText: template.previewText,
-            introText: readBlockText(template.blocks, "rich_text"),
-            footerText: readBlockText(template.blocks, "footer"),
-            fieldOrderText: template.fieldOrder.join(", "),
-          }))
+        ? siteLevelTemplates.map((template) => {
+            const fallbackTemplate = createDefaultEmailTemplateEditor(
+              template.templateType,
+            );
+            const blocks = toEmailBlocksArray(template.blocks);
+            const layoutId = resolveEmailLayoutId(
+              blocks,
+              template.templateType,
+            );
+            const preset = getEmailLayoutPreset(layoutId);
+            const editorTemplate: EmailTemplateEditor = {
+              id: template.id,
+              templateType: template.templateType,
+              name: template.name,
+              enabled: template.enabled,
+              subjectTemplate: template.subjectTemplate,
+              previewText: template.previewText,
+              introText:
+                readBlockText(blocks, "rich_text") ||
+                fallbackTemplate.introText,
+              footerText:
+                readBlockText(blocks, "footer") || fallbackTemplate.footerText,
+              fieldOrder:
+                normalizeFieldOrder(template.fieldOrder).length > 0
+                  ? normalizeFieldOrder(template.fieldOrder)
+                  : fallbackTemplate.fieldOrder,
+              layoutId,
+              showContextSummary: readBlockBoolean(
+                blocks,
+                "brand_header",
+                "showSummary",
+                preset.defaults.showContextSummary,
+              ),
+              showFieldList: blocks.some(
+                (block) => String(block.type ?? "") === "field_list",
+              ),
+              showFooter: blocks.some(
+                (block) => String(block.type ?? "") === "footer",
+              ),
+              advancedMode: false,
+              advancedBlocksText: "",
+            };
+            const persistedBlocks =
+              blocks.length > 0
+                ? blocks
+                : buildStandardEmailBlocks(editorTemplate);
+
+            return {
+              ...editorTemplate,
+              advancedMode: !isStandardEmailTemplate(
+                persistedBlocks,
+                editorTemplate,
+              ),
+              advancedBlocksText: formatEmailBlocks(persistedBlocks),
+            };
+          })
         : createBlankEmailStudioEditor().templates,
   };
+}
+
+function serializeEmailStudioEditor(
+  editor: EmailStudioEditor,
+): UpdateFormEmailStudioPayload {
+  const internalTemplate = editor.templates.find(
+    (template) => template.templateType === "INTERNAL_NOTIFICATION",
+  );
+
+  return {
+    theme: {
+      brandName: editor.brandName.trim(),
+      logoUrl: editor.logoUrl.trim(),
+      primaryColor: normalizeHexColor(editor.primaryColor, "#2563eb"),
+      accentColor: normalizeHexColor(editor.accentColor, "#0f172a"),
+      surfaceColor: normalizeHexColor(editor.surfaceColor, "#ffffff"),
+      textColor: normalizeHexColor(editor.textColor, "#0f172a"),
+      typographyFamily: normalizeEmailFont(editor.typographyFamily),
+      footerContent: {
+        text:
+          internalTemplate && internalTemplate.showFooter
+            ? internalTemplate.footerText.trim()
+            : "",
+      },
+    },
+    templates: editor.templates.map((template) => ({
+      id: template.id,
+      templateType: template.templateType,
+      name: getEmailTemplateSavedName(template),
+      enabled: template.enabled,
+      subjectTemplate: template.subjectTemplate.trim(),
+      previewText: template.previewText.trim(),
+      blocks: template.advancedMode
+        ? parseAdvancedEmailBlocks(template.advancedBlocksText)
+        : buildStandardEmailBlocks(template),
+      fieldOrder: normalizeFieldOrder(template.fieldOrder),
+    })),
+  };
+}
+
+function buildStandardEmailBlocks(template: EmailTemplateEditor) {
+  const preset = getEmailLayoutPreset(template.layoutId);
+
+  return [
+    {
+      type: "brand_header",
+      variant: template.layoutId,
+      title: getDefaultEmailHeading(template.templateType),
+      showSummary: template.showContextSummary,
+    },
+    template.introText.trim()
+      ? { type: "rich_text", text: template.introText.trim() }
+      : null,
+    template.showFieldList
+      ? {
+          type: "field_list",
+          variant: preset.fieldListVariant,
+          title: getDefaultEmailFieldListTitle(template.templateType),
+        }
+      : null,
+    template.showFooter && template.footerText.trim()
+      ? { type: "footer", text: template.footerText.trim() }
+      : null,
+  ].filter(Boolean) as Array<Record<string, unknown>>;
+}
+
+function applyEmailLayoutPreset(
+  template: EmailTemplateEditor,
+  layoutId: EmailLayoutId,
+): EmailTemplateEditor {
+  const preset = getEmailLayoutPreset(layoutId);
+  const nextTemplate: EmailTemplateEditor = {
+    ...template,
+    layoutId,
+    showContextSummary: preset.defaults.showContextSummary,
+    showFieldList: preset.defaults.showFieldList,
+    showFooter: preset.defaults.showFooter,
+    advancedMode: false,
+  };
+
+  return {
+    ...nextTemplate,
+    advancedBlocksText: formatEmailBlocks(
+      buildStandardEmailBlocks(nextTemplate),
+    ),
+  };
+}
+
+function setEmailTemplateAdvancedMode(
+  template: EmailTemplateEditor,
+  enabled: boolean,
+): EmailTemplateEditor {
+  if (!enabled) {
+    return {
+      ...template,
+      advancedMode: false,
+    };
+  }
+
+  return {
+    ...template,
+    advancedMode: true,
+    advancedBlocksText: template.advancedMode
+      ? template.advancedBlocksText
+      : formatEmailBlocks(buildStandardEmailBlocks(template)),
+  };
+}
+
+function parseAdvancedEmailBlocks(value: string) {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("Advanced blocks must be valid JSON.");
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("Advanced blocks must be a JSON array.");
+  }
+
+  if (
+    parsed.some(
+      (block) => !block || typeof block !== "object" || Array.isArray(block),
+    )
+  ) {
+    throw new Error("Each advanced block must be a JSON object.");
+  }
+
+  return parsed as Array<Record<string, unknown>>;
+}
+
+function formatEmailBlocks(blocks: unknown) {
+  return JSON.stringify(blocks, null, 2);
+}
+
+function isStandardEmailTemplate(
+  blocks: Array<Record<string, unknown>>,
+  template: EmailTemplateEditor,
+) {
+  if (isLegacyStandardEmailTemplate(blocks)) {
+    return true;
+  }
+
+  return (
+    JSON.stringify(blocks) ===
+    JSON.stringify(buildStandardEmailBlocks(template))
+  );
+}
+
+function resolveEmailLayoutId(
+  blocks: Array<Record<string, unknown>>,
+  templateType: FormEmailTemplateType,
+): EmailLayoutId {
+  const headerBlock = findEmailBlock(blocks, "brand_header");
+  const variant = headerBlock?.variant;
+
+  if (
+    typeof variant === "string" &&
+    EMAIL_LAYOUT_PRESETS.some((preset) => preset.id === variant)
+  ) {
+    return variant as EmailLayoutId;
+  }
+
+  if (isLegacyStandardEmailTemplate(blocks)) {
+    return "signature";
+  }
+
+  return getDefaultEmailLayoutId(templateType);
+}
+
+function isLegacyStandardEmailTemplate(blocks: Array<Record<string, unknown>>) {
+  return (
+    JSON.stringify(blocks.map((block) => String(block.type ?? ""))) ===
+    JSON.stringify(["brand_header", "rich_text", "field_list", "footer"])
+  );
+}
+
+function normalizeFieldOrder(value: string[]) {
+  return value
+    .map((fieldKey) => fieldKey.trim())
+    .filter(Boolean)
+    .filter((fieldKey, index, fields) => fields.indexOf(fieldKey) === index);
+}
+
+function normalizeEmailFont(value: string) {
+  const trimmedValue = value.trim();
+
+  return SAFE_EMAIL_FONTS.some((font) => font.value === trimmedValue)
+    ? trimmedValue
+    : SAFE_EMAIL_FONTS[0].value;
+}
+
+function normalizeHexColor(value: string, fallback: string) {
+  const trimmedValue = value.trim();
+  const shortMatch = trimmedValue.match(/^#([0-9a-f]{3})$/i);
+
+  if (shortMatch) {
+    return `#${shortMatch[1]
+      .split("")
+      .map((part) => `${part}${part}`)
+      .join("")}`.toLowerCase();
+  }
+
+  if (/^#([0-9a-f]{6})$/i.test(trimmedValue)) {
+    return trimmedValue.toLowerCase();
+  }
+
+  return fallback;
+}
+
+function readBlockBoolean(
+  blocks: Array<Record<string, unknown>>,
+  targetType: string,
+  key: string,
+  fallback: boolean,
+) {
+  const match = findEmailBlock(blocks, targetType);
+  return typeof match?.[key] === "boolean" ? Boolean(match[key]) : fallback;
+}
+
+function findEmailBlock(
+  blocks: Array<Record<string, unknown>> | unknown,
+  targetType: string,
+) {
+  return toEmailBlocksArray(blocks).find(
+    (block) => String(block.type ?? "") === targetType,
+  );
+}
+
+function toEmailBlocksArray(blocks: unknown) {
+  if (!Array.isArray(blocks)) {
+    return [] as Array<Record<string, unknown>>;
+  }
+
+  return blocks.filter(
+    (block) => block && typeof block === "object" && !Array.isArray(block),
+  ) as Array<Record<string, unknown>>;
 }
 
 function serializeFormEditor(formEditor: FormEditorState) {
@@ -1512,11 +2193,95 @@ function serializeRoutingRuleEditor(rule: RoutingRuleEditor) {
     isActive: rule.isActive,
     saveToInbox: rule.saveToInbox,
     emailRecipients: splitCommaList(rule.emailRecipientsText),
-    webhookUrl: rule.webhookUrl.trim() || undefined,
-    webhookSecret: rule.webhookSecret.trim() || undefined,
+    webhookUrl:
+      rule.integrationPresetId === "none"
+        ? undefined
+        : rule.webhookUrl.trim() || undefined,
+    webhookSecret:
+      rule.integrationPresetId === "none"
+        ? undefined
+        : rule.webhookSecret.trim() || undefined,
     sendConfirmationEmail: rule.sendConfirmationEmail,
     confirmationReplyToFieldKey:
       rule.confirmationReplyToFieldKey.trim() || "email",
+  };
+}
+
+function getDeliveryIntegrationPreset(
+  presetId: DeliveryIntegrationPresetId,
+): DeliveryIntegrationPreset {
+  return (
+    DELIVERY_INTEGRATION_PRESETS.find((preset) => preset.id === presetId) ??
+    DELIVERY_INTEGRATION_PRESETS[0]
+  );
+}
+
+function inferDeliveryIntegrationPresetId(
+  webhookUrl: string,
+): DeliveryIntegrationPresetId {
+  const trimmedUrl = webhookUrl.trim();
+
+  if (!trimmedUrl) {
+    return "none";
+  }
+
+  try {
+    const hostname = new URL(trimmedUrl).hostname.toLowerCase();
+
+    if (
+      hostname.includes("zapier") ||
+      hostname.includes("make.com") ||
+      hostname.includes("n8n") ||
+      hostname.includes("pipedream") ||
+      hostname.includes("workato")
+    ) {
+      return "automation";
+    }
+
+    if (
+      hostname.includes("hubspot") ||
+      hostname.includes("salesforce") ||
+      hostname.includes("zoho") ||
+      hostname.includes("pipedrive") ||
+      hostname.includes("crm")
+    ) {
+      return "crm";
+    }
+
+    if (
+      hostname.includes("cloudbeds") ||
+      hostname.includes("guesty") ||
+      hostname.includes("mews") ||
+      hostname.includes("apaleo") ||
+      hostname.includes("opera") ||
+      hostname.includes("siteminder") ||
+      hostname.includes("pms")
+    ) {
+      return "pms";
+    }
+  } catch {
+    return "custom";
+  }
+
+  return "custom";
+}
+
+function applyDeliveryIntegrationPreset(
+  rule: RoutingRuleEditor,
+  presetId: DeliveryIntegrationPresetId,
+): RoutingRuleEditor {
+  if (presetId === "none") {
+    return {
+      ...rule,
+      integrationPresetId: presetId,
+      webhookUrl: "",
+      webhookSecret: "",
+    };
+  }
+
+  return {
+    ...rule,
+    integrationPresetId: presetId,
   };
 }
 
@@ -1542,19 +2307,11 @@ function normalizeOptionsToText(
 }
 
 function readBlockText(blocks: unknown, targetType: string) {
-  if (!Array.isArray(blocks)) {
-    return "";
-  }
+  const match = findEmailBlock(blocks, targetType) as
+    | { text?: string }
+    | undefined;
 
-  const match = blocks.find(
-    (block) =>
-      block &&
-      typeof block === "object" &&
-      "type" in block &&
-      block.type === targetType,
-  ) as { text?: string } | undefined;
-
-  return match?.text ?? "";
+  return typeof match?.text === "string" ? match.text : "";
 }
 
 function LabeledInput({
@@ -1611,6 +2368,43 @@ function LabeledSelect({
           </option>
         ))}
       </select>
+    </label>
+  );
+}
+
+function LabeledColorInput({
+  label,
+  value,
+  onChange,
+  help,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  help?: string;
+}) {
+  const normalizedValue = normalizeHexColor(value, "#2563eb");
+
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-gray-700">{label}</span>
+      <div className="mt-2 flex items-center gap-3">
+        <input
+          type="color"
+          value={normalizedValue}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-12 w-14 rounded-xl border border-gray-200 bg-white p-1"
+        />
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          placeholder={normalizedValue}
+        />
+      </div>
+      {help ? (
+        <span className="mt-1 block text-xs text-gray-500">{help}</span>
+      ) : null}
     </label>
   );
 }
@@ -1715,6 +2509,422 @@ function FieldEditorCard({
   );
 }
 
+function EmailLayoutPresetCard({
+  preset,
+  selected,
+  primaryColor,
+  accentColor,
+  onSelect,
+}: {
+  preset: EmailLayoutPreset;
+  selected: boolean;
+  primaryColor: string;
+  accentColor: string;
+  onSelect: () => void;
+}) {
+  const primary = normalizeHexColor(primaryColor, "#2563eb");
+  const accent = normalizeHexColor(accentColor, "#0f172a");
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`rounded-2xl border p-4 text-left transition-colors ${
+        selected
+          ? "border-blue-300 bg-blue-50"
+          : "border-gray-200 hover:border-gray-300"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-gray-900">
+            {preset.label}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">{preset.description}</div>
+        </div>
+        {selected ? (
+          <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-semibold text-blue-700">
+            Selected
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white p-3">
+        {preset.id === "spotlight" ? (
+          <>
+            <div
+              className="rounded-xl px-3 py-4"
+              style={{ backgroundColor: primary }}
+            >
+              <div className="h-2 w-16 rounded-full bg-white/80" />
+              <div className="mt-3 h-3 w-28 rounded-full bg-white/90" />
+              <div className="mt-2 h-2 w-24 rounded-full bg-white/60" />
+            </div>
+            <div className="mt-3 grid gap-2">
+              <div className="h-9 rounded-xl bg-gray-100" />
+              <div className="h-9 rounded-xl bg-gray-50" />
+            </div>
+          </>
+        ) : preset.id === "concierge" ? (
+          <>
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <div className="flex items-start gap-3">
+                <div
+                  className="h-10 w-1 rounded-full"
+                  style={{ backgroundColor: primary }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="h-2 w-14 rounded-full bg-gray-200" />
+                  <div
+                    className="mt-2 h-3 w-[6.5rem] rounded-full"
+                    style={{ backgroundColor: accent, opacity: 0.2 }}
+                  />
+                  <div className="mt-2 h-2 w-20 rounded-full bg-gray-200" />
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2">
+              <div className="rounded-xl border border-gray-100 bg-white p-2">
+                <div className="h-2 w-[4.5rem] rounded-full bg-gray-200" />
+                <div className="mt-2 h-2 w-full rounded-full bg-gray-100" />
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-white p-2">
+                <div className="h-2 w-16 rounded-full bg-gray-200" />
+                <div className="mt-2 h-2 w-5/6 rounded-full bg-gray-100" />
+              </div>
+            </div>
+          </>
+        ) : preset.id === "minimal" ? (
+          <>
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+              <div className="h-2 w-[4.5rem] rounded-full bg-gray-300" />
+              <div
+                className="h-2 w-10 rounded-full"
+                style={{ backgroundColor: primary, opacity: 0.35 }}
+              />
+            </div>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="h-2 w-16 rounded-full bg-gray-300" />
+                <div className="h-2 w-20 rounded-full bg-gray-100" />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="h-2 w-14 rounded-full bg-gray-300" />
+                <div className="h-2 w-24 rounded-full bg-gray-100" />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="h-2 w-12 rounded-full bg-gray-300" />
+                <div className="h-2 w-28 rounded-full bg-gray-100" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              className="h-1.5 rounded-full"
+              style={{ backgroundColor: primary }}
+            />
+            <div className="mt-3 rounded-xl bg-gray-50 p-3">
+              <div className="h-2 w-14 rounded-full bg-gray-200" />
+              <div
+                className="mt-2 h-3 w-28 rounded-full"
+                style={{ backgroundColor: accent, opacity: 0.18 }}
+              />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <div
+                  className="h-6 w-16 rounded-full"
+                  style={{ backgroundColor: primary, opacity: 0.12 }}
+                />
+                <div className="h-6 w-12 rounded-full bg-gray-200" />
+                <div className="h-6 w-[4.5rem] rounded-full bg-gray-100" />
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2">
+              <div className="h-8 rounded-xl bg-gray-100" />
+              <div className="h-8 rounded-xl bg-gray-50" />
+            </div>
+          </>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function EmailToggleCard({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start justify-between gap-3 rounded-2xl border p-4 transition-colors ${
+        checked ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"
+      }`}
+    >
+      <div>
+        <div className="text-sm font-semibold text-gray-900">{label}</div>
+        <div className="mt-1 text-xs text-gray-500">{description}</div>
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1"
+      />
+    </label>
+  );
+}
+
+function FieldOrderComposer({
+  value,
+  suggestedKeys,
+  onChange,
+}: {
+  value: string[];
+  suggestedKeys: string[];
+  onChange: (value: string[]) => void;
+}) {
+  const [customFieldKey, setCustomFieldKey] = useState("");
+  const availableKeys = suggestedKeys.filter(
+    (fieldKey) => !value.includes(fieldKey),
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        {value.length > 0 ? (
+          value.map((fieldKey, index) => (
+            <div
+              key={`${fieldKey}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-2"
+            >
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  Position {index + 1}
+                </div>
+                <div className="text-sm font-medium text-gray-900">
+                  {fieldKey}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (index === 0) {
+                      return;
+                    }
+                    const nextOrder = [...value];
+                    [nextOrder[index - 1], nextOrder[index]] = [
+                      nextOrder[index],
+                      nextOrder[index - 1],
+                    ];
+                    onChange(nextOrder);
+                  }}
+                  disabled={index === 0}
+                  className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-600 disabled:cursor-not-allowed disabled:text-gray-300"
+                >
+                  Up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (index === value.length - 1) {
+                      return;
+                    }
+                    const nextOrder = [...value];
+                    [nextOrder[index], nextOrder[index + 1]] = [
+                      nextOrder[index + 1],
+                      nextOrder[index],
+                    ];
+                    onChange(nextOrder);
+                  }}
+                  disabled={index === value.length - 1}
+                  className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-600 disabled:cursor-not-allowed disabled:text-gray-300"
+                >
+                  Down
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange(
+                      value.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                  className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-sm text-gray-500">
+            Add the fields that should appear in this email.
+          </div>
+        )}
+      </div>
+
+      {availableKeys.length > 0 ? (
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Suggested fields
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {availableKeys.map((fieldKey) => (
+              <button
+                key={fieldKey}
+                type="button"
+                onClick={() => onChange([...value, fieldKey])}
+                className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+              >
+                Add {fieldKey}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-xl bg-gray-50 p-4">
+        <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+          Custom field key
+        </div>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            value={customFieldKey}
+            onChange={(event) => setCustomFieldKey(event.target.value)}
+            placeholder="arrival_date"
+            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const nextFieldKey = customFieldKey.trim();
+              if (!nextFieldKey) {
+                return;
+              }
+              onChange(normalizeFieldOrder([...value, nextFieldKey]));
+              setCustomFieldKey("");
+            }}
+            disabled={!customFieldKey.trim()}
+            className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Add field
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogoUploader({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  return (
+    <div className="rounded-2xl border border-gray-200 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-sm font-semibold text-gray-900">Logo</div>
+          <div className="mt-1 text-xs text-gray-500">
+            Upload a compact SVG or PNG, or paste a hosted asset URL. Hosted
+            URLs remain the safest option for inbox rendering.
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700"
+          >
+            Upload logo
+          </button>
+          {value ? (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500"
+            >
+              Remove
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+
+          if (!file) {
+            return;
+          }
+
+          if (file.size > MAX_EMAIL_LOGO_FILE_SIZE) {
+            toast.error("Upload a logo smaller than 120 KB.");
+            event.target.value = "";
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              onChange(reader.result);
+            }
+          };
+          reader.readAsDataURL(file);
+          event.target.value = "";
+        }}
+      />
+
+      {value ? (
+        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-5">
+          <img
+            src={value}
+            alt="Email logo preview"
+            className="h-10 max-w-[12rem] object-contain"
+            onError={(event) => {
+              (event.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-sm text-gray-500">
+          No logo selected yet.
+        </div>
+      )}
+
+      <label className="mt-4 block">
+        <span className="text-sm font-medium text-gray-700">
+          Hosted logo URL
+        </span>
+        <input
+          value={value.startsWith("data:") ? "" : value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="https://cdn.example.com/logo.svg"
+          className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        />
+        <span className="mt-1 block text-xs text-gray-500">
+          Paste a hosted asset anytime to replace an uploaded file.
+        </span>
+      </label>
+    </div>
+  );
+}
+
 function RoutingRuleEditorCard({
   rule,
   onChange,
@@ -1724,6 +2934,8 @@ function RoutingRuleEditorCard({
   onChange: (rule: RoutingRuleEditor) => void;
   onRemove: () => void;
 }) {
+  const integrationPreset = getDeliveryIntegrationPreset(rule.integrationPresetId);
+
   return (
     <div className="rounded-2xl border border-gray-200 p-4">
       <div className="flex items-center justify-between gap-4">
@@ -1744,53 +2956,36 @@ function RoutingRuleEditorCard({
           onChange={(value) => onChange({ ...rule, name: value })}
         />
         <LabeledInput
-          label="Priority"
+          label="Priority order"
           value={String(rule.priority)}
           onChange={(value) =>
             onChange({ ...rule, priority: Number(value || 0) })
           }
+          help="Lower numbers run first when more than one rule matches."
         />
         <LabeledInput
-          label="Page slug override"
+          label="Page slug"
           value={rule.pageSlug}
           onChange={(value) => onChange({ ...rule, pageSlug: value })}
           placeholder="contact-us"
         />
         <LabeledInput
-          label="Locale override"
+          label="Locale"
           value={rule.locale}
           onChange={(value) => onChange({ ...rule, locale: value })}
           placeholder="en"
         />
         <div className="md:col-span-2">
           <LabeledInput
-            label="Email recipients"
+            label="Delivery inboxes"
             value={rule.emailRecipientsText}
             onChange={(value) =>
               onChange({ ...rule, emailRecipientsText: value })
             }
             placeholder="ops@example.com, sales@example.com"
+            help="Comma-separated inboxes for the default email delivery path."
           />
         </div>
-        <LabeledInput
-          label="Webhook URL"
-          value={rule.webhookUrl}
-          onChange={(value) => onChange({ ...rule, webhookUrl: value })}
-          placeholder="https://example.com/hooks/inquiry"
-        />
-        <LabeledInput
-          label="Webhook secret"
-          value={rule.webhookSecret}
-          onChange={(value) => onChange({ ...rule, webhookSecret: value })}
-        />
-        <LabeledInput
-          label="Guest reply-to field"
-          value={rule.confirmationReplyToFieldKey}
-          onChange={(value) =>
-            onChange({ ...rule, confirmationReplyToFieldKey: value })
-          }
-          placeholder="email"
-        />
         <div className="flex items-center gap-6 md:col-span-2">
           <label className="inline-flex items-center gap-2 text-sm text-gray-600">
             <input
@@ -1826,6 +3021,104 @@ function RoutingRuleEditorCard({
             Active
           </label>
         </div>
+        <details
+          open={rule.integrationPresetId !== "none"}
+          className="md:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-4"
+        >
+          <summary className="cursor-pointer list-none text-sm font-semibold text-gray-900">
+            Advanced delivery
+          </summary>
+          <p className="mt-1 text-xs text-gray-500">
+            Choose a delivery preset first. Raw webhook fields stay tucked away
+            behind the custom option instead of being the default customer path.
+          </p>
+          <div className="mt-4 space-y-4">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                Integration preset
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {DELIVERY_INTEGRATION_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() =>
+                      onChange(applyDeliveryIntegrationPreset(rule, preset.id))
+                    }
+                    className={`rounded-2xl border p-4 text-left transition-colors ${
+                      rule.integrationPresetId === preset.id
+                        ? "border-blue-300 bg-blue-50"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {preset.label}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {preset.description}
+                        </div>
+                      </div>
+                      {rule.integrationPresetId === preset.id ? (
+                        <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-semibold text-blue-700">
+                          Selected
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {rule.integrationPresetId === "none" ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-4 text-sm text-gray-500">
+                This route will deliver only to the inboxes above. Add an
+                integration later if your CRM, PMS, or automation workflow
+                needs the structured payload too.
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2 rounded-xl border border-gray-200 bg-white px-4 py-4">
+                  <div className="text-sm font-semibold text-gray-900">
+                    {integrationPreset.label}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {integrationPreset.description}
+                  </p>
+                </div>
+                <LabeledInput
+                  label={integrationPreset.endpointLabel}
+                  value={rule.webhookUrl}
+                  onChange={(value) => onChange({ ...rule, webhookUrl: value })}
+                  placeholder={integrationPreset.endpointPlaceholder}
+                  help={integrationPreset.endpointHelp}
+                />
+                <LabeledInput
+                  label={integrationPreset.secretLabel}
+                  value={rule.webhookSecret}
+                  onChange={(value) =>
+                    onChange({ ...rule, webhookSecret: value })
+                  }
+                  placeholder={integrationPreset.secretPlaceholder}
+                  help={integrationPreset.secretHelp}
+                />
+              </div>
+            )}
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <LabeledInput
+                label="Reply-to field key"
+                value={rule.confirmationReplyToFieldKey}
+                onChange={(value) =>
+                  onChange({ ...rule, confirmationReplyToFieldKey: value })
+                }
+                placeholder="email"
+                help="Used when guest confirmations should reply to a submitted field such as email."
+              />
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   );

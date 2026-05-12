@@ -84,6 +84,154 @@ const LOCALE_META: Record<
   de: { label: "German", flag: "🇩🇪", nativeName: "Deutsch" },
 };
 
+type InquiryDeliveryPresetId =
+  | "none"
+  | "automation"
+  | "crm"
+  | "pms"
+  | "custom";
+
+type InquiryDeliveryPreset = {
+  id: InquiryDeliveryPresetId;
+  label: string;
+  description: string;
+  endpointLabel: string;
+  endpointPlaceholder: string;
+  endpointHelp: string;
+  secretLabel: string;
+  secretPlaceholder: string;
+  secretHelp: string;
+};
+
+const INQUIRY_DELIVERY_PRESETS: InquiryDeliveryPreset[] = [
+  {
+    id: "none",
+    label: "Email only",
+    description:
+      "Keep delivery simple and send inquiries only to the routing inbox.",
+    endpointLabel: "",
+    endpointPlaceholder: "",
+    endpointHelp: "",
+    secretLabel: "",
+    secretPlaceholder: "",
+    secretHelp: "",
+  },
+  {
+    id: "automation",
+    label: "Automation workflow",
+    description:
+      "Send inquiries into Zapier, Make, n8n, or another workflow tool.",
+    endpointLabel: "Workflow endpoint",
+    endpointPlaceholder: "https://hooks.zapier.com/hooks/catch/...",
+    endpointHelp:
+      "Paste the catch-hook URL from your automation platform.",
+    secretLabel: "Verification token",
+    secretPlaceholder: "Optional token or shared secret",
+    secretHelp:
+      "Optional. Use this when your workflow expects a token outside the URL.",
+  },
+  {
+    id: "crm",
+    label: "CRM handoff",
+    description:
+      "Forward structured inquiries into HubSpot, Salesforce, or another pipeline.",
+    endpointLabel: "CRM intake endpoint",
+    endpointPlaceholder: "https://crm.example.com/api/inquiries",
+    endpointHelp:
+      "Paste the CRM workflow or middleware endpoint for new inquiries.",
+    secretLabel: "CRM signing secret",
+    secretPlaceholder: "Optional HMAC or shared secret",
+    secretHelp:
+      "Use this when your CRM bridge validates signed inquiry traffic.",
+  },
+  {
+    id: "pms",
+    label: "PMS / reservations",
+    description:
+      "Route inquiries into a PMS, reservations desk workflow, or hospitality ops service.",
+    endpointLabel: "Reservations endpoint",
+    endpointPlaceholder: "https://ops.example.com/pms/inquiries",
+    endpointHelp:
+      "Paste the endpoint that should receive reservation-ready inquiry data.",
+    secretLabel: "Shared signing secret",
+    secretPlaceholder: "Optional shared secret",
+    secretHelp:
+      "Add a secret if the PMS or middleware verifies signed requests.",
+  },
+  {
+    id: "custom",
+    label: "Custom webhook",
+    description:
+      "Bring your own endpoint when none of the named presets match your stack.",
+    endpointLabel: "Webhook URL",
+    endpointPlaceholder: "https://example.com/hooks/inquiries",
+    endpointHelp: "Paste the full endpoint URL for your custom integration.",
+    secretLabel: "Webhook secret",
+    secretPlaceholder: "whsec_...",
+    secretHelp:
+      "Optional HMAC secret used to sign outgoing inquiry delivery payloads.",
+  },
+];
+
+function getInquiryDeliveryPreset(
+  presetId: InquiryDeliveryPresetId,
+): InquiryDeliveryPreset {
+  return (
+    INQUIRY_DELIVERY_PRESETS.find((preset) => preset.id === presetId) ??
+    INQUIRY_DELIVERY_PRESETS[0]
+  );
+}
+
+function inferInquiryDeliveryPresetId(
+  webhookUrl: string,
+): InquiryDeliveryPresetId {
+  const trimmedUrl = webhookUrl.trim();
+
+  if (!trimmedUrl) {
+    return "none";
+  }
+
+  try {
+    const hostname = new URL(trimmedUrl).hostname.toLowerCase();
+
+    if (
+      hostname.includes("zapier") ||
+      hostname.includes("make.com") ||
+      hostname.includes("n8n") ||
+      hostname.includes("pipedream") ||
+      hostname.includes("workato")
+    ) {
+      return "automation";
+    }
+
+    if (
+      hostname.includes("hubspot") ||
+      hostname.includes("salesforce") ||
+      hostname.includes("zoho") ||
+      hostname.includes("pipedrive") ||
+      hostname.includes("crm")
+    ) {
+      return "crm";
+    }
+
+    if (
+      hostname.includes("cloudbeds") ||
+      hostname.includes("guesty") ||
+      hostname.includes("mews") ||
+      hostname.includes("apaleo") ||
+      hostname.includes("opera") ||
+      hostname.includes("siteminder") ||
+      hostname.includes("pms")
+    ) {
+      return "pms";
+    }
+  } catch {
+    return "custom";
+  }
+
+  return "custom";
+}
+
 // ─── Main Page ─────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -753,6 +901,7 @@ function SiteSettingsTab() {
     siteName: "",
     supportEmail: "",
     defaultInquiryRoutingEmail: "",
+    inquiryWebhookPresetId: "none" as InquiryDeliveryPresetId,
     inquiryWebhookUrl: "",
     inquiryWebhookSecret: "",
     inquiryWebhookSecretConfigured: false,
@@ -781,6 +930,9 @@ function SiteSettingsTab() {
         siteName: settings.siteName,
         supportEmail: settings.supportEmail,
         defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+        inquiryWebhookPresetId: inferInquiryDeliveryPresetId(
+          settings.inquiryWebhookUrl,
+        ),
         inquiryWebhookUrl: settings.inquiryWebhookUrl,
         inquiryWebhookSecret: "",
         inquiryWebhookSecretConfigured: settings.inquiryWebhookSecretConfigured,
@@ -813,11 +965,13 @@ function SiteSettingsTab() {
   };
 
   const buildGeneralPayload = (): UpdateSettingsPayload => ({
+    ...(general.inquiryWebhookPresetId === "none"
+      ? { inquiryWebhookUrl: "", inquiryWebhookSecret: "" }
+      : { inquiryWebhookUrl: general.inquiryWebhookUrl }),
     siteName: general.siteName,
     supportEmail: general.supportEmail,
     defaultInquiryRoutingEmail: general.defaultInquiryRoutingEmail,
-    inquiryWebhookUrl: general.inquiryWebhookUrl,
-    ...(general.clearInquiryWebhookSecret
+    ...(general.inquiryWebhookPresetId === "none" || general.clearInquiryWebhookSecret
       ? { inquiryWebhookSecret: "" }
       : general.inquiryWebhookSecret.trim()
         ? { inquiryWebhookSecret: general.inquiryWebhookSecret.trim() }
@@ -853,6 +1007,9 @@ function SiteSettingsTab() {
               siteName: settings.siteName,
               supportEmail: settings.supportEmail,
               defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+              inquiryWebhookPresetId: inferInquiryDeliveryPresetId(
+                settings.inquiryWebhookUrl,
+              ),
               inquiryWebhookUrl: settings.inquiryWebhookUrl,
               inquiryWebhookSecret: "",
               inquiryWebhookSecretConfigured:
@@ -920,69 +1077,165 @@ function SiteSettingsTab() {
             />
           </SettingsField>
           <SettingsField
-            label="Inquiry Webhook URL"
-            id="inquiryWebhookUrl"
-            hint="Optional POST endpoint for structured inquiry delivery"
-          >
-            <input
-              id="inquiryWebhookUrl"
-              type="url"
-              value={general.inquiryWebhookUrl}
-              onChange={(e) => {
-                setGeneral((p) => ({
-                  ...p,
-                  inquiryWebhookUrl: e.target.value,
-                }));
-                setGeneralDirty(true);
-              }}
-              className={inputCls}
-              placeholder="https://ops.example.com/hooks/inquiries"
-            />
-          </SettingsField>
-          <SettingsField
-            label="Webhook Secret"
-            id="inquiryWebhookSecret"
-            hint="Optional HMAC secret used to sign delivery webhooks"
+            label="Inquiry integration"
+            id="inquiryDeliveryPreset"
+            hint="Optional structured delivery for CRM, PMS, or workflow handoffs"
           >
             <div className="space-y-2">
-              <input
-                id="inquiryWebhookSecret"
-                type="password"
-                value={general.inquiryWebhookSecret}
-                onChange={(e) => {
-                  setGeneral((p) => ({
-                    ...p,
-                    inquiryWebhookSecret: e.target.value,
-                    clearInquiryWebhookSecret: false,
-                  }));
-                  setGeneralDirty(true);
-                }}
-                className={inputCls}
-                placeholder={
-                  general.inquiryWebhookSecretConfigured &&
-                  !general.clearInquiryWebhookSecret
-                    ? "Stored secret configured"
-                    : "whsec_..."
-                }
-              />
-              {general.inquiryWebhookSecretConfigured &&
-                !general.clearInquiryWebhookSecret && (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {INQUIRY_DELIVERY_PRESETS.map((preset) => (
                   <button
+                    key={preset.id}
+                    id={preset.id === "none" ? "inquiryDeliveryPreset" : undefined}
                     type="button"
                     onClick={() => {
                       setGeneral((p) => ({
                         ...p,
-                        inquiryWebhookSecret: "",
-                        clearInquiryWebhookSecret: true,
+                        inquiryWebhookPresetId: preset.id,
+                        inquiryWebhookUrl:
+                          preset.id === "none" ? "" : p.inquiryWebhookUrl,
+                        inquiryWebhookSecret:
+                          preset.id === "none" ? "" : p.inquiryWebhookSecret,
+                        clearInquiryWebhookSecret: preset.id === "none",
                       }));
                       setGeneralDirty(true);
                     }}
-                    className="text-xs font-medium text-amber-700 hover:text-amber-800"
+                    className={`rounded-2xl border p-4 text-left transition-colors ${
+                      general.inquiryWebhookPresetId === preset.id
+                        ? "border-blue-300 bg-blue-50"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
                   >
-                    Clear stored secret on next save
+                    <div className="text-sm font-semibold text-gray-900">
+                      {preset.label}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      {preset.description}
+                    </div>
                   </button>
-                )}
-              {general.clearInquiryWebhookSecret ? (
+                ))}
+              </div>
+
+              {general.inquiryWebhookPresetId === "none" ? (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                  Site-level inquiry delivery will stay email-only until you
+                  pick a named integration.
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {
+                        getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
+                          .label
+                      }
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {
+                        getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
+                          .description
+                      }
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label
+                        htmlFor="inquiryWebhookUrl"
+                        className="mb-1.5 block text-sm font-medium text-gray-700"
+                      >
+                        {
+                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
+                            .endpointLabel
+                        }
+                      </label>
+                      <input
+                        id="inquiryWebhookUrl"
+                        type="url"
+                        value={general.inquiryWebhookUrl}
+                        onChange={(e) => {
+                          setGeneral((p) => ({
+                            ...p,
+                            inquiryWebhookUrl: e.target.value,
+                          }));
+                          setGeneralDirty(true);
+                        }}
+                        className={inputCls}
+                        placeholder={
+                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
+                            .endpointPlaceholder
+                        }
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        {
+                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
+                            .endpointHelp
+                        }
+                      </p>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label
+                        htmlFor="inquiryWebhookSecret"
+                        className="mb-1.5 block text-sm font-medium text-gray-700"
+                      >
+                        {
+                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
+                            .secretLabel
+                        }
+                      </label>
+                      <input
+                        id="inquiryWebhookSecret"
+                        type="password"
+                        value={general.inquiryWebhookSecret}
+                        onChange={(e) => {
+                          setGeneral((p) => ({
+                            ...p,
+                            inquiryWebhookSecret: e.target.value,
+                            clearInquiryWebhookSecret: false,
+                          }));
+                          setGeneralDirty(true);
+                        }}
+                        className={inputCls}
+                        placeholder={
+                          general.inquiryWebhookSecretConfigured &&
+                          !general.clearInquiryWebhookSecret
+                            ? "Stored secret configured"
+                            : getInquiryDeliveryPreset(
+                                general.inquiryWebhookPresetId,
+                              ).secretPlaceholder
+                        }
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        {
+                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
+                            .secretHelp
+                        }
+                      </p>
+                      {general.inquiryWebhookSecretConfigured &&
+                        !general.clearInquiryWebhookSecret && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGeneral((p) => ({
+                                ...p,
+                                inquiryWebhookSecret: "",
+                                clearInquiryWebhookSecret: true,
+                              }));
+                              setGeneralDirty(true);
+                            }}
+                            className="mt-2 text-xs font-medium text-amber-700 hover:text-amber-800"
+                          >
+                            Clear stored secret on next save
+                          </button>
+                        )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {general.clearInquiryWebhookSecret ||
+              general.inquiryWebhookPresetId === "none" ? (
                 <p className="text-xs text-amber-700">
                   The stored webhook secret will be removed when you save.
                 </p>
