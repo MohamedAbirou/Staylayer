@@ -131,7 +131,7 @@ Setup: seed 3 test pages (2 published EN, 1 draft EN, 1 published ES) before tes
 - On save success: shows `toast.success("Page saved")`, `isDirty` resets to `false`
 - On save failure (500): shows `toast.error("Save failed...")`, `isDirty` stays `true`
 - ADMIN role: "Publish" button is visible
-- EDITOR role: "Publish" button is hidden (`user.role === 'EDITOR'` from `useAuth()`)
+- EDITOR membership role: "Publish" button is hidden when `canPublishContent()` returns `false` for the active session
 
 ### src/hooks/usePages.test.ts
 

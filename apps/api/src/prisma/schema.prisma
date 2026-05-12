@@ -11,12 +11,6 @@ datasource db {
 
 // ─── Enums ─────────────────────────────────────────────────
 
-enum Role {
-    EDITOR
-    ADMIN
-    SUPER_ADMIN
-}
-
 enum PlatformRole {
     PLATFORM_OWNER
     SUPPORT_ADMIN
@@ -165,10 +159,6 @@ model User {
     emailVerifiedAt DateTime?     @map("email_verified_at")
     /// Platform operator role. Null means the account is customer-only.
     platformRole    PlatformRole? @map("platform_role")
-    /// Legacy global operator role kept for current auth surfaces.
-    /// Customer workspace access must resolve through TenantMembership.
-    /// Phase 02 auth reads platformRole instead of this column.
-    role            Role          @default(EDITOR)
 
     // Brute-force protection
     failedAttempts Int       @default(0) @map("failed_attempts")
@@ -496,7 +486,6 @@ model Deployment {
     errorMessage      String?          @map("error_message")
     createdAt         DateTime         @default(now()) @map("created_at")
     updatedAt         DateTime         @updatedAt @map("updated_at")
-
     site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
     @@index([siteId])

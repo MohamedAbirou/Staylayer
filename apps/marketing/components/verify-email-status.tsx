@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   buildDashboardAuthHandoffUrl,
   getBrowserApiBaseUrl,
+  resolveDashboardPath,
   sanitizeReturnTo,
   type VerificationResponse,
 } from "@/lib/public-api";
@@ -63,7 +64,7 @@ export function VerifyEmailStatus({
 
       const payload = (await response.json()) as VerificationResponse;
       if (!cancelled) {
-        const destination = safeReturnTo || payload.redirectTo;
+        const destination = safeReturnTo || resolveDashboardPath(payload);
         window.location.href = buildDashboardAuthHandoffUrl(
           payload,
           destination,

@@ -6,7 +6,6 @@ import {
 import {
   OnboardingMilestoneKey,
   Prisma,
-  Role,
   SiteStatus,
   SiteType,
   TenantMembershipRole,
@@ -85,7 +84,6 @@ export class PublicRegistrationService {
               email,
               passwordHash,
               platformRole: null,
-              role: Role.EDITOR,
             },
             select: {
               id: true,

@@ -6,7 +6,6 @@ import {
 import {
   NotificationCategory,
   Prisma,
-  Role,
   SiteStatus,
   SiteType,
   TenantMembershipRole,
@@ -238,7 +237,6 @@ export class TenantWorkspaceService {
           passwordHash,
           emailVerifiedAt: new Date(),
           platformRole: null,
-          role: Role.EDITOR,
         },
         select: {
           id: true,

@@ -7,11 +7,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import {
-  NotificationCategory,
-  Role,
-  TenantMembershipRole,
-} from "@prisma/client";
+import { NotificationCategory, TenantMembershipRole } from "@prisma/client";
 import { randomBytes, createHash } from "crypto";
 import { BillingService } from "../billing/billing.service";
 import { TransactionalEmailService } from "../mail/transactional-email.service";
@@ -535,7 +531,6 @@ export class CustomerAccessService {
             email: invitation.email,
             passwordHash: passwordHash!,
             emailVerifiedAt: new Date(),
-            role: Role.EDITOR,
             platformRole: null,
           },
           select: { id: true },

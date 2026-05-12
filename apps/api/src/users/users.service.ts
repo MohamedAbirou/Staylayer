@@ -27,7 +27,6 @@ const authUserSelect = Prisma.validator<Prisma.UserSelect>()({
   passwordHash: true,
   emailVerifiedAt: true,
   platformRole: true,
-  role: true,
   failedAttempts: true,
   lockedUntil: true,
   memberships: {

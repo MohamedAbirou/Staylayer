@@ -84,7 +84,7 @@ export class PublicAuthController {
 
     return {
       ...authResponse,
-      redirectTo: "/onboarding",
+      redirectTo: this.resolveCustomerRedirectPath(authResponse),
     };
   }
 
@@ -134,7 +134,29 @@ export class PublicAuthController {
 
     return {
       ...authResponse,
-      redirectTo: "/workspace",
+      redirectTo: this.resolveCustomerRedirectPath(authResponse),
     };
+  }
+
+  private resolveCustomerRedirectPath(authResponse: {
+    activeMembershipRole: string | null;
+    activeSite: { id: string } | null;
+  }): string {
+    if (
+      authResponse.activeMembershipRole === "OWNER" ||
+      authResponse.activeMembershipRole === "ADMIN"
+    ) {
+      return authResponse.activeSite ? "/" : "/workspace";
+    }
+
+    if (authResponse.activeMembershipRole === "EDITOR") {
+      return authResponse.activeSite ? "/pages" : "/";
+    }
+
+    if (authResponse.activeMembershipRole === "BILLING") {
+      return "/billing";
+    }
+
+    return authResponse.activeSite ? "/" : "/workspace";
   }
 }

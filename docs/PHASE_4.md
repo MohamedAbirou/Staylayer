@@ -57,7 +57,7 @@ All error responses follow this structure:
 Auth:        Public (no token required)
 Rate limit:  10 req/15min per IP
 Request:     { "email": "string (email format)", "password": "string (min 8)" }
-Success 200: { "accessToken": "string", "user": { "id": "string", "email": "string", "role": "EDITOR|ADMIN|SUPER_ADMIN" } }
+Success 200: { "accessToken": "string", "user": { "id": "string", "email": "string", "platformRole": "PLATFORM_OWNER|SUPPORT_ADMIN|FINANCE_ADMIN|null" }, "activeMembershipRole": "OWNER|ADMIN|EDITOR|BILLING|null" }
              + Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/auth/refresh; Max-Age=2592000
 Error 401:   { code: "UNAUTHORIZED", message: "Invalid email or password" }
 Error 403:   { code: "ACCOUNT_LOCKED", message: "Account locked. Try again after {lockedUntil}" }
@@ -89,23 +89,23 @@ Error 401:   { code: "UNAUTHORIZED" }
 
 ---
 
-#### Users Endpoints (SUPER_ADMIN only)
+#### Users Endpoints (PLATFORM_OWNER only)
 
 **GET /users**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
+Auth:        JWT required, PLATFORM_OWNER only
 Query:       ?page=1&limit=20
-Success 200: { "data": [{ "id", "email", "role", "createdAt" }], "total": number, "page": number, "limit": number }
+Success 200: { "data": [{ "id", "email", "platformRole", "createdAt" }], "total": number, "page": number, "limit": number }
 Error 403:   { code: "FORBIDDEN" }
 ```
 
 **POST /users**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
-Request:     { "email": "string (email)", "password": "string (min 8)", "role": "EDITOR|ADMIN|SUPER_ADMIN" }
-Success 201: { "id", "email", "role", "createdAt" }
+Auth:        JWT required, PLATFORM_OWNER only
+Request:     { "email": "string (email)", "password": "string (min 8)", "platformRole": "PLATFORM_OWNER|SUPPORT_ADMIN|FINANCE_ADMIN" }
+Success 201: { "id", "email", "platformRole", "createdAt" }
 Error 409:   { code: "CONFLICT", message: "User with this email already exists" }
 Error 400:   { code: "VALIDATION_ERROR" }
 ```
@@ -113,10 +113,10 @@ Error 400:   { code: "VALIDATION_ERROR" }
 **PATCH /users/:id**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
-Request:     { "email?": "string", "password?": "string", "role?": "EDITOR|ADMIN|SUPER_ADMIN" }
+Auth:        JWT required, PLATFORM_OWNER only
+Request:     { "email?": "string", "password?": "string", "platformRole?": "PLATFORM_OWNER|SUPPORT_ADMIN|FINANCE_ADMIN" }
              (all fields optional, at least one required)
-Success 200: { "id", "email", "role", "updatedAt" }
+Success 200: { "id", "email", "platformRole", "updatedAt" }
 Error 404:   { code: "NOT_FOUND" }
 Error 409:   { code: "CONFLICT", message: "Email already in use" }
 ```
@@ -124,7 +124,7 @@ Error 409:   { code: "CONFLICT", message: "Email already in use" }
 **DELETE /users/:id**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
+Auth:        JWT required, PLATFORM_OWNER only
 Success 200: { "message": "User deleted" }
 Error 404:   { code: "NOT_FOUND" }
 Error 400:   { code: "VALIDATION_ERROR", message: "Cannot delete your own account" }
@@ -170,7 +170,7 @@ Error 404:   { code: "NOT_FOUND" }
 **POST /pages**
 
 ```
-Auth:        JWT required (EDITOR, ADMIN, SUPER_ADMIN)
+Auth:        JWT required (EDITOR, ADMIN, OWNER membership)
 Request:     {
                "slug": "string (kebab-case, 1-200 chars)",
                "locale": "en|es|fr|de",
@@ -189,7 +189,7 @@ Error 413:   { code: "PAYLOAD_TOO_LARGE", message: "puckData exceeds 5MB limit" 
 **PUT /pages/:slug**
 
 ```
-Auth:        JWT required (EDITOR, ADMIN, SUPER_ADMIN)
+Auth:        JWT required (EDITOR, ADMIN, OWNER membership)
 Query:       ?locale=en (required)
 Request:     {
                "title?": "string",
@@ -207,7 +207,7 @@ Error 413:   { code: "PAYLOAD_TOO_LARGE" }
 **DELETE /pages/:slug**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required — deletes one locale variant)
 Success 200: { "message": "Page deleted" }
 Error 404:   { code: "NOT_FOUND" }
@@ -217,7 +217,7 @@ Error 403:   { code: "FORBIDDEN" }
 **POST /pages/:slug/publish**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required)
 Side effect: Sets published=true, then calls RevalidationService.revalidatePage(slug)
              which triggers ISR revalidation on the website for all locales
@@ -229,7 +229,7 @@ Error 403:   { code: "FORBIDDEN" }
 **POST /pages/:slug/unpublish**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required)
 Side effect: Sets published=false, triggers revalidation (page will 404 on next request)
 Success 200: { "message": "Page unpublished", "slug", "locale" }
@@ -273,7 +273,7 @@ Error 404:   { code: "NOT_FOUND", message: "Page not found" }
 **POST /pages/:slug/versions/:id/restore**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required)
 Side effect: Copies version's puckData to the Page row.
              Creates a new PageVersion with note "Restored from version {id}".

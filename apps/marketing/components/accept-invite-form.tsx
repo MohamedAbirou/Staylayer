@@ -6,6 +6,7 @@ import { OrbitButton } from "@/components/orbit-button";
 import {
   buildDashboardAuthHandoffUrl,
   getBrowserApiBaseUrl,
+  resolveDashboardPath,
   type AcceptInvitationResponse,
   type WorkspaceInvitationPreview,
 } from "@/lib/public-api";
@@ -99,7 +100,7 @@ export function AcceptInviteForm({ token }: { token: string | null }) {
       const payload = (await response.json()) as AcceptInvitationResponse;
       window.location.href = buildDashboardAuthHandoffUrl(
         payload,
-        payload.redirectTo,
+        resolveDashboardPath(payload),
       );
     } finally {
       setSubmitting(false);

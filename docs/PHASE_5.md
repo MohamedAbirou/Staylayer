@@ -951,10 +951,12 @@ const fs = require("fs");
 const path = require("path");
 
 const API_URL = process.env.CMS_API_URL || "http://localhost:4000";
-const TOKEN = process.env.CMS_SEED_TOKEN; // ADMIN or SUPER_ADMIN JWT
+const TOKEN = process.env.CMS_SEED_TOKEN; // OWNER or ADMIN membership JWT
 
 if (!TOKEN) {
-  console.error("CMS_SEED_TOKEN env var required (ADMIN role JWT)");
+  console.error(
+    "CMS_SEED_TOKEN env var required (OWNER or ADMIN membership JWT)",
+  );
   process.exit(1);
 }
 

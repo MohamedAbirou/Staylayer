@@ -6,31 +6,42 @@ import { AppModule } from "../src/app.module";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { globalValidationPipe } from "../src/common/pipes/validation.pipe";
 import * as argon2 from "argon2";
-import { Role } from "@prisma/client";
+import { PlatformRole, SiteStatus, TenantMembershipRole } from "@prisma/client";
+import { expect } from "@playwright/test";
 
 describe("MyAllocator CMS API (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
-  const testSuperAdmin = {
-    email: "superadmin@test.com",
+  const testPlatformOwner = {
+    email: "platformowner@test.com",
     password: "TestPassword123!",
-    role: Role.SUPER_ADMIN,
+    platformRole: PlatformRole.PLATFORM_OWNER,
   };
 
   const testAdmin = {
     email: "admin@test.com",
     password: "TestPassword123!",
-    role: Role.ADMIN,
+    membershipRole: TenantMembershipRole.ADMIN,
   };
 
   const testEditor = {
     email: "editor@test.com",
     password: "TestPassword123!",
-    role: Role.EDITOR,
+    membershipRole: TenantMembershipRole.EDITOR,
   };
 
-  let superAdminToken: string;
+  const testTenant = {
+    slug: "e2e-workspace",
+    name: "E2E Workspace",
+  };
+
+  const testSite = {
+    slug: "e2e-site",
+    name: "E2E Site",
+  };
+
+  let platformOwnerToken: string;
   let adminToken: string;
   let editorToken: string;
 
@@ -50,32 +61,76 @@ describe("MyAllocator CMS API (e2e)", () => {
     await prisma.pageVersion.deleteMany({});
     await prisma.page.deleteMany({});
     await prisma.refreshToken.deleteMany({});
+    await prisma.tenant.deleteMany({ where: { slug: testTenant.slug } });
     await prisma.user.deleteMany({});
 
     // Seed test users
-    const passwordHash = await argon2.hash(testSuperAdmin.password, {
+    const passwordHash = await argon2.hash(testPlatformOwner.password, {
       type: argon2.argon2id,
       memoryCost: 65536,
       timeCost: 3,
       parallelism: 4,
     });
 
-    await prisma.user.createMany({
+    const platformOwnerUser = await prisma.user.create({
+      data: {
+        email: testPlatformOwner.email,
+        passwordHash,
+        platformRole: testPlatformOwner.platformRole,
+      },
+      select: { id: true },
+    });
+
+    const adminUser = await prisma.user.create({
+      data: {
+        email: testAdmin.email,
+        passwordHash,
+        emailVerifiedAt: new Date(),
+        platformRole: null,
+      },
+      select: { id: true },
+    });
+
+    const editorUser = await prisma.user.create({
+      data: {
+        email: testEditor.email,
+        passwordHash,
+        emailVerifiedAt: new Date(),
+        platformRole: null,
+      },
+      select: { id: true },
+    });
+
+    const tenant = await prisma.tenant.create({
+      data: {
+        slug: testTenant.slug,
+        name: testTenant.name,
+      },
+      select: { id: true },
+    });
+
+    await prisma.site.create({
+      data: {
+        tenantId: tenant.id,
+        slug: testSite.slug,
+        name: testSite.name,
+        status: SiteStatus.ACTIVE,
+      },
+    });
+
+    await prisma.tenantMembership.createMany({
       data: [
         {
-          email: testSuperAdmin.email,
-          passwordHash,
-          role: testSuperAdmin.role,
+          tenantId: tenant.id,
+          userId: adminUser.id,
+          role: testAdmin.membershipRole,
+          isDefault: true,
         },
         {
-          email: testAdmin.email,
-          passwordHash,
-          role: testAdmin.role,
-        },
-        {
-          email: testEditor.email,
-          passwordHash,
-          role: testEditor.role,
+          tenantId: tenant.id,
+          userId: editorUser.id,
+          role: testEditor.membershipRole,
+          isDefault: true,
         },
       ],
     });
@@ -86,6 +141,7 @@ describe("MyAllocator CMS API (e2e)", () => {
     await prisma.pageVersion.deleteMany({});
     await prisma.page.deleteMany({});
     await prisma.refreshToken.deleteMany({});
+    await prisma.tenant.deleteMany({ where: { slug: testTenant.slug } });
     await prisma.user.deleteMany({});
     await app.close();
   });
@@ -112,15 +168,15 @@ describe("MyAllocator CMS API (e2e)", () => {
       const res = await request(app.getHttpServer())
         .post("/auth/login")
         .send({
-          email: testSuperAdmin.email,
-          password: testSuperAdmin.password,
+          email: testPlatformOwner.email,
+          password: testPlatformOwner.password,
         })
         .expect(HttpStatus.OK);
 
       expect(res.body).toHaveProperty("accessToken");
-      expect(res.body.user).toHaveProperty("email", testSuperAdmin.email);
-      expect(res.body.user).toHaveProperty("role", "SUPER_ADMIN");
-      superAdminToken = res.body.accessToken;
+      expect(res.body.user).toHaveProperty("email", testPlatformOwner.email);
+      expect(res.body.user).toHaveProperty("platformRole", "PLATFORM_OWNER");
+      platformOwnerToken = res.body.accessToken;
     });
 
     it("should login admin successfully", async () => {
@@ -144,7 +200,7 @@ describe("MyAllocator CMS API (e2e)", () => {
     it("should return 401 for wrong password", async () => {
       const res = await request(app.getHttpServer())
         .post("/auth/login")
-        .send({ email: testSuperAdmin.email, password: "WrongPassword1!" })
+        .send({ email: testPlatformOwner.email, password: "WrongPassword1!" })
         .expect(HttpStatus.UNAUTHORIZED);
 
       expect(res.body.code).toBe("UNAUTHORIZED");
@@ -173,8 +229,8 @@ describe("MyAllocator CMS API (e2e)", () => {
       const loginRes = await request(app.getHttpServer())
         .post("/auth/login")
         .send({
-          email: testSuperAdmin.email,
-          password: testSuperAdmin.password,
+          email: testPlatformOwner.email,
+          password: testPlatformOwner.password,
         })
         .expect(HttpStatus.OK);
 
@@ -202,7 +258,7 @@ describe("MyAllocator CMS API (e2e)", () => {
     it("should logout successfully", async () => {
       const res = await request(app.getHttpServer())
         .post("/auth/logout")
-        .set("Authorization", `Bearer ${superAdminToken}`)
+        .set("Authorization", `Bearer ${platformOwnerToken}`)
         .expect(HttpStatus.OK);
 
       expect(res.body).toHaveProperty("message", "Logged out successfully");
@@ -220,24 +276,24 @@ describe("MyAllocator CMS API (e2e)", () => {
     // This will be called after the describe blocks' beforeAll
   });
 
-  // ─── Users (SUPER_ADMIN only) ───────────────────────────
+  // ─── Users (PLATFORM_OWNER only) ────────────────────────
 
   describe("Users CRUD", () => {
     let createdUserId: string;
 
     beforeAll(async () => {
-      // Re-login super admin
+      // Re-login platform owner
       const res = await request(app.getHttpServer()).post("/auth/login").send({
-        email: testSuperAdmin.email,
-        password: testSuperAdmin.password,
+        email: testPlatformOwner.email,
+        password: testPlatformOwner.password,
       });
-      superAdminToken = res.body.accessToken;
+      platformOwnerToken = res.body.accessToken;
     });
 
-    it("GET /users — should list users (SUPER_ADMIN)", async () => {
+    it("GET /users — should list users (PLATFORM_OWNER)", async () => {
       const res = await request(app.getHttpServer())
         .get("/users")
-        .set("Authorization", `Bearer ${superAdminToken}`)
+        .set("Authorization", `Bearer ${platformOwnerToken}`)
         .expect(HttpStatus.OK);
 
       expect(res.body).toHaveProperty("data");
@@ -258,30 +314,31 @@ describe("MyAllocator CMS API (e2e)", () => {
         .expect(HttpStatus.FORBIDDEN);
     });
 
-    it("POST /users — should create user (SUPER_ADMIN)", async () => {
+    it("POST /users — should create user (PLATFORM_OWNER)", async () => {
       const res = await request(app.getHttpServer())
         .post("/users")
-        .set("Authorization", `Bearer ${superAdminToken}`)
+        .set("Authorization", `Bearer ${platformOwnerToken}`)
         .send({
           email: "newuser@test.com",
           password: "NewUserPass1!",
-          role: "EDITOR",
+          platformRole: "SUPPORT_ADMIN",
         })
         .expect(HttpStatus.CREATED);
 
       expect(res.body).toHaveProperty("id");
       expect(res.body).toHaveProperty("email", "newuser@test.com");
+      expect(res.body).toHaveProperty("platformRole", "SUPPORT_ADMIN");
       createdUserId = res.body.id;
     });
 
     it("POST /users — should return 409 for duplicate email", async () => {
       const res = await request(app.getHttpServer())
         .post("/users")
-        .set("Authorization", `Bearer ${superAdminToken}`)
+        .set("Authorization", `Bearer ${platformOwnerToken}`)
         .send({
           email: "newuser@test.com",
           password: "AnotherPass1!",
-          role: "EDITOR",
+          platformRole: "SUPPORT_ADMIN",
         })
         .expect(HttpStatus.CONFLICT);
 
@@ -291,7 +348,7 @@ describe("MyAllocator CMS API (e2e)", () => {
     it("PATCH /users/:id — should update user", async () => {
       const res = await request(app.getHttpServer())
         .patch(`/users/${createdUserId}`)
-        .set("Authorization", `Bearer ${superAdminToken}`)
+        .set("Authorization", `Bearer ${platformOwnerToken}`)
         .send({ email: "updated@test.com" })
         .expect(HttpStatus.OK);
 
@@ -301,7 +358,7 @@ describe("MyAllocator CMS API (e2e)", () => {
     it("DELETE /users/:id — should delete user", async () => {
       const res = await request(app.getHttpServer())
         .delete(`/users/${createdUserId}`)
-        .set("Authorization", `Bearer ${superAdminToken}`)
+        .set("Authorization", `Bearer ${platformOwnerToken}`)
         .expect(HttpStatus.OK);
 
       expect(res.body).toHaveProperty("message", "User deleted");
@@ -309,12 +366,12 @@ describe("MyAllocator CMS API (e2e)", () => {
 
     it("DELETE /users/:id — cannot delete own account", async () => {
       const currentUser = await prisma.user.findUnique({
-        where: { email: testSuperAdmin.email },
+        where: { email: testPlatformOwner.email },
       });
 
       const res = await request(app.getHttpServer())
         .delete(`/users/${currentUser!.id}`)
-        .set("Authorization", `Bearer ${superAdminToken}`)
+        .set("Authorization", `Bearer ${platformOwnerToken}`)
         .expect(HttpStatus.BAD_REQUEST);
 
       expect(res.body.code).toBe("VALIDATION_ERROR");
@@ -336,10 +393,10 @@ describe("MyAllocator CMS API (e2e)", () => {
     beforeAll(async () => {
       // Re-login tokens
       let res = await request(app.getHttpServer()).post("/auth/login").send({
-        email: testSuperAdmin.email,
-        password: testSuperAdmin.password,
+        email: testPlatformOwner.email,
+        password: testPlatformOwner.password,
       });
-      superAdminToken = res.body.accessToken;
+      platformOwnerToken = res.body.accessToken;
 
       res = await request(app.getHttpServer())
         .post("/auth/login")

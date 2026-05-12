@@ -14,7 +14,6 @@ import {
   FormType,
   PlatformRole,
   PrismaClient,
-  Role,
   SiteStatus,
   SiteType,
   TenantMembershipRole,
@@ -38,7 +37,6 @@ async function hashPassword(password: string): Promise<string> {
 async function upsertUser(
   email: string,
   password: string,
-  role: Role,
   platformRole: PlatformRole | null = null,
 ): Promise<{ id: string; email: string; platformRole: PlatformRole | null }> {
   const emailVerifiedAt = platformRole ? null : new Date();
@@ -49,7 +47,6 @@ async function upsertUser(
       email: true,
       passwordHash: true,
       emailVerifiedAt: true,
-      role: true,
       platformRole: true,
     },
   });
@@ -57,7 +54,6 @@ async function upsertUser(
     const updates: {
       passwordHash?: string;
       emailVerifiedAt?: Date | null;
-      role?: Role;
       platformRole?: PlatformRole | null;
     } = {};
     const passwordMatches = await argon2.verify(
@@ -67,10 +63,6 @@ async function upsertUser(
 
     if (!passwordMatches) {
       updates.passwordHash = await hashPassword(password);
-    }
-
-    if (existing.role !== role) {
-      updates.role = role;
     }
 
     if (existing.platformRole !== platformRole) {
@@ -100,7 +92,7 @@ async function upsertUser(
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, passwordHash, emailVerifiedAt, role, platformRole },
+    data: { email, passwordHash, emailVerifiedAt, platformRole },
     select: { id: true, email: true, platformRole: true },
   });
 
@@ -517,29 +509,27 @@ async function main(): Promise<void> {
   await upsertUser(
     "superadmin@myallocator.com",
     "SuperAdmin123!",
-    Role.SUPER_ADMIN,
     PlatformRole.PLATFORM_OWNER,
   );
   const opsAdmin = await upsertUser(
     "admin@myallocator.com",
     "Admin123!",
-    Role.ADMIN,
     PlatformRole.SUPPORT_ADMIN,
   );
   const coastalOwner = await upsertUser(
     "owner@azurebayvillas.com",
     "AzureBay123!",
-    Role.ADMIN,
+    null,
   );
   const coastalEditor = await upsertUser(
     "editor@azurebayvillas.com",
     "AzureEdit123!",
-    Role.EDITOR,
+    null,
   );
   const glampingOwner = await upsertUser(
     "owner@pineandpeak.com",
     "PinePeak123!",
-    Role.ADMIN,
+    null,
   );
 
   console.log("\nTenants:");

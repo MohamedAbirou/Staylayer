@@ -190,7 +190,7 @@ pnpm db:migrate
 # 5. Generate the Prisma client (must run AFTER migrate)
 pnpm db:generate
 
-# 6. Seed the first SUPER_ADMIN user
+# 6. Seed the first platform owner user
 pnpm --filter @myallocator/api db:seed
 
 # 7. Build the NestJS app
@@ -374,7 +374,7 @@ After the initial deployment, run through this in order:
 - [ ] Database is accessible from the VPS (`psql $DATABASE_URL`)
 - [ ] `pnpm db:migrate` ran successfully (no errors)
 - [ ] `pnpm db:generate` ran successfully
-- [ ] `pnpm db:seed` created the first SUPER_ADMIN user
+- [ ] `pnpm db:seed` created the first platform owner user
 - [ ] API health check responds: `curl https://api.myallocator.com/health`
 - [ ] Dashboard opens at `https://cms.myallocator.com` and login works
 - [ ] Website ISR works: publish a page from dashboard and verify it updates on the website

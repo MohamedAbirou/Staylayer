@@ -61,10 +61,10 @@ myallocator-cms/
 │   │   │   │   │   └── jwt.strategy.ts     # JWT access token extraction & validation
 │   │   │   │   ├── guards/
 │   │   │   │   │   ├── jwt-auth.guard.ts   # Applies JwtStrategy
-│   │   │   │   │   └── roles.guard.ts      # RBAC guard (checks @Roles() decorator)
+│   │   │   │   │   └── roles.guard.ts      # RBAC guard (checks platform + workspace role decorators)
 │   │   │   │   ├── decorators/
 │   │   │   │   │   ├── current-user.decorator.ts  # Extracts user from req
-│   │   │   │   │   └── roles.decorator.ts         # @Roles('ADMIN', 'SUPER_ADMIN')
+│   │   │   │   │   └── roles.decorator.ts         # @PlatformRoles(...) + @MembershipRoles(...)
 │   │   │   │   └── dto/
 │   │   │   │       ├── login.dto.ts        # { email, password }
 │   │   │   │       └── refresh.dto.ts      # (empty — token comes from cookie)
@@ -128,7 +128,7 @@ myallocator-cms/
 │   │   │   │   ├── NewPagePage.tsx      # Create page form (slug, locale, title)
 │   │   │   │   ├── EditorPage.tsx       # Puck editor (main editing interface)
 │   │   │   │   ├── PreviewPage.tsx      # Server-rendered preview in iframe
-│   │   │   │   └── SettingsPage.tsx     # User management (SUPER_ADMIN)
+│   │   │   │   └── SettingsPage.tsx     # Internal user management (PLATFORM_OWNER)
 │   │   │   ├── components/
 │   │   │   │   ├── Layout.tsx           # Dashboard shell (sidebar + content)
 │   │   │   │   ├── Sidebar.tsx          # Navigation sidebar
@@ -420,7 +420,7 @@ REVALIDATION_SECRET=random_32_char_hex_string
 
 #### AuthModule (`src/auth/auth.module.ts`)
 
-- **Role:** Authentication (JWT + refresh token) and authorization (RBAC)
+- **Role:** Authentication (JWT + refresh token) and authorization (platform + workspace RBAC)
 - **Services:**
   - AuthService — login validation, access token generation, refresh token issuance/rotation, logout (revoke all user tokens)
 - **Controllers:**
@@ -428,7 +428,7 @@ REVALIDATION_SECRET=random_32_char_hex_string
 - **Providers (internal):**
   - LocalStrategy — validates email + password via Passport
   - JwtStrategy — extracts and validates JWT from Authorization header
-  - RolesGuard — checks `@Roles()` metadata against `req.user.role`
+  - RolesGuard — checks `@PlatformRoles()` and `@MembershipRoles()` metadata against `req.user.platformRole` and `req.user.activeMembershipRole`
 - **Exports:** JwtStrategy, RolesGuard (consumed by other modules' controllers)
 - **Imports:** PrismaModule (implicit via Global), UsersModule (for user lookup), PassportModule, JwtModule (async config with RS256 keys)
 - **Rate limit override:** Auth endpoints → 10 req/15min per IP (stricter than default)
@@ -439,7 +439,7 @@ REVALIDATION_SECRET=random_32_char_hex_string
 - **Services:**
   - UsersService — createUser, findByEmail, findById, updateUser, deleteUser, hashPassword, verifyPassword, incrementFailedAttempts, resetFailedAttempts, lockAccount
 - **Controllers:**
-  - UsersController — `GET /users`, `POST /users`, `PATCH /users/:id`, `DELETE /users/:id` (all SUPER_ADMIN only)
+  - UsersController — `GET /users`, `POST /users`, `PATCH /users/:id`, `DELETE /users/:id` (platform-owner only)
 - **Exports:** UsersService — consumed by AuthModule for login validation
 - **Imports:** PrismaModule (implicit via Global)
 
@@ -487,10 +487,17 @@ datasource db {
 
 // ─── Enums ─────────────────────────────────────────────────
 
-enum Role {
-  EDITOR
+enum PlatformRole {
+  PLATFORM_OWNER
+  SUPPORT_ADMIN
+  FINANCE_ADMIN
+}
+
+enum TenantMembershipRole {
+  OWNER
   ADMIN
-  SUPER_ADMIN
+  EDITOR
+  BILLING
 }
 
 // ─── User ──────────────────────────────────────────────────
@@ -499,7 +506,7 @@ model User {
   id             String   @id @default(cuid())
   email          String   @unique
   passwordHash   String   @map("password_hash")
-  role           Role     @default(EDITOR)
+  platformRole   PlatformRole? @map("platform_role")
 
   // Brute-force protection
   failedAttempts Int      @default(0) @map("failed_attempts")
@@ -509,8 +516,26 @@ model User {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   refreshTokens  RefreshToken[]
+  memberships    TenantMembership[]
 
   @@map("users")
+}
+
+// ─── Tenant Membership ─────────────────────────────────────
+
+model TenantMembership {
+  id         String               @id @default(cuid())
+  userId     String               @map("user_id")
+  tenantId   String               @map("tenant_id")
+  role       TenantMembershipRole
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, role])
+  @@map("tenant_memberships")
 }
 
 // ─── Refresh Token ─────────────────────────────────────────
@@ -622,13 +647,13 @@ model PageVersion {
 4. On success:
    a. Reset failedAttempts to 0, clear lockedUntil
    b. Generate access token (JWT, RS256, 15min expiry)
-      Payload: { sub: userId, email, role, iat, exp }
+      Payload: { sub: userId, email, platformRole, activeMembershipRole, activeTenantId, activeSiteId, iat, exp }
    c. Generate refresh token (crypto.randomBytes(32).toString('hex'))
    d. Hash refresh token with argon2id, store in RefreshToken table
    e. Set refresh token in httpOnly cookie:
       Set-Cookie: refresh_token={raw_token}; HttpOnly; Secure;
       SameSite=Strict; Path=/auth/refresh; Max-Age=2592000
-   f. Return { accessToken, user: { id, email, role } } in body
+    f. Return the authenticated session payload with `user.platformRole`, `activeMembershipRole`, and active tenant/site context in the body
 ```
 
 **Refresh Flow (POST /auth/refresh):**
@@ -663,25 +688,30 @@ model PageVersion {
 
 #### Authorization (RBAC)
 
-**Permission Matrix:**
+**Workspace Permission Matrix:**
 
-| Permission                   | EDITOR | ADMIN  | SUPER_ADMIN |
-| ---------------------------- | ------ | ------ | ----------- |
-| Read pages (published)       | Yes    | Yes    | Yes         |
-| Read pages (all incl. draft) | Yes    | Yes    | Yes         |
-| Create page                  | Yes    | Yes    | Yes         |
-| Update page (save draft)     | Yes    | Yes    | Yes         |
-| Delete page                  | **No** | Yes    | Yes         |
-| Publish / Unpublish          | **No** | Yes    | Yes         |
-| View version history         | Yes    | Yes    | Yes         |
-| Restore version              | **No** | Yes    | Yes         |
-| Manage users                 | **No** | **No** | Yes         |
+| Permission                   | EDITOR | ADMIN  | OWNER | BILLING |
+| ---------------------------- | ------ | ------ | ----- | ------- |
+| Read pages (published)       | Yes    | Yes    | Yes   | No      |
+| Read pages (all incl. draft) | Yes    | Yes    | Yes   | No      |
+| Create page                  | Yes    | Yes    | Yes   | No      |
+| Update page (save draft)     | Yes    | Yes    | Yes   | No      |
+| Publish / Unpublish          | **No** | Yes    | Yes   | No      |
+| Delete page permanently      | **No** | **No** | Yes   | No      |
+| Manage members / sites       | **No** | Yes    | Yes   | No      |
+| Access billing               | **No** | **No** | Yes   | Yes     |
+
+Platform administration routes are separate and require `PlatformRole` values such as `PLATFORM_OWNER`, `SUPPORT_ADMIN`, or `FINANCE_ADMIN`.
 
 **Implementation:**
 
 ```typescript
 // decorators/roles.decorator.ts
-export const Roles = (...roles: Role[]) => SetMetadata("roles", roles);
+export const PlatformRoles = (...roles: PlatformRole[]) =>
+  SetMetadata("platformRoles", roles);
+
+export const MembershipRoles = (...roles: TenantMembershipRole[]) =>
+  SetMetadata("membershipRoles", roles);
 
 // guards/roles.guard.ts
 @Injectable()
@@ -689,13 +719,28 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<Role[]>("roles", [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (!requiredRoles) return true; // no @Roles() = public to authenticated users
+    const requiredPlatformRoles = this.reflector.getAllAndOverride<
+      PlatformRole[]
+    >("platformRoles", [context.getHandler(), context.getClass()]);
+    const requiredMembershipRoles = this.reflector.getAllAndOverride<
+      TenantMembershipRole[]
+    >("membershipRoles", [context.getHandler(), context.getClass()]);
     const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.includes(user.role);
+
+    if (requiredPlatformRoles?.length) {
+      return (
+        !!user.platformRole && requiredPlatformRoles.includes(user.platformRole)
+      );
+    }
+
+    if (requiredMembershipRoles?.length) {
+      return (
+        !!user.activeMembershipRole &&
+        requiredMembershipRoles.includes(user.activeMembershipRole)
+      );
+    }
+
+    return true;
   }
 }
 ```
@@ -705,11 +750,11 @@ export class RolesGuard implements CanActivate {
 ```typescript
 @Post(':slug/publish')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.SUPER_ADMIN)
+@MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
 async publishPage(@Param('slug') slug: string) { ... }
 ```
 
-**Why not CASL:** The permission matrix is flat — three roles, no ownership semantics (any editor can edit any page, not just their own). CASL adds complexity for attribute-based rules we don't need. If ownership restrictions are added later (e.g., "editors can only edit pages they created"), add CASL at that point. For now, the simple RolesGuard is sufficient and easier to audit.
+**Why not CASL:** The current permission model is still mostly role-based and scoped either to the platform or the active tenant membership. The split `PlatformRoles` / `MembershipRoles` decorators keep that explicit and easy to audit. If per-record ownership rules are introduced later, CASL becomes more compelling; for now, the guard-based approach is sufficient.
 
 #### Security Hardening
 
@@ -795,7 +840,7 @@ All error responses follow this structure:
 Auth:        Public (no token required)
 Rate limit:  10 req/15min per IP
 Request:     { "email": "string (email format)", "password": "string (min 8)" }
-Success 200: { "accessToken": "string", "user": { "id": "string", "email": "string", "role": "EDITOR|ADMIN|SUPER_ADMIN" } }
+Success 200: { "accessToken": "string", "user": { "id": "string", "email": "string", "platformRole": "PLATFORM_OWNER|SUPPORT_ADMIN|FINANCE_ADMIN|null" }, "activeMembershipRole": "OWNER|ADMIN|EDITOR|BILLING|null" }
              + Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/auth/refresh; Max-Age=2592000
 Error 401:   { code: "UNAUTHORIZED", message: "Invalid email or password" }
 Error 403:   { code: "ACCOUNT_LOCKED", message: "Account locked. Try again after {lockedUntil}" }
@@ -827,23 +872,23 @@ Error 401:   { code: "UNAUTHORIZED" }
 
 ---
 
-#### Users Endpoints (SUPER_ADMIN only)
+#### Users Endpoints (PLATFORM_OWNER only)
 
 **GET /users**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
+Auth:        JWT required, PLATFORM_OWNER only
 Query:       ?page=1&limit=20
-Success 200: { "data": [{ "id", "email", "role", "createdAt" }], "total": number, "page": number, "limit": number }
+Success 200: { "data": [{ "id", "email", "platformRole", "createdAt" }], "total": number, "page": number, "limit": number }
 Error 403:   { code: "FORBIDDEN" }
 ```
 
 **POST /users**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
-Request:     { "email": "string (email)", "password": "string (min 8)", "role": "EDITOR|ADMIN|SUPER_ADMIN" }
-Success 201: { "id", "email", "role", "createdAt" }
+Auth:        JWT required, PLATFORM_OWNER only
+Request:     { "email": "string (email)", "password": "string (min 8)", "platformRole": "PLATFORM_OWNER|SUPPORT_ADMIN|FINANCE_ADMIN" }
+Success 201: { "id", "email", "platformRole", "createdAt" }
 Error 409:   { code: "CONFLICT", message: "User with this email already exists" }
 Error 400:   { code: "VALIDATION_ERROR" }
 ```
@@ -851,10 +896,10 @@ Error 400:   { code: "VALIDATION_ERROR" }
 **PATCH /users/:id**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
-Request:     { "email?": "string", "password?": "string", "role?": "EDITOR|ADMIN|SUPER_ADMIN" }
+Auth:        JWT required, PLATFORM_OWNER only
+Request:     { "email?": "string", "password?": "string", "platformRole?": "PLATFORM_OWNER|SUPPORT_ADMIN|FINANCE_ADMIN" }
              (all fields optional, at least one required)
-Success 200: { "id", "email", "role", "updatedAt" }
+Success 200: { "id", "email", "platformRole", "updatedAt" }
 Error 404:   { code: "NOT_FOUND" }
 Error 409:   { code: "CONFLICT", message: "Email already in use" }
 ```
@@ -862,7 +907,7 @@ Error 409:   { code: "CONFLICT", message: "Email already in use" }
 **DELETE /users/:id**
 
 ```
-Auth:        JWT required, SUPER_ADMIN only
+Auth:        JWT required, PLATFORM_OWNER only
 Success 200: { "message": "User deleted" }
 Error 404:   { code: "NOT_FOUND" }
 Error 400:   { code: "VALIDATION_ERROR", message: "Cannot delete your own account" }
@@ -908,7 +953,7 @@ Error 404:   { code: "NOT_FOUND" }
 **POST /pages**
 
 ```
-Auth:        JWT required (EDITOR, ADMIN, SUPER_ADMIN)
+Auth:        JWT required (EDITOR, ADMIN, OWNER membership)
 Request:     {
                "slug": "string (kebab-case, 1-200 chars)",
                "locale": "en|es|fr|de",
@@ -927,7 +972,7 @@ Error 413:   { code: "PAYLOAD_TOO_LARGE", message: "puckData exceeds 5MB limit" 
 **PUT /pages/:slug**
 
 ```
-Auth:        JWT required (EDITOR, ADMIN, SUPER_ADMIN)
+Auth:        JWT required (EDITOR, ADMIN, OWNER membership)
 Query:       ?locale=en (required)
 Request:     {
                "title?": "string",
@@ -945,7 +990,7 @@ Error 413:   { code: "PAYLOAD_TOO_LARGE" }
 **DELETE /pages/:slug**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required — deletes one locale variant)
 Success 200: { "message": "Page deleted" }
 Error 404:   { code: "NOT_FOUND" }
@@ -955,7 +1000,7 @@ Error 403:   { code: "FORBIDDEN" }
 **POST /pages/:slug/publish**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required)
 Side effect: Sets published=true, then calls RevalidationService.revalidatePage(slug)
              which triggers ISR revalidation on the website for all locales
@@ -967,7 +1012,7 @@ Error 403:   { code: "FORBIDDEN" }
 **POST /pages/:slug/unpublish**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required)
 Side effect: Sets published=false, triggers revalidation (page will 404 on next request)
 Success 200: { "message": "Page unpublished", "slug", "locale" }
@@ -1011,7 +1056,7 @@ Error 404:   { code: "NOT_FOUND", message: "Page not found" }
 **POST /pages/:slug/versions/:id/restore**
 
 ```
-Auth:        JWT required, ADMIN or SUPER_ADMIN only
+Auth:        JWT required, elevated workspace membership only
 Query:       ?locale=en (required)
 Side effect: Copies version's puckData to the Page row.
              Creates a new PageVersion with note "Restored from version {id}".
@@ -1078,11 +1123,11 @@ apps/dashboard/
 │   │   ├── NewPagePage.tsx           # Form: slug (auto-kebab), locale dropdown, title → POST /pages
 │   │   ├── EditorPage.tsx            # Puck <Editor> component, auto-save indicator, Save/Publish buttons
 │   │   ├── PreviewPage.tsx           # Renders puckData via <Render> in an iframe or inline
-│   │   └── SettingsPage.tsx          # User CRUD table (SUPER_ADMIN only), role dropdown
+│   │   └── SettingsPage.tsx          # User CRUD table (PLATFORM_OWNER only), platform role dropdown
 │   │
 │   ├── components/                   # Shared UI components
 │   │   ├── Layout.tsx                # Dashboard shell: sidebar (left) + main content area (right)
-│   │   ├── Sidebar.tsx               # Nav links: Pages, Settings (if SUPER_ADMIN), Logout
+│   │   ├── Sidebar.tsx               # Nav links: Pages, Settings (if PLATFORM_OWNER), Logout
 │   │   ├── ToastProvider.tsx         # Toast context + toast() function + toast container UI
 │   │   ├── PageStatusBadge.tsx       # Green "Published" / Yellow "Draft" pill badge
 │   │   ├── LocaleTabs.tsx            # Tab bar: EN | ES | FR | DE — switches locale query param
@@ -1277,7 +1322,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/settings',
-        element: <RoleGate roles={['SUPER_ADMIN']}><SettingsPage /></RoleGate>,
+        element: <RoleGate platformRoles={['PLATFORM_OWNER']}><SettingsPage /></RoleGate>,
       },
     ],
   },
@@ -1286,15 +1331,15 @@ export const router = createBrowserRouter([
 
 **Route breakdown:**
 
-| Path             | Component     | Auth   | Role        | Description                                                              |
-| ---------------- | ------------- | ------ | ----------- | ------------------------------------------------------------------------ |
-| `/login`         | LoginPage     | Public | —           | Email/password login form                                                |
-| `/`              | (redirect)    | JWT    | Any         | Redirects to /pages                                                      |
-| `/pages`         | PagesListPage | JWT    | Any         | Pages list with search, filter by locale/status                          |
-| `/pages/new`     | NewPagePage   | JWT    | Any         | Create new page (slug + locale + title)                                  |
-| `/editor/:slug`  | EditorPage    | JWT    | Any         | Puck editor. `?locale=en` query param. Save = any role. Publish = ADMIN+ |
-| `/preview/:slug` | PreviewPage   | JWT    | Any         | Renders page using Puck `<Render>`. `?locale=en` query param             |
-| `/settings`      | SettingsPage  | JWT    | SUPER_ADMIN | User management CRUD table                                               |
+| Path             | Component     | Auth   | Role           | Description                                                                                               |
+| ---------------- | ------------- | ------ | -------------- | --------------------------------------------------------------------------------------------------------- |
+| `/login`         | LoginPage     | Public | —              | Email/password login form                                                                                 |
+| `/`              | (redirect)    | JWT    | Any            | Redirects to /pages                                                                                       |
+| `/pages`         | PagesListPage | JWT    | Any            | Pages list with search, filter by locale/status                                                           |
+| `/pages/new`     | NewPagePage   | JWT    | Any            | Create new page (slug + locale + title)                                                                   |
+| `/editor/:slug`  | EditorPage    | JWT    | Any            | Puck editor. `?locale=en` query param. Save = content membership. Publish = elevated workspace membership |
+| `/preview/:slug` | PreviewPage   | JWT    | Any            | Renders page using Puck `<Render>`. `?locale=en` query param                                              |
+| `/settings`      | SettingsPage  | JWT    | PLATFORM_OWNER | User management CRUD table                                                                                |
 
 ### 3.4 State Management
 
@@ -2373,7 +2418,7 @@ import { puckConfig } from "@myallocator/puck-components";
 │ NestJS API                                                              │
 │                                                                         │
 │  1. JwtAuthGuard → verify JWT                                           │
-│  2. RolesGuard → check @Roles(ADMIN, SUPER_ADMIN) → ✓                  │
+│  2. RolesGuard → check @MembershipRoles(OWNER, ADMIN) → ✓              │
 │  3. PagesService.publishPage('pricing', 'en')                           │
 │     → Prisma: UPDATE pages SET published = true                         │
 │       WHERE slug = 'pricing' AND locale = 'en'                          │
@@ -2574,9 +2619,9 @@ REVALIDATION_SECRET=dev-revalidation-secret-change-me
 ### Authorization
 
 - [ ] **Role-based access control (RBAC) via RolesGuard** — `apps/api/src/auth/guards/roles.guard.ts` — Mitigates: privilege escalation (editors can't publish/delete, only admins can).
-- [ ] **@Roles() decorator on every protected endpoint** — All controllers — Mitigates: forgotten authorization checks.
-- [ ] **SUPER_ADMIN-only user management** — `apps/api/src/users/users.controller.ts` — Mitigates: unauthorized user creation or role elevation.
-- [ ] **Cannot delete own account** — `apps/api/src/users/users.service.ts` — Mitigates: accidental self-lockout by last SUPER_ADMIN.
+- [ ] **@PlatformRoles() / @MembershipRoles() decorators on every protected endpoint** — All controllers — Mitigates: forgotten authorization checks.
+- [ ] **PLATFORM_OWNER-only user management** — `apps/api/src/users/users.controller.ts` — Mitigates: unauthorized user creation or role elevation.
+- [ ] **Cannot delete own account** — `apps/api/src/users/users.service.ts` — Mitigates: accidental self-lockout by the last platform owner.
 
 ### Input Validation
 

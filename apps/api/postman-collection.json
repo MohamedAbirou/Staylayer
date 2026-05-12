@@ -219,7 +219,7 @@
     },
     {
       "name": "Users",
-      "description": "All endpoints require SUPER_ADMIN role.",
+      "description": "All endpoints require the PLATFORM_OWNER platform role.",
       "item": [
         {
           "name": "GET /users",

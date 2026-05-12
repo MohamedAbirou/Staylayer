@@ -1,11 +1,6 @@
 /// <reference types="jest" />
 
-import {
-  Role,
-  SiteStatus,
-  SiteType,
-  TenantMembershipRole,
-} from "@prisma/client";
+import { SiteStatus, SiteType, TenantMembershipRole } from "@prisma/client";
 import { TenantWorkspaceService } from "./tenant-workspace.service";
 
 function buildPrismaMock() {
@@ -186,7 +181,6 @@ describe("TenantWorkspaceService", () => {
         passwordHash: "hashed-password",
         emailVerifiedAt: expect.any(Date),
         platformRole: null,
-        role: Role.EDITOR,
       },
       select: {
         id: true,
