@@ -512,7 +512,7 @@ export class FormEmailRendererService {
       bundle.template.blocks,
       bundle.template.templateType,
     );
-    const tokens = this.buildTokens(context);
+    const tokens = this.buildTokens(context, bundle.theme);
     const htmlBlocks = blocks
       .map((block) =>
         this.renderBlockHtml(
@@ -540,13 +540,17 @@ export class FormEmailRendererService {
     const previewText = this.interpolate(bundle.template.previewText, tokens);
     const html = [
       "<!doctype html>",
-      `<html><body style=\"margin:0;padding:24px;background:${this.escapeHtml(bundle.theme.accentColor)}12;font-family:${this.escapeHtml(bundle.theme.typographyFamily)},sans-serif;color:${this.escapeHtml(bundle.theme.textColor)};\">`,
-      `<div style=\"max-width:640px;margin:0 auto;background:${this.escapeHtml(bundle.theme.surfaceColor)};border-radius:20px;padding:32px;border:1px solid ${this.escapeHtml(bundle.theme.accentColor)}22;\">`,
+      `<html><body style=\"margin:0;padding:32px 16px;background:${this.escapeHtml(this.withAlpha(bundle.theme.primaryColor, "10"))};font-family:${this.escapeHtml(bundle.theme.typographyFamily)},sans-serif;color:${this.escapeHtml(bundle.theme.textColor)};\">`,
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td align="center">',
+      `<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:680px;border-collapse:separate;background:${this.escapeHtml(bundle.theme.surfaceColor)};border:1px solid ${this.escapeHtml(this.withAlpha(bundle.theme.accentColor, "1f"))};border-radius:28px;overflow:hidden;box-shadow:0 18px 60px ${this.escapeHtml(this.withAlpha(bundle.theme.accentColor, "18"))};\">`,
+      `<tr><td style=\"height:8px;line-height:8px;font-size:0;background:${this.escapeHtml(bundle.theme.primaryColor)};\">&nbsp;</td></tr>`,
+      '<tr><td style="padding:32px;">',
       previewText
         ? `<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">${this.escapeHtml(previewText)}</div>`
         : "",
       htmlBlocks,
-      "</div></body></html>",
+      "</td></tr></table>",
+      "</td></tr></table></body></html>",
     ]
       .filter(Boolean)
       .join("");
@@ -577,29 +581,31 @@ export class FormEmailRendererService {
         );
         const subtitle = String(block.subtitle ?? "");
         const resolvedSubtitle = subtitle
-          ? `<p style=\"margin:8px 0 0;color:${this.escapeHtml(tokens.accentColor)};font-size:14px;\">${this.escapeHtml(this.interpolate(subtitle, tokens))}</p>`
+          ? `<p style=\"margin:12px 0 0;color:${this.escapeHtml(tokens.textColor)};font-size:15px;line-height:1.7;opacity:0.84;\">${this.escapeHtml(this.interpolate(subtitle, tokens))}</p>`
           : "";
         const logo =
           context.brandName && tokens.logoUrl
-            ? `<img src=\"${this.escapeHtml(tokens.logoUrl)}\" alt=\"${this.escapeHtml(context.brandName)}\" style=\"max-height:48px;display:block;margin-bottom:16px;\" />`
+            ? `<img src=\"${this.escapeHtml(tokens.logoUrl)}\" alt=\"${this.escapeHtml(context.brandName)}\" style=\"max-height:44px;max-width:180px;display:block;margin:0 0 20px;\" />`
             : "";
+        const badge = `<div style=\"display:inline-block;margin:0 0 14px;padding:6px 12px;border-radius:999px;background:${this.escapeHtml(this.withAlpha(tokens.primaryColor, "16"))};color:${this.escapeHtml(tokens.primaryColor)};font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;\">${this.escapeHtml(context.brandName || context.siteName)}</div>`;
+        const summary = this.renderContextSummaryHtml(context, tokens);
 
-        return `${logo}<h1 style=\"margin:0;font-size:28px;line-height:1.2;color:${this.escapeHtml(tokens.accentColor)};\">${title}</h1>${resolvedSubtitle}`;
+        return `${badge}${logo}<h1 style=\"margin:0;font-size:34px;line-height:1.15;letter-spacing:-0.02em;color:${this.escapeHtml(tokens.accentColor)};\">${title}</h1>${resolvedSubtitle}${summary}`;
       }
       case "rich_text":
-        return `<p style=\"margin:20px 0 0;font-size:16px;line-height:1.6;\">${this.escapeHtml(this.interpolate(String(block.text ?? ""), tokens))}</p>`;
+        return `<p style=\"margin:24px 0 0;font-size:16px;line-height:1.75;color:${this.escapeHtml(tokens.textColor)};\">${this.escapeHtml(this.interpolate(String(block.text ?? ""), tokens))}</p>`;
       case "field_list": {
         const title = block.title
-          ? `<h2 style=\"margin:28px 0 12px;font-size:16px;color:${this.escapeHtml(tokens.accentColor)};\">${this.escapeHtml(this.interpolate(String(block.title), tokens))}</h2>`
+          ? `<div style=\"margin:32px 0 14px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${this.escapeHtml(tokens.primaryColor)};\">${this.escapeHtml(this.interpolate(String(block.title), tokens))}</div>`
           : "";
         const rows = this.renderFieldRows(context, fieldOrder)
           .map(
-            (row) =>
-              `<tr><td style=\"padding:10px 0;font-weight:600;vertical-align:top;min-width:160px;\">${this.escapeHtml(row.label)}</td><td style=\"padding:10px 0;\">${this.escapeHtml(row.value)}</td></tr>`,
+            (row, index) =>
+              `<tr><td style=\"padding:14px 16px;width:34%;font-weight:700;vertical-align:top;color:${this.escapeHtml(tokens.accentColor)};background:${this.escapeHtml(index % 2 === 0 ? this.withAlpha(tokens.primaryColor, "08") : tokens.surfaceColor)};${index > 0 ? `border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "12"))};` : ""}\">${this.escapeHtml(row.label)}</td><td style=\"padding:14px 16px;color:${this.escapeHtml(tokens.textColor)};background:${this.escapeHtml(index % 2 === 0 ? this.withAlpha(tokens.primaryColor, "04") : tokens.surfaceColor)};${index > 0 ? `border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "12"))};` : ""}\">${this.escapeHtml(row.value)}</td></tr>`,
           )
           .join("");
 
-        return `${title}<table role=\"presentation\" width=\"100%\" style=\"border-collapse:collapse;margin-top:8px;\">${rows}</table>`;
+        return `${title}<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:separate;border-spacing:0;border:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "16"))};border-radius:20px;overflow:hidden;background:${this.escapeHtml(tokens.surfaceColor)};\">${rows}</table>`;
       }
       case "cta": {
         const label = this.escapeHtml(
@@ -608,10 +614,10 @@ export class FormEmailRendererService {
         const url = this.escapeHtml(
           this.interpolate(String(block.url ?? "#"), tokens),
         );
-        return `<p style=\"margin:28px 0 0;\"><a href=\"${url}\" style=\"display:inline-block;background:${this.escapeHtml(tokens.primaryColor)};color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:999px;\">${label}</a></p>`;
+        return `<p style=\"margin:28px 0 0;\"><a href=\"${url}\" style=\"display:inline-block;background:${this.escapeHtml(tokens.primaryColor)};color:#ffffff;text-decoration:none;padding:14px 22px;border-radius:999px;font-weight:700;letter-spacing:0.01em;\">${label}</a></p>`;
       }
       case "footer":
-        return `<p style=\"margin:32px 0 0;font-size:13px;line-height:1.6;color:${this.escapeHtml(tokens.accentColor)};opacity:0.75;\">${this.escapeHtml(this.interpolate(String(block.text ?? ""), tokens))}</p>`;
+        return `<div style=\"margin:32px 0 0;padding-top:18px;border-top:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "16"))};font-size:13px;line-height:1.8;color:${this.escapeHtml(tokens.textColor)};opacity:0.72;\">${this.escapeHtml(this.interpolate(String(block.text ?? ""), tokens))}</div>`;
       default:
         return "";
     }
@@ -626,11 +632,24 @@ export class FormEmailRendererService {
     const type = String(block.type ?? "");
 
     switch (type) {
-      case "brand_header":
-        return this.interpolate(
+      case "brand_header": {
+        const title = this.interpolate(
           String(block.title ?? context.formName),
           tokens,
         );
+        const subtitle = String(block.subtitle ?? "");
+
+        return [
+          title,
+          subtitle ? this.interpolate(subtitle, tokens) : "",
+          `Form: ${context.formName}`,
+          context.pageSlug ? `Page: /${context.pageSlug}` : "",
+          `Locale: ${context.locale}`,
+          `Submitted: ${this.formatSubmittedAt(context.submittedAtIso)}`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
       case "rich_text":
         return this.interpolate(String(block.text ?? ""), tokens);
       case "field_list":
@@ -685,7 +704,7 @@ export class FormEmailRendererService {
       : DEFAULT_INTERNAL_BLOCKS;
   }
 
-  private buildTokens(context: RenderContext) {
+  private buildTokens(context: RenderContext, theme: TemplateBundle["theme"]) {
     const payloadTokens = Object.fromEntries(
       Object.entries(context.payload).map(([key, value]) => [
         key,
@@ -701,12 +720,62 @@ export class FormEmailRendererService {
       pageSlug: context.pageSlug ?? "",
       locale: context.locale,
       submittedAt: context.submittedAtIso,
-      primaryColor: context.payload.primaryColor
-        ? this.stringifyValue(context.payload.primaryColor)
-        : "#2563eb",
-      accentColor: "#0f172a",
-      logoUrl: "",
+      primaryColor: theme.primaryColor || "#2563eb",
+      accentColor: theme.accentColor || "#0f172a",
+      surfaceColor: theme.surfaceColor || "#ffffff",
+      textColor: theme.textColor || "#0f172a",
+      logoUrl: theme.logoUrl || "",
     };
+  }
+
+  private renderContextSummaryHtml(
+    context: RenderContext,
+    tokens: Record<string, string>,
+  ) {
+    const details = [
+      { label: "Form", value: context.formName },
+      context.pageSlug
+        ? { label: "Page", value: `/${context.pageSlug}` }
+        : null,
+      { label: "Locale", value: context.locale.toUpperCase() },
+      {
+        label: "Submitted",
+        value: this.formatSubmittedAt(context.submittedAtIso),
+      },
+    ].filter(Boolean) as Array<{ label: string; value: string }>;
+
+    const cells = details
+      .map(
+        (detail) =>
+          `<td style=\"padding:0 10px 10px 0;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:separate;\"><tr><td style=\"padding:10px 12px;border:1px solid ${this.escapeHtml(this.withAlpha(tokens.accentColor, "14"))};border-radius:16px;background:${this.escapeHtml(this.withAlpha(tokens.primaryColor, "08"))};\"><div style=\"font-size:10px;line-height:1.4;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${this.escapeHtml(tokens.primaryColor)};\">${this.escapeHtml(detail.label)}</div><div style=\"padding-top:4px;font-size:13px;line-height:1.5;font-weight:600;color:${this.escapeHtml(tokens.textColor)};\">${this.escapeHtml(detail.value)}</div></td></tr></table></td>`,
+      )
+      .join("");
+
+    return `<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;margin-top:24px;\"><tr>${cells}</tr></table>`;
+  }
+
+  private formatSubmittedAt(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  }
+
+  private withAlpha(color: string, alphaHex: string) {
+    const trimmed = color.trim();
+
+    if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+      return `${trimmed}${alphaHex}`;
+    }
+
+    if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+      const expanded = `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+      return `${expanded}${alphaHex}`;
+    }
+
+    return color;
   }
 
   private payloadAsRecord(payload: unknown): JsonRecord {

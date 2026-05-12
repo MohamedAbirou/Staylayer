@@ -268,6 +268,97 @@ describe("FormsService", () => {
     expect(prisma.formSubmission.create).not.toHaveBeenCalled();
   });
 
+  it("prefers the most specific matching routing rule for a submission", async () => {
+    prisma.site.findUnique.mockResolvedValue({ id: "site-1" });
+    prisma.page.findFirst.mockResolvedValue({ id: "page-1" });
+    prisma.formRoutingRule.findMany.mockResolvedValue([
+      {
+        id: "site-fallback",
+        formDefinitionId: null,
+        pageSlug: null,
+        locale: null,
+        priority: 0,
+        isActive: true,
+      },
+      {
+        id: "form-only",
+        formDefinitionId: "form-1",
+        pageSlug: null,
+        locale: null,
+        priority: 0,
+        isActive: true,
+      },
+      {
+        id: "form-page",
+        formDefinitionId: "form-1",
+        pageSlug: "contact",
+        locale: null,
+        priority: 0,
+        isActive: true,
+      },
+      {
+        id: "form-page-locale",
+        formDefinitionId: "form-1",
+        pageSlug: "contact",
+        locale: "en",
+        priority: 0,
+        isActive: true,
+      },
+    ]);
+    prisma.formSubmission.create.mockResolvedValue({
+      id: "submission-2",
+      status: FormSubmissionStatus.RECEIVED,
+    });
+
+    await service.createSubmission({
+      siteId: "site-1",
+      formType: FormType.CONTACT,
+      pageSlug: "contact",
+      locale: "en",
+      name: "Guest Example",
+      email: "guest@example.com",
+      message: "We would like to book a room for two nights.",
+    });
+
+    expect(prisma.formSubmission.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          routingRuleId: "form-page-locale",
+        }),
+      }),
+    );
+  });
+
+  it("hides submissions from routing rules that disable inbox storage", async () => {
+    prisma.formSubmission.findMany.mockResolvedValue([]);
+    prisma.formSubmission.count.mockResolvedValue(0);
+
+    await expect(service.listForSite("site-1", {})).resolves.toEqual({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 50,
+    });
+
+    const expectedWhere = {
+      siteId: "site-1",
+      status: { not: FormSubmissionStatus.SPAM },
+      OR: [
+        { routingRuleId: null },
+        { routingRule: { is: { saveToInbox: true } } },
+      ],
+    };
+
+    expect(prisma.formSubmission.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expectedWhere,
+      }),
+    );
+    expect(prisma.formSubmission.count).toHaveBeenCalledWith({
+      where: expectedWhere,
+    });
+  });
+
   it("reports admin totals with spam included in the denominator", async () => {
     prisma.site.findMany.mockResolvedValue([
       {

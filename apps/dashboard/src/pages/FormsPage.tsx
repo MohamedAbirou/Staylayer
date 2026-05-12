@@ -351,6 +351,13 @@ export default function FormsPage() {
             : undefined,
         recipientEmail: testRecipientEmail,
       }),
+    onSuccess: (result) => {
+      const acceptedRecipient = result.accepted?.[0] ?? testRecipientEmail;
+      toast.success(`Test email sent to ${acceptedRecipient}`);
+    },
+    onError: () => {
+      toast.error("Failed to send test email");
+    },
   });
 
   const submissions: Submission[] = data?.data ?? [];
@@ -801,7 +808,7 @@ export default function FormsPage() {
                       description: event.target.value,
                     }))
                   }
-                  className="mt-2 min-h-[96px] w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="mt-2 min-h-24 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                   placeholder="Briefly explain where this form should be used."
                 />
               </div>
@@ -1131,7 +1138,7 @@ export default function FormsPage() {
                                 ),
                               }))
                             }
-                            className="mt-2 min-h-[96px] w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            className="mt-2 min-h-24 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -1154,7 +1161,7 @@ export default function FormsPage() {
                                 ),
                               }))
                             }
-                            className="mt-2 min-h-[80px] w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            className="mt-2 min-h-20 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
                         <div className="md:col-span-2">

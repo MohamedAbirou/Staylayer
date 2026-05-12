@@ -122,6 +122,64 @@ describe("SubmissionOperationsService", () => {
     });
   });
 
+  it("creates a guest confirmation delivery when the route and template both allow it", async () => {
+    formEmailRendererService.isTemplateEnabled.mockResolvedValue(true);
+    prisma.formSubmission.findUnique.mockResolvedValue({
+      id: "submission-1",
+      siteId: "site-1",
+      formDefinitionId: "form-1",
+      formType: FormType.CONTACT,
+      status: FormSubmissionStatus.RECEIVED,
+      payload: {
+        name: "Guest Example",
+        email: "guest@example.com",
+        message: "Hello",
+      },
+      routingRule: {
+        emailRecipients: ["ops@example.com"],
+        webhookUrl: "",
+        sendConfirmationEmail: true,
+        confirmationReplyToFieldKey: "email",
+      },
+      site: {
+        name: "Harbor House",
+        settings: {
+          supportEmail: "",
+          defaultInquiryRoutingEmail: "",
+          inquiryWebhookUrl: "",
+          inquiryWebhookSecret: "",
+        },
+      },
+    });
+    prisma.formDelivery.findMany.mockResolvedValue([]);
+
+    await service.queueSubmissionDelivery("submission-1");
+
+    expect(formEmailRendererService.isTemplateEnabled).toHaveBeenCalledWith(
+      "site-1",
+      "form-1",
+      "GUEST_CONFIRMATION",
+    );
+    expect(prisma.formDelivery.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({
+          submissionId: "submission-1",
+          siteId: "site-1",
+          purpose: FormDeliveryPurpose.INTERNAL_NOTIFICATION,
+          channel: FormDeliveryChannel.EMAIL,
+          destination: "ops@example.com",
+        }),
+        expect.objectContaining({
+          submissionId: "submission-1",
+          siteId: "site-1",
+          purpose: FormDeliveryPurpose.GUEST_CONFIRMATION,
+          channel: FormDeliveryChannel.EMAIL,
+          destination: "guest@example.com",
+        }),
+      ]),
+    });
+  });
+
   it("opens a delivery alert when no routing destination exists", async () => {
     prisma.formSubmission.findUnique.mockResolvedValue({
       id: "submission-1",

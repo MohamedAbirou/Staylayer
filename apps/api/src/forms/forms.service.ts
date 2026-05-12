@@ -679,8 +679,13 @@ export class FormsService {
     const { status, page = 1, limit = 50 } = params;
     const where: Prisma.FormSubmissionWhereInput = {
       siteId,
-      // Customers never see spam-flagged submissions in their own inbox
+      // Customers never see spam-flagged submissions or routes that opt out
+      // of the inbox surface.
       status: status ?? { not: FormSubmissionStatus.SPAM },
+      OR: [
+        { routingRuleId: null },
+        { routingRule: { is: { saveToInbox: true } } },
+      ],
     };
 
     const [rows, total] = await Promise.all([
