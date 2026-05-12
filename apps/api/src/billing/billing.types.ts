@@ -15,6 +15,11 @@ export type BillingPublicStatus =
 
 export type BillingSupportTier = "docs" | "email" | "priority" | "white_glove";
 
+export type BillingSalesMotion =
+  | "self_serve"
+  | "workspace_checkout"
+  | "contact_sales";
+
 export interface BillingPlanLimits {
   sites: number;
   locales: number;
@@ -30,6 +35,15 @@ export interface BillingPlanLimits {
   exportEnabled: boolean;
   scheduledExports: boolean;
   supportTier: BillingSupportTier;
+}
+
+export interface BillingPlanPublicCatalog {
+  audience: string;
+  promise: string;
+  upgradeTrigger: string;
+  ctaLabel: string;
+  salesMotion: BillingSalesMotion;
+  featured: boolean;
 }
 
 export interface BillingEnforcementPolicy {
@@ -65,6 +79,7 @@ export interface BillingPlanDefinition {
   provider: BillingProvider;
   stripePriceIdEnvVar: string | null;
   isFree: boolean;
+  catalog: BillingPlanPublicCatalog;
   limits: BillingPlanLimits;
 }
 

@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "translation_glossary_terms_glossary_id_source_term_source_key" RENAME TO "translation_glossary_terms_glossary_id_source_term_source_l_key";

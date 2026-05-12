@@ -159,27 +159,63 @@ enum OperationalAlertStatus {
 // ─── User ──────────────────────────────────────────────────
 
 model User {
-    id           String        @id @default(cuid())
-    email        String        @unique
-    passwordHash String        @map("password_hash")
+    id              String        @id @default(cuid())
+    email           String        @unique
+    passwordHash    String        @map("password_hash")
+    emailVerifiedAt DateTime?     @map("email_verified_at")
     /// Platform operator role. Null means the account is customer-only.
-    platformRole PlatformRole? @map("platform_role")
+    platformRole    PlatformRole? @map("platform_role")
     /// Legacy global operator role kept for current auth surfaces.
     /// Customer workspace access must resolve through TenantMembership.
     /// Phase 02 auth reads platformRole instead of this column.
-    role         Role          @default(EDITOR)
+    role            Role          @default(EDITOR)
 
     // Brute-force protection
     failedAttempts Int       @default(0) @map("failed_attempts")
     lockedUntil    DateTime? @map("locked_until")
 
-    memberships TenantMembership[]
+    memberships              TenantMembership[]
+    emailVerificationTokens  EmailVerificationToken[]
+    passwordResetTokens      PasswordResetToken[]
+    sentWorkspaceInvitations WorkspaceInvitation[]    @relation("WorkspaceInvitationSender")
 
     createdAt DateTime @default(now()) @map("created_at")
     updatedAt DateTime @updatedAt @map("updated_at")
 
     @@index([platformRole])
     @@map("users")
+}
+
+model EmailVerificationToken {
+    id         String    @id @default(cuid())
+    userId     String    @map("user_id")
+    email      String
+    tokenHash  String    @unique @map("token_hash")
+    expiresAt  DateTime  @map("expires_at")
+    consumedAt DateTime? @map("consumed_at")
+    createdAt  DateTime  @default(now()) @map("created_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, createdAt])
+    @@index([expiresAt])
+    @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+    id         String    @id @default(cuid())
+    userId     String    @map("user_id")
+    email      String
+    tokenHash  String    @unique @map("token_hash")
+    expiresAt  DateTime  @map("expires_at")
+    consumedAt DateTime? @map("consumed_at")
+    createdAt  DateTime  @default(now()) @map("created_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, createdAt])
+    @@index([expiresAt])
+    @@map("password_reset_tokens")
 }
 
 // ─── Tenant ────────────────────────────────────────────────
@@ -190,19 +226,42 @@ model Tenant {
     name   String
     status TenantStatus @default(ACTIVE)
 
-    memberships      TenantMembership[]
-    sites            Site[]
-    subscriptions    Subscription[]
-    auditLogs        AuditLog[]
-    webhookEvents    BillingWebhookEvent[]
-    translationJobs  TranslationJob[]
-    glossaries       TranslationGlossary[]
+    memberships          TenantMembership[]
+    sites                Site[]
+    subscriptions        Subscription[]
+    auditLogs            AuditLog[]
+    webhookEvents        BillingWebhookEvent[]
+    translationJobs      TranslationJob[]
+    glossaries           TranslationGlossary[]
+    workspaceInvitations WorkspaceInvitation[]
 
     createdAt DateTime @default(now()) @map("created_at")
     updatedAt DateTime @updatedAt @map("updated_at")
 
     @@index([status])
     @@map("tenants")
+}
+
+model WorkspaceInvitation {
+    id              String               @id @default(cuid())
+    tenantId        String               @map("tenant_id")
+    email           String
+    role            TenantMembershipRole
+    tokenHash       String               @unique @map("token_hash")
+    invitedByUserId String?              @map("invited_by_user_id")
+    expiresAt       DateTime             @map("expires_at")
+    acceptedAt      DateTime?            @map("accepted_at")
+    revokedAt       DateTime?            @map("revoked_at")
+    createdAt       DateTime             @default(now()) @map("created_at")
+    updatedAt       DateTime             @updatedAt @map("updated_at")
+
+    tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    invitedByUser User?  @relation("WorkspaceInvitationSender", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+    @@index([tenantId, email])
+    @@index([email, acceptedAt, revokedAt])
+    @@index([expiresAt])
+    @@map("workspace_invitations")
 }
 
 // ─── Tenant Membership ─────────────────────────────────────
@@ -291,9 +350,9 @@ model Page {
     createdAt DateTime @default(now()) @map("created_at")
     updatedAt DateTime @updatedAt @map("updated_at")
 
-    site              Site                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    versions          PageVersion[]
-    translationMeta   PageTranslationMeta?
+    site               Site                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    versions           PageVersion[]
+    translationMeta    PageTranslationMeta?
     sourceTranslations PageTranslationMeta[] @relation("SourceTranslations")
 
     @@unique([siteId, slug, locale])
@@ -727,21 +786,21 @@ enum OnboardingMilestoneKey {
 }
 
 model TenantOnboarding {
-    id         String    @id @default(cuid())
-    tenantId   String    @unique @map("tenant_id")
-    startedAt  DateTime  @default(now()) @map("started_at")
-    completedAt DateTime? @map("completed_at")
-    milestones TenantOnboardingMilestone[]
+    id          String                      @id @default(cuid())
+    tenantId    String                      @unique @map("tenant_id")
+    startedAt   DateTime                    @default(now()) @map("started_at")
+    completedAt DateTime?                   @map("completed_at")
+    milestones  TenantOnboardingMilestone[]
 
     @@map("tenant_onboarding")
 }
 
 model TenantOnboardingMilestone {
-    id             String                 @id @default(cuid())
-    onboardingId   String                 @map("onboarding_id")
-    milestone      OnboardingMilestoneKey
-    completedAt    DateTime               @default(now()) @map("completed_at")
-    metadata       Json?
+    id           String                 @id @default(cuid())
+    onboardingId String                 @map("onboarding_id")
+    milestone    OnboardingMilestoneKey
+    completedAt  DateTime               @default(now()) @map("completed_at")
+    metadata     Json?
 
     onboarding TenantOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
 
@@ -770,17 +829,17 @@ model TranslationUsage {
 // ─── URL Redirects ────────────────────────────────────────
 
 model Redirect {
-    id          String   @id @default(cuid())
-    siteId      String   @map("site_id")
-    fromPath    String   @map("from_path")
-    toPath      String   @map("to_path")
-    statusCode  Int      @default(301) @map("status_code")
-    locale      String?
-    reason      String?
-    permanent   Boolean  @default(true)
-    enabled     Boolean  @default(true)
-    createdAt   DateTime @default(now()) @map("created_at")
-    updatedAt   DateTime @updatedAt @map("updated_at")
+    id         String   @id @default(cuid())
+    siteId     String   @map("site_id")
+    fromPath   String   @map("from_path")
+    toPath     String   @map("to_path")
+    statusCode Int      @default(301) @map("status_code")
+    locale     String?
+    reason     String?
+    permanent  Boolean  @default(true)
+    enabled    Boolean  @default(true)
+    createdAt  DateTime @default(now()) @map("created_at")
+    updatedAt  DateTime @updatedAt @map("updated_at")
 
     site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -793,29 +852,29 @@ model Redirect {
 // ─── SEO Structured Data ──────────────────────────────────
 
 model SiteStructuredData {
-    id              String   @id @default(cuid())
-    siteId          String   @unique @map("site_id")
-    businessType    String   @default("Hotel") @map("business_type")
-    businessName    String?  @map("business_name")
-    description     String?
-    streetAddress   String?  @map("street_address")
-    city            String?
-    region          String?
-    postalCode      String?  @map("postal_code")
-    country         String?
-    telephone       String?
-    email           String?
-    starRating      Int?     @map("star_rating")
-    priceRange      String?  @map("price_range")
-    checkInTime     String?  @map("check_in_time")
-    checkOutTime    String?  @map("check_out_time")
-    amenities       Json?
-    roomCount       Int?     @map("room_count")
-    latitude        Float?
-    longitude       Float?
-    imageUrl        String?  @map("image_url")
-    createdAt       DateTime @default(now()) @map("created_at")
-    updatedAt       DateTime @updatedAt @map("updated_at")
+    id            String   @id @default(cuid())
+    siteId        String   @unique @map("site_id")
+    businessType  String   @default("Hotel") @map("business_type")
+    businessName  String?  @map("business_name")
+    description   String?
+    streetAddress String?  @map("street_address")
+    city          String?
+    region        String?
+    postalCode    String?  @map("postal_code")
+    country       String?
+    telephone     String?
+    email         String?
+    starRating    Int?     @map("star_rating")
+    priceRange    String?  @map("price_range")
+    checkInTime   String?  @map("check_in_time")
+    checkOutTime  String?  @map("check_out_time")
+    amenities     Json?
+    roomCount     Int?     @map("room_count")
+    latitude      Float?
+    longitude     Float?
+    imageUrl      String?  @map("image_url")
+    createdAt     DateTime @default(now()) @map("created_at")
+    updatedAt     DateTime @updatedAt @map("updated_at")
 
     site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -872,8 +931,8 @@ model TranslationGlossary {
     createdAt DateTime @default(now()) @map("created_at")
     updatedAt DateTime @updatedAt @map("updated_at")
 
-    tenant Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    site   Site?                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    tenant Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    site   Site?                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
     terms  TranslationGlossaryTerm[]
 
     @@unique([tenantId, siteId, name])
@@ -883,14 +942,14 @@ model TranslationGlossary {
 }
 
 model TranslationGlossaryTerm {
-    id           String  @id @default(cuid())
-    glossaryId   String  @map("glossary_id")
-    sourceTerm   String  @map("source_term")
-    targetTerm   String  @map("target_term")
-    sourceLocale String  @map("source_locale")
-    targetLocale String  @map("target_locale")
-    caseSensitive Boolean @default(false) @map("case_sensitive")
-    createdAt    DateTime @default(now()) @map("created_at")
+    id            String   @id @default(cuid())
+    glossaryId    String   @map("glossary_id")
+    sourceTerm    String   @map("source_term")
+    targetTerm    String   @map("target_term")
+    sourceLocale  String   @map("source_locale")
+    targetLocale  String   @map("target_locale")
+    caseSensitive Boolean  @default(false) @map("case_sensitive")
+    createdAt     DateTime @default(now()) @map("created_at")
 
     glossary TranslationGlossary @relation(fields: [glossaryId], references: [id], onDelete: Cascade)
 
@@ -902,15 +961,15 @@ model TranslationGlossaryTerm {
 // ─── Page Translation Metadata ────────────────────────────
 
 model PageTranslationMeta {
-    id                   String   @id @default(cuid())
-    pageId               String   @map("page_id")
-    sourcePageId         String   @map("source_page_id")
-    lastTranslatedAt     DateTime? @map("last_translated_at")
-    sourceContentHash    String?  @map("source_content_hash")
-    isStale              Boolean  @default(false) @map("is_stale")
-    translationJobId     String?  @map("translation_job_id")
-    createdAt            DateTime @default(now()) @map("created_at")
-    updatedAt            DateTime @updatedAt @map("updated_at")
+    id                String    @id @default(cuid())
+    pageId            String    @map("page_id")
+    sourcePageId      String    @map("source_page_id")
+    lastTranslatedAt  DateTime? @map("last_translated_at")
+    sourceContentHash String?   @map("source_content_hash")
+    isStale           Boolean   @default(false) @map("is_stale")
+    translationJobId  String?   @map("translation_job_id")
+    createdAt         DateTime  @default(now()) @map("created_at")
+    updatedAt         DateTime  @updatedAt @map("updated_at")
 
     page       Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
     sourcePage Page @relation("SourceTranslations", fields: [sourcePageId], references: [id], onDelete: Cascade)
@@ -959,18 +1018,18 @@ enum NotificationCategory {
 }
 
 model Notification {
-    id         String               @id @default(cuid())
-    tenantId   String               @map("tenant_id")
-    userId     String?              @map("user_id")
-    siteId     String?              @map("site_id")
-    category   NotificationCategory
-    channel    NotificationChannel  @default(IN_APP)
-    title      String
-    body       String
-    actionUrl  String?              @map("action_url")
-    readAt     DateTime?            @map("read_at")
-    metadata   Json?
-    createdAt  DateTime             @default(now()) @map("created_at")
+    id        String               @id @default(cuid())
+    tenantId  String               @map("tenant_id")
+    userId    String?              @map("user_id")
+    siteId    String?              @map("site_id")
+    category  NotificationCategory
+    channel   NotificationChannel  @default(IN_APP)
+    title     String
+    body      String
+    actionUrl String?              @map("action_url")
+    readAt    DateTime?            @map("read_at")
+    metadata  Json?
+    createdAt DateTime             @default(now()) @map("created_at")
 
     @@index([tenantId, userId, readAt])
     @@index([tenantId, createdAt])
@@ -979,14 +1038,14 @@ model Notification {
 }
 
 model NotificationPreference {
-    id         String               @id @default(cuid())
-    userId     String               @map("user_id")
-    tenantId   String               @map("tenant_id")
-    category   NotificationCategory
-    channel    NotificationChannel
-    enabled    Boolean              @default(true)
-    createdAt  DateTime             @default(now()) @map("created_at")
-    updatedAt  DateTime             @updatedAt @map("updated_at")
+    id        String               @id @default(cuid())
+    userId    String               @map("user_id")
+    tenantId  String               @map("tenant_id")
+    category  NotificationCategory
+    channel   NotificationChannel
+    enabled   Boolean              @default(true)
+    createdAt DateTime             @default(now()) @map("created_at")
+    updatedAt DateTime             @updatedAt @map("updated_at")
 
     @@unique([userId, tenantId, category, channel])
     @@index([userId, tenantId])

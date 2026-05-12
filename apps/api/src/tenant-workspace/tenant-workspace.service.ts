@@ -2,16 +2,18 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
 } from "@nestjs/common";
 import {
+  NotificationCategory,
   Prisma,
   Role,
   SiteStatus,
   SiteType,
   TenantMembershipRole,
 } from "@prisma/client";
+import { CustomerAccessService } from "../auth/customer-access.service";
 import { BillingService } from "../billing/billing.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
 import { CreateSiteDto } from "./dto/create-site.dto";
@@ -40,12 +42,34 @@ type TenantMemberSummary = {
   createdAt: string;
 };
 
+type TenantInvitationSummary = {
+  id: string;
+  email: string;
+  role: TenantMembershipRole;
+  status: "pending";
+  createdAt: string;
+  expiresAt: string;
+};
+
+type PendingTenantInvitationSummary = {
+  id: string;
+  email: string;
+  role: TenantMembershipRole;
+  status: "pending";
+  createdAt: string;
+  expiresAt: string;
+  invitedByUserId: string | null;
+  invitedByEmail: string | null;
+};
+
 @Injectable()
 export class TenantWorkspaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly usersService: UsersService,
+    private readonly customerAccessService: CustomerAccessService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listSites(tenantId: string): Promise<TenantSiteSummary[]> {
@@ -88,6 +112,12 @@ export class TenantWorkspaceService {
     });
 
     return memberships.map((membership) => this.serializeMember(membership));
+  }
+
+  async listPendingInvitations(
+    tenantId: string,
+  ): Promise<PendingTenantInvitationSummary[]> {
+    return this.customerAccessService.listPendingWorkspaceInvitations(tenantId);
   }
 
   async createSite(
@@ -145,6 +175,24 @@ export class TenantWorkspaceService {
         return createdSite;
       });
 
+      await this.notificationsService.createForTenantRoles({
+        tenantId,
+        roles: [
+          TenantMembershipRole.OWNER,
+          TenantMembershipRole.ADMIN,
+          TenantMembershipRole.EDITOR,
+        ],
+        category: NotificationCategory.SYSTEM,
+        title: `${site.name} is ready in Workspace Studio`,
+        body: `A new ${this.describeSiteType(site.siteType)} site was provisioned and can now be assigned, edited, and launched.`,
+        actionUrl: "/workspace",
+        metadata: {
+          siteId: site.id,
+          siteSlug: site.slug,
+          siteType: site.siteType,
+        },
+      });
+
       return this.serializeSite(site);
     } catch (error) {
       this.rethrowSiteConflict(error);
@@ -155,19 +203,14 @@ export class TenantWorkspaceService {
   async inviteMember(
     tenantId: string,
     dto: InviteTenantMemberDto,
-  ): Promise<TenantMemberSummary> {
-    const email = this.normalizeEmail(dto.email);
-    const user = await this.usersService.findByEmail(email);
-
-    if (!user) {
-      throw new NotFoundException({
-        code: "NOT_FOUND",
-        message:
-          "No account exists for this email. Create the member account before inviting it to the workspace.",
-      });
-    }
-
-    return this.addMembership(tenantId, user.id, dto.role);
+    invitedByUserId: string | null,
+  ): Promise<TenantInvitationSummary> {
+    return this.customerAccessService.createWorkspaceInvitation({
+      tenantId,
+      email: dto.email,
+      role: dto.role,
+      invitedByUserId,
+    });
   }
 
   async createMember(
@@ -193,6 +236,7 @@ export class TenantWorkspaceService {
         data: {
           email,
           passwordHash,
+          emailVerifiedAt: new Date(),
           platformRole: null,
           role: Role.EDITOR,
         },
@@ -225,58 +269,32 @@ export class TenantWorkspaceService {
       });
     });
 
-    return this.serializeMember(membership);
-  }
-
-  private async addMembership(
-    tenantId: string,
-    userId: string,
-    role: TenantMembershipRole,
-  ): Promise<TenantMemberSummary> {
-    const existingMembership = await this.prisma.tenantMembership.findUnique({
-      where: {
-        tenantId_userId: {
-          tenantId,
-          userId,
-        },
-      },
-      select: { id: true },
-    });
-
-    if (existingMembership) {
-      throw new ConflictException({
-        code: "CONFLICT",
-        message: "This user is already a member of the active workspace.",
-      });
-    }
-
-    await this.billingService.assertCanAddSeat(tenantId);
-
-    const existingMembershipCount = await this.prisma.tenantMembership.count({
-      where: { userId },
-    });
-
-    const membership = await this.prisma.tenantMembership.create({
-      data: {
+    await Promise.all([
+      this.notificationsService.createForTenantRoles({
         tenantId,
-        userId,
-        role,
-        isDefault: existingMembershipCount === 0,
-      },
-      select: {
-        id: true,
-        tenantId: true,
-        role: true,
-        isDefault: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
+        roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
+        category: NotificationCategory.SYSTEM,
+        title: `Team member added: ${membership.user.email}`,
+        body: `${membership.user.email} can now sign in as ${this.describeRole(membership.role)}.`,
+        actionUrl: "/workspace",
+        metadata: {
+          userId: membership.user.id,
+          email: membership.user.email,
+          role: membership.role,
         },
-      },
-    });
+      }),
+      this.notificationsService.create({
+        tenantId,
+        userId: membership.user.id,
+        category: NotificationCategory.SYSTEM,
+        title: "Your StayLayer workspace access is ready",
+        body: `You can now sign in and work as ${this.describeRole(membership.role)} in this workspace.`,
+        actionUrl: "/",
+        metadata: {
+          role: membership.role,
+        },
+      }),
+    ]);
 
     return this.serializeMember(membership);
   }
@@ -371,6 +389,38 @@ export class TenantWorkspaceService {
     }
 
     return normalizedLocales;
+  }
+
+  private describeRole(role: TenantMembershipRole): string {
+    switch (role) {
+      case TenantMembershipRole.OWNER:
+        return "owner";
+      case TenantMembershipRole.ADMIN:
+        return "admin";
+      case TenantMembershipRole.EDITOR:
+        return "editor";
+      case TenantMembershipRole.BILLING:
+        return "billing contact";
+      default:
+        return "member";
+    }
+  }
+
+  private describeSiteType(siteType: SiteType): string {
+    switch (siteType) {
+      case SiteType.VACATION_RENTAL:
+        return "vacation rental";
+      case SiteType.BOUTIQUE_HOTEL:
+        return "boutique hotel";
+      case SiteType.BNB:
+        return "bed and breakfast";
+      case SiteType.GLAMPING:
+        return "glamping";
+      case SiteType.GUEST_HOUSE:
+        return "guest house";
+      default:
+        return "hospitality";
+    }
   }
 
   private normalizeRequiredValue(value: string, fieldName: string): string {

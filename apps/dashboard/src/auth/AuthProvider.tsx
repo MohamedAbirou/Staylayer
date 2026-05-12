@@ -20,55 +20,19 @@ import {
   setWorkspaceContext,
 } from "../api/client";
 import type { AuthApiResponse, AuthContextRequest, AuthSession } from "./types";
+import {
+  extractSession,
+  primeSessionFromHandoff,
+  setStoredSession,
+  toWorkspaceContext,
+} from "./session-storage";
 
-const AUTH_SESSION_KEY = "auth_session";
 const CUSTOMER_QUERY_PREFIXES = new Set([
   "pages",
   "page",
   "versions",
   "settings",
 ]);
-
-function getStoredSession(): AuthSession | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(AUTH_SESSION_KEY);
-    return raw ? (JSON.parse(raw) as AuthSession) : null;
-  } catch {
-    return null;
-  }
-}
-
-function setStoredSession(session: AuthSession | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (session) {
-      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
-    } else {
-      localStorage.removeItem(AUTH_SESSION_KEY);
-    }
-  } catch {
-    // Ignore storage failures to avoid breaking auth flow.
-  }
-}
-
-function extractSession(response: AuthApiResponse): AuthSession {
-  const { accessToken: _accessToken, ...session } = response;
-  return session;
-}
-
-function toWorkspaceContext(
-  session: AuthSession | null,
-): AuthContextRequest | null {
-  if (!session?.activeTenant && !session?.activeSite) {
-    return null;
-  }
-
-  return {
-    tenantId: session.activeTenant?.id,
-    siteId: session.activeSite?.id,
-  };
-}
 
 function didWorkspaceChange(
   previous: AuthSession | null,
@@ -90,7 +54,11 @@ function isCustomerQuery(queryKey: QueryKey): boolean {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const storedSessionRef = useRef<AuthSession | null>(getStoredSession());
+  const storedSessionRef = useRef<AuthSession | null>(
+    typeof window === "undefined"
+      ? null
+      : primeSessionFromHandoff(window.location),
+  );
   const [session, setSession] = useState<AuthSession | null>(
     () => storedSessionRef.current,
   );

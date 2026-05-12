@@ -20,7 +20,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   SYSTEM: "bg-slate-100 text-slate-700",
 };
 
-export function NotificationBell() {
+export function NotificationBell({
+  align = "start",
+}: {
+  align?: "start" | "end";
+}) {
   const { session } = useAuth();
   const tenantId = session?.activeTenant?.id ?? null;
   const queryClient = useQueryClient();
@@ -32,7 +36,8 @@ export function NotificationBell() {
     queryKey: ["notifications", "unread-count", tenantId],
     queryFn: () => getUnreadCount(tenantId!),
     enabled: Boolean(tenantId),
-    refetchInterval: 30_000,
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: true,
     retry: false,
   });
 
@@ -40,6 +45,8 @@ export function NotificationBell() {
     queryKey: ["notifications", "list", tenantId],
     queryFn: () => getNotifications(tenantId!, { limit: 15 }),
     enabled: Boolean(tenantId && open),
+    refetchInterval: open ? 10_000 : false,
+    refetchIntervalInBackground: true,
     retry: false,
   });
 
@@ -98,27 +105,41 @@ export function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100/20 hover:text-white cursor-pointer"
+        className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
         title="Notifications"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-sm">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-96 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <p className="text-sm font-semibold text-gray-900">Notifications</p>
+        <div
+          className={`absolute top-full z-50 mt-3 w-[24rem] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_22px_60px_rgba(15,23,42,0.18)] ${align === "end" ? "right-0" : "left-0"}`}
+        >
+          <div className="border-b border-slate-100 bg-[linear-gradient(135deg,rgba(248,250,252,1),rgba(255,255,255,1),rgba(226,232,240,0.45))] px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+                  Live inbox
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  Notifications
+                </p>
+              </div>
+              <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                {unreadCount} unread
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={() => markAllMutation.mutate()}
                   disabled={markAllMutation.isPending}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                  className="mt-3 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   <CheckCheck className="h-3 w-3" />
                   Mark all read
@@ -126,23 +147,29 @@ export function NotificationBell() {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                className="ml-auto rounded-full p-2 text-slate-400 hover:bg-white hover:text-slate-700"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[28rem] overflow-y-auto bg-white">
             {isLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">
+              <div className="px-4 py-10 text-center text-sm text-slate-400">
                 Loading...
               </div>
             ) : notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <Bell className="mx-auto h-6 w-6 text-gray-200" />
-                <p className="mt-2 text-sm text-gray-500">
+              <div className="px-6 py-10 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-300">
+                  <Bell className="h-6 w-6" />
+                </div>
+                <p className="mt-3 text-sm font-medium text-slate-700">
                   No notifications yet
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Workspace activity, billing syncs, and access events will land
+                  here automatically.
                 </p>
               </div>
             ) : (
@@ -151,41 +178,41 @@ export function NotificationBell() {
                   key={n.id}
                   type="button"
                   onClick={() => handleNotificationClick(n)}
-                  className={`flex w-full items-start gap-3 border-b border-gray-50 px-4 py-3 text-left transition-colors hover:bg-gray-50 ${
-                    !n.readAt ? "bg-blue-50/30" : ""
+                  className={`flex w-full items-start gap-3 border-b border-slate-100 px-5 py-4 text-left transition hover:bg-slate-50 ${
+                    !n.readAt ? "bg-sky-50/40" : ""
                   }`}
                 >
-                  <div className="mt-0.5 flex-1 min-w-0">
+                  <div className="mt-0.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
                           CATEGORY_COLORS[n.category] ?? CATEGORY_COLORS.SYSTEM
                         }`}
                       >
                         {n.category.replace("_", " ")}
                       </span>
-                      <span className="text-[11px] text-gray-400">
+                      <span className="text-[11px] text-slate-400">
                         {formatRelativeTime(n.createdAt)}
                       </span>
                     </div>
                     <p
-                      className={`mt-1 truncate text-sm ${
+                      className={`mt-2 truncate text-sm ${
                         !n.readAt
-                          ? "font-semibold text-gray-900"
-                          : "text-gray-700"
+                          ? "font-semibold text-slate-900"
+                          : "text-slate-700"
                       }`}
                     >
                       {n.title}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-gray-500">
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
                       {n.body}
                     </p>
                   </div>
                   {!n.readAt && (
-                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                    <div className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" />
                   )}
                   {n.readAt && (
-                    <Check className="mt-2 h-3.5 w-3.5 shrink-0 text-gray-300" />
+                    <Check className="mt-2 h-3.5 w-3.5 shrink-0 text-slate-300" />
                   )}
                 </button>
               ))

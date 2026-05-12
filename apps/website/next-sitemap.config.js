@@ -39,12 +39,14 @@ function getConfiguredSiteId() {
   const siteId = publicSiteId || serverSiteId;
 
   if (!siteId) {
-    throw new SiteRuntimeConfigError(
-      "SITE_ID or NEXT_PUBLIC_SITE_ID must be configured for site-scoped sitemap generation",
-    );
+    return null;
   }
 
   return siteId;
+}
+
+function hasDedicatedSiteRuntime() {
+  return Boolean(getConfiguredSiteId());
 }
 
 function getConfiguredBrandUrl() {
@@ -117,6 +119,10 @@ function getRouteForPage(slug, locale, defaultLocale) {
 async function fetchPublishedPages() {
   try {
     const siteId = getConfiguredSiteId();
+    if (!siteId) {
+      return [];
+    }
+
     const { locales } = getConfiguredLocales();
     const response = await fetch(buildCmsUrl("/pages/published", { siteId }), {
       headers: { "Content-Type": "application/json" },
@@ -143,6 +149,10 @@ async function fetchPublishedPages() {
 async function fetchPublicSettings() {
   try {
     const siteId = getConfiguredSiteId();
+    if (!siteId) {
+      return null;
+    }
+
     const response = await fetch(buildCmsUrl("/settings/public", { siteId }), {
       headers: { "Content-Type": "application/json" },
     });
@@ -255,6 +265,10 @@ module.exports = {
   robotsTxtOptions: {
     policies: [{ userAgent: "*", allow: "/" }],
     transformRobotsTxt: async (config) => {
+      if (!hasDedicatedSiteRuntime()) {
+        return buildRobotsTxt(config.siteUrl.replace(/\/$/, ""), false);
+      }
+
       const settings = await fetchPublicSettings();
       return buildRobotsTxt(
         config.siteUrl.replace(/\/$/, ""),

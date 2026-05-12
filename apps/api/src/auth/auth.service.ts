@@ -63,6 +63,14 @@ export class AuthService {
       return null;
     }
 
+    if (!user.platformRole && !user.emailVerifiedAt) {
+      throw new ForbiddenException({
+        code: "EMAIL_NOT_VERIFIED",
+        message:
+          "Verify your email before signing in. Request a new verification email if needed.",
+      });
+    }
+
     // Reset failed attempts on successful login
     await this.usersService.resetFailedAttempts(user.id);
 
@@ -175,6 +183,14 @@ export class AuthService {
     user: AuthUserRecord,
     context: AuthContextRequest,
   ): Promise<AuthResponse> {
+    if (!user.platformRole && !user.emailVerifiedAt) {
+      throw new ForbiddenException({
+        code: "EMAIL_NOT_VERIFIED",
+        message:
+          "Verify your email before signing in. Request a new verification email if needed.",
+      });
+    }
+
     const memberships = this.buildMembershipSummaries(user);
 
     if (!user.platformRole && memberships.length === 0) {
@@ -311,7 +327,7 @@ export class AuthService {
       return requestedSite;
     }
 
-    if (membership.sites.length === 1) {
+    if (membership.sites.length >= 1) {
       return membership.sites[0];
     }
 

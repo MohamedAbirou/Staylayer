@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { PrismaModule } from "../prisma/prisma.module";
 import { BillingController } from "./billing.controller";
+import { PublicBillingController } from "./public-billing.controller";
 import { BillingService } from "./billing.service";
 import { StripeWebhooksController } from "./stripe-webhooks.controller";
 import { AdminSubscriptionsController } from "./admin-subscriptions.controller";
@@ -10,6 +11,7 @@ import { AdminSubscriptionsController } from "./admin-subscriptions.controller";
   imports: [ConfigModule, PrismaModule],
   controllers: [
     BillingController,
+    PublicBillingController,
     StripeWebhooksController,
     AdminSubscriptionsController,
   ],

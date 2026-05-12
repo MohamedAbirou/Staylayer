@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./useAuth";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import {
@@ -7,6 +7,7 @@ import {
   hasMembershipRole,
   hasPlatformRole,
 } from "./access";
+import { ADMIN_LOGIN_PATH } from "../lib/constants";
 import type { MembershipRole, PlatformRole } from "./types";
 
 interface ProtectedRouteProps {
@@ -27,13 +28,24 @@ export function ProtectedRoute({
   redirectTo,
 }: ProtectedRouteProps) {
   const { session, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <LoadingSpinner />;
   }
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    if (platformRoles && !membershipRoles) {
+      return <Navigate to={ADMIN_LOGIN_PATH} replace />;
+    }
+
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    const search =
+      returnTo && returnTo !== "/login"
+        ? `?returnTo=${encodeURIComponent(returnTo)}`
+        : "";
+
+    return <Navigate to={`/login${search}`} replace />;
   }
 
   const platformAllowed = platformRoles

@@ -3,6 +3,7 @@ import GoogleTagScript from "@/components/googleTagScript";
 import ClarityScript from "@/components/clarityScript";
 import { BRAND_NAME } from "@/lib/brand";
 import { fetchSettings, getHomepageData } from "@/lib/cmsClient";
+import { getMarketingRedirect, hasDedicatedSiteRuntime } from "@/lib/runtimeOwnership";
 import PuckRenderer from "@/lib/puckRenderer";
 
 function getDefaultLocale() {
@@ -10,6 +11,10 @@ function getDefaultLocale() {
 }
 
 export async function getStaticProps({ locale }) {
+  if (!hasDedicatedSiteRuntime()) {
+    return getMarketingRedirect("/");
+  }
+
   const requestedLocale = locale || getDefaultLocale();
   const [cmsPage, settings] = await Promise.all([
     getHomepageData(requestedLocale),

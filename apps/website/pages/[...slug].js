@@ -8,12 +8,20 @@ import {
   fetchSettings,
   isHomepageSlug,
 } from "@/lib/cmsClient";
+import { getMarketingRedirect, hasDedicatedSiteRuntime } from "@/lib/runtimeOwnership";
 
 function getDefaultLocale() {
   return (process.env.PRIMARY_LOCALE || "en").trim() || "en";
 }
 
 export async function getStaticPaths({ locales }) {
+  if (!hasDedicatedSiteRuntime()) {
+    return {
+      paths: [],
+      fallback: "blocking",
+    };
+  }
+
   const pages = await fetchAllPublishedSlugs();
   const enabledLocales =
     Array.isArray(locales) && locales.length > 0
@@ -37,6 +45,12 @@ export async function getStaticPaths({ locales }) {
 }
 
 export async function getStaticProps({ params, locale }) {
+  if (!hasDedicatedSiteRuntime()) {
+    const slugSegments = Array.isArray(params?.slug) ? params.slug : [];
+    const pathname = slugSegments.length > 0 ? `/${slugSegments.join("/")}` : "/";
+    return getMarketingRedirect(pathname);
+  }
+
   const requestedLocale = locale || getDefaultLocale();
   const slug = Array.isArray(params.slug) ? params.slug.join("/") : params.slug;
 

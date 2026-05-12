@@ -14,7 +14,21 @@ import { getSubmissions } from "../api/submissions";
 import { getLatestDeployment } from "../api/deployments";
 import { getOnboarding } from "../api/onboarding";
 import type { SiteDeployment } from "../api/deployments";
-import { FileText, Globe, File as FileEdit, Languages, Plus, ArrowRight, Clock, Inbox, CreditCard, Sparkles, Rocket, ExternalLink, CircleAlert as AlertCircle } from "lucide-react";
+import {
+  FileText,
+  Globe,
+  File as FileEdit,
+  Languages,
+  Plus,
+  ArrowRight,
+  Clock,
+  Inbox,
+  CreditCard,
+  Sparkles,
+  Rocket,
+  ExternalLink,
+  CircleAlert as AlertCircle,
+} from "lucide-react";
 
 const POLLING_DEPLOYMENT_STATUSES: SiteDeployment["status"][] = [
   "CREATING_PROJECT",
@@ -103,16 +117,16 @@ export default function DashboardHome() {
             Welcome to your workspace
           </h1>
           <p className="mt-2 text-sm text-gray-600">
-            Select a site from the sidebar or run the setup wizard to create
-            your first hospitality website.
+            Open Workspace Studio to create your first hospitality site, then
+            return here once a site is active.
           </p>
         </div>
         <button
-          onClick={() => navigate("/onboarding")}
+          onClick={() => navigate("/workspace")}
           className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
         >
           <Sparkles className="h-4 w-4" />
-          Set up your site
+          Create your first site
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -211,9 +225,8 @@ export default function DashboardHome() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-blue-900">
-                  Launch checklist ·{" "}
-                  {onboarding.progress.completed}/{onboarding.progress.total}{" "}
-                  complete
+                  Launch checklist · {onboarding.progress.completed}/
+                  {onboarding.progress.total} complete
                 </p>
                 <p className="text-xs text-blue-800/80">
                   Finish the remaining steps to reach a launch-ready site.

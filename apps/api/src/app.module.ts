@@ -17,10 +17,12 @@ import { FormsModule } from "./forms/forms.module";
 import { TenantWorkspaceModule } from "./tenant-workspace/tenant-workspace.module";
 import { OnboardingModule } from "./onboarding/onboarding.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { PublicModule } from "./public/public.module";
 import { TranslationModule } from "./translation/translation.module";
 import { SeoModule } from "./seo/seo.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
+import { MailModule } from "./mail/mail.module";
 
 @Module({
   imports: [
@@ -44,6 +46,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
       // Refresh — allow normal page reloads, multi-tab usage, and token rotation
       { name: "refresh", ttl: 3600000, limit: 180 }, // 180 per hour (~3 per minute average)
     ]),
+    MailModule,
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -59,6 +62,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     TenantWorkspaceModule,
     OnboardingModule,
     NotificationsModule,
+    PublicModule,
     TranslationModule,
     SeoModule,
   ],

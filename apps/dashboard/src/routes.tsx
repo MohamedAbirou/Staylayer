@@ -5,18 +5,21 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import {
   BILLING_MEMBERSHIP_ROLES,
   CONTENT_MEMBERSHIP_ROLES,
+  hasActiveSite,
   SITE_ADMIN_MEMBERSHIP_ROLES,
 } from "./auth/access";
 import { PLATFORM_ROLES } from "./auth/types";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useAuth } from "./auth/useAuth";
 import LoginPage from "./pages/LoginPage";
+import AuthHandoffPage from "./pages/AuthHandoffPage";
+import MarketingLoginRedirectPage from "./pages/MarketingLoginRedirectPage";
 import PagesListPage from "./pages/PagesListPage";
 import NewPagePage from "./pages/NewPagePage";
 import EditorPage from "./pages/EditorPage";
 import PreviewPage from "./pages/PreviewPage";
 import SettingsPage from "./pages/SettingsPage";
 import DashboardHome from "./pages/DashboardHome";
-import OnboardingPage from "./pages/OnboardingPage";
 import UsagePage from "./pages/UsagePage";
 import FormsPage from "./pages/FormsPage";
 import DomainsPage from "./pages/DomainsPage";
@@ -34,9 +37,28 @@ import AdminDomainsPage from "./pages/admin/AdminDomainsPage";
 import AdminFormsPage from "./pages/admin/AdminFormsPage";
 import AdminAuditPage from "./pages/admin/AdminAuditPage";
 
+function LegacyOnboardingRedirect() {
+  const { session } = useAuth();
+
+  return (
+    <Navigate
+      to={hasActiveSite(session) ? "/pages/new" : "/workspace"}
+      replace
+    />
+  );
+}
+
 export const router = createBrowserRouter([
   {
+    path: "/auth/handoff",
+    element: <AuthHandoffPage />,
+  },
+  {
     path: "/login",
+    element: <MarketingLoginRedirectPage />,
+  },
+  {
+    path: "/admin/login",
     element: <LoginPage />,
   },
   {
@@ -107,9 +129,7 @@ export const router = createBrowserRouter([
             path: "/onboarding",
             element: (
               <ProtectedRoute membershipRoles={CONTENT_MEMBERSHIP_ROLES}>
-                <ErrorBoundary>
-                  <OnboardingPage />
-                </ErrorBoundary>
+                <LegacyOnboardingRedirect />
               </ProtectedRoute>
             ),
           },

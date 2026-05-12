@@ -1,5 +1,8 @@
 import { expect, type Page } from "@playwright/test";
 
+const API_BASE_URL =
+  process.env.PLAYWRIGHT_API_BASE_URL ?? "http://localhost:4000";
+
 export const PLATFORM_OWNER = {
   email: "superadmin@myallocator.com",
   password: "SuperAdmin123!",
@@ -15,14 +18,22 @@ export async function loginAs(
   credentials: { email: string; password: string },
   expectedPath: RegExp,
 ) {
-  await page.goto("/login");
-  await expect(
-    page.getByRole("heading", { name: "MyAllocator CMS" }),
-  ).toBeVisible();
+  const response = await page.request.post(`${API_BASE_URL}/auth/login`, {
+    data: credentials,
+  });
 
-  await page.getByRole("textbox", { name: "Email" }).fill(credentials.email);
-  await page.locator('input[type="password"]').fill(credentials.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  expect(response.ok()).toBeTruthy();
+
+  const authResponse = (await response.json()) as {
+    accessToken: string;
+    user: { platformRole: string | null };
+  };
+
+  const payload = Buffer.from(JSON.stringify(authResponse)).toString(
+    "base64url",
+  );
+
+  await page.goto(`/auth/handoff#payload=${payload}`);
 
   await expect(page).toHaveURL(expectedPath);
 }

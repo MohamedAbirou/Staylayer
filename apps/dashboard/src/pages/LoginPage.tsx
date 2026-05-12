@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDefaultAuthenticatedPath } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -9,7 +8,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -19,7 +18,16 @@ export default function LoginPage() {
 
     try {
       const session = await login(email, password);
-      navigate(getDefaultAuthenticatedPath(session), { replace: true });
+
+      if (!session.user.platformRole) {
+        await logout();
+        setError(
+          "Customer login moved to the marketing app. Use the public customer login instead.",
+        );
+        return;
+      }
+
+      navigate("/admin", { replace: true });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -34,9 +42,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">MyAllocator CMS</h1>
+          <h1 className="text-2xl font-bold text-gray-900">StayLayer Operator Console</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to manage your website content
+            Sign in with a platform-admin account
           </p>
         </div>
 

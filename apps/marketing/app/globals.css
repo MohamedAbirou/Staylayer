@@ -1,0 +1,293 @@
+@import "tailwindcss";
+
+:root {
+  /* ── StayLayer Brand Palette ── */
+  --sl-orange: #e07038;
+  --sl-orange-mid: #f08c58;
+  --sl-orange-pale: #fef0e8;
+  --sl-orange-glow: rgba(224, 112, 56, 0.22);
+  --sl-navy: #1a4870;
+  --sl-navy-deep: #0d2840;
+  --sl-teal: #3a9898;
+  --sl-teal-bright: #56c4c2;
+  --sl-teal-glow: rgba(58, 152, 152, 0.2);
+  --sl-gold: #f0b030;
+  --sl-gold-pale: rgba(240, 176, 48, 0.15);
+  --sl-cream: #faf7f3;
+  --sl-parchment: #f3ede3;
+
+  /* ── Legacy aliases (kept for compatibility) ── */
+  --orbit-ivory: var(--sl-parchment);
+  --orbit-cloud: var(--sl-cream);
+  --orbit-graphite: #1a2c3e;
+  --orbit-midnight: var(--sl-navy-deep);
+  --orbit-teal: var(--sl-teal);
+  --orbit-cyan: var(--sl-teal-bright);
+  --orbit-amber: var(--sl-gold);
+  --orbit-orange: var(--sl-orange);
+  --orbit-border: rgba(13, 40, 64, 0.09);
+  --orbit-shadow: 0 24px 72px rgba(13, 40, 64, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 8% 0%,
+      rgba(58, 152, 152, 0.16) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 55% 40% at 94% 8%,
+      rgba(224, 112, 56, 0.13) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 60% 45% at 50% 105%,
+      rgba(240, 176, 48, 0.08) 0%,
+      transparent 55%
+    ),
+    linear-gradient(168deg, #faf7f3 0%, #f6f0e8 55%, #f0e8dc 100%);
+  color: var(--orbit-graphite);
+  font-family: var(--font-body), sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(26, 72, 112, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 72, 112, 0.028) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(
+    ellipse 80% 70% at center,
+    rgba(0, 0, 0, 0.45),
+    transparent 78%
+  );
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(224, 112, 56, 0.2);
+}
+
+/* ─── Core shells ─── */
+
+.orbit-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.orbit-card {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(26, 72, 112, 0.08);
+  box-shadow: var(--orbit-shadow);
+  backdrop-filter: blur(20px);
+}
+
+/* Orange-accented featured card */
+.sl-card-featured {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid rgba(224, 112, 56, 0.38);
+  box-shadow:
+    0 0 0 4px rgba(224, 112, 56, 0.06),
+    0 24px 72px rgba(224, 112, 56, 0.16),
+    0 4px 16px rgba(13, 40, 64, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+/* Teal-accented card */
+.sl-card-teal {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1.5px solid rgba(58, 152, 152, 0.3);
+  box-shadow:
+    0 0 0 4px rgba(58, 152, 152, 0.05),
+    0 24px 72px rgba(58, 152, 152, 0.12);
+  backdrop-filter: blur(20px);
+}
+
+/* Dark navy band */
+.orbit-dark-band {
+  background:
+    radial-gradient(
+      ellipse 60% 55% at 5% 45%,
+      rgba(58, 152, 152, 0.22) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 96% 15%,
+      rgba(224, 112, 56, 0.2) 0%,
+      transparent 50%
+    ),
+    linear-gradient(148deg, #081828 0%, #0d2840 45%, #1a4870 100%);
+  color: #f9f6ef;
+}
+
+/* Orange-warm dark section */
+.sl-dark-orange {
+  background:
+    radial-gradient(
+      ellipse 65% 55% at 95% 90%,
+      rgba(240, 176, 48, 0.22) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 55% 45% at 5% 15%,
+      rgba(58, 152, 152, 0.18) 0%,
+      transparent 50%
+    ),
+    linear-gradient(148deg, #1a0d04 0%, #3a1808 50%, #1a4870 100%);
+  color: #f9f6ef;
+}
+
+/* Teal gradient section */
+.sl-teal-band {
+  background: linear-gradient(
+    145deg,
+    rgba(26, 72, 112, 0.96) 0%,
+    rgba(58, 152, 152, 0.88) 100%
+  );
+  color: #f9f6ef;
+}
+
+/* ─── Dividers ─── */
+
+.orbit-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(224, 112, 56, 0.3),
+    rgba(58, 152, 152, 0.2),
+    transparent
+  );
+}
+
+/* ─── Typography utilities ─── */
+
+.orbit-heading {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.orbit-kicker {
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* Split-color wordmark — "Stay" = orange, "Layer" = navy */
+.sl-stay {
+  color: var(--sl-orange);
+}
+.sl-layer {
+  color: var(--sl-navy);
+}
+
+/* Gradient text */
+.sl-gradient-text {
+  background: linear-gradient(125deg, var(--sl-orange) 0%, var(--sl-gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sl-gradient-text-teal {
+  background: linear-gradient(
+    125deg,
+    var(--sl-teal) 0%,
+    var(--sl-teal-bright) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Badge pills ─── */
+
+.sl-badge-orange {
+  background: rgba(224, 112, 56, 0.1);
+  border: 1px solid rgba(224, 112, 56, 0.28);
+  color: var(--sl-orange);
+}
+
+.sl-badge-teal {
+  background: rgba(58, 152, 152, 0.1);
+  border: 1px solid rgba(58, 152, 152, 0.28);
+  color: var(--sl-teal);
+}
+
+.sl-badge-gold {
+  background: rgba(240, 176, 48, 0.1);
+  border: 1px solid rgba(240, 176, 48, 0.28);
+  color: #b07818;
+}
+
+.sl-badge-navy {
+  background: rgba(26, 72, 112, 0.08);
+  border: 1px solid rgba(26, 72, 112, 0.18);
+  color: var(--sl-navy);
+}
+
+/* ─── Glow effects ─── */
+
+.sl-glow-orange {
+  box-shadow:
+    0 0 48px rgba(224, 112, 56, 0.28),
+    0 24px 72px rgba(13, 40, 64, 0.1);
+}
+
+.sl-glow-teal {
+  box-shadow:
+    0 0 48px rgba(58, 152, 152, 0.22),
+    0 24px 72px rgba(13, 40, 64, 0.08);
+}
+
+/* ─── Orange underline accent ─── */
+.sl-underline-orange {
+  text-decoration: underline;
+  text-decoration-color: var(--sl-orange);
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+}
+
+/* ─── Layered platform graphic ─── */
+.sl-layers-graphic {
+  position: relative;
+}
+
+.sl-layers-graphic::before,
+.sl-layers-graphic::after {
+  content: "";
+  position: absolute;
+  inset-inline: 10%;
+  height: 6px;
+  border-radius: 4px;
+  opacity: 0.5;
+}
+
+.sl-layers-graphic::before {
+  bottom: -10px;
+  background: var(--sl-teal);
+  inset-inline: 14%;
+}
+
+.sl-layers-graphic::after {
+  bottom: -19px;
+  background: var(--sl-navy);
+  inset-inline: 22%;
+  opacity: 0.35;
+}

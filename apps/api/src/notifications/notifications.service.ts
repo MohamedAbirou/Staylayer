@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { NotificationCategory, NotificationChannel, Prisma } from "@prisma/client";
+import {
+  NotificationCategory,
+  NotificationChannel,
+  Prisma,
+  TenantMembershipRole,
+} from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreateNotificationInput {
@@ -38,6 +43,14 @@ export interface NotificationPreferenceDto {
   enabled: boolean;
 }
 
+export interface CreateRoleNotificationInput extends Omit<
+  CreateNotificationInput,
+  "userId"
+> {
+  roles: TenantMembershipRole[];
+  excludeUserIds?: string[];
+}
+
 @Injectable()
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -60,6 +73,66 @@ export class NotificationsService {
     return this.toDto(notification);
   }
 
+  async createForUsers(
+    input: Omit<CreateNotificationInput, "userId"> & { userIds: string[] },
+  ): Promise<NotificationDto[]> {
+    const channel = input.channel ?? NotificationChannel.IN_APP;
+    const uniqueUserIds = Array.from(
+      new Set(input.userIds.map((userId) => userId.trim()).filter(Boolean)),
+    );
+
+    if (uniqueUserIds.length === 0) {
+      return [];
+    }
+
+    const enabledUserIds = await this.resolveEnabledUserIds(
+      input.tenantId,
+      uniqueUserIds,
+      input.category,
+      channel,
+    );
+
+    if (enabledUserIds.length === 0) {
+      return [];
+    }
+
+    return Promise.all(
+      enabledUserIds.map((userId) =>
+        this.create({
+          ...input,
+          userId,
+          channel,
+        }),
+      ),
+    );
+  }
+
+  async createForTenantRoles(
+    input: CreateRoleNotificationInput,
+  ): Promise<NotificationDto[]> {
+    const excludedUserIds = new Set(
+      input.excludeUserIds?.filter(Boolean) ?? [],
+    );
+    const memberships = await this.prisma.tenantMembership.findMany({
+      where: {
+        tenantId: input.tenantId,
+        role: { in: input.roles },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    const userIds = memberships
+      .map((membership) => membership.userId)
+      .filter((userId) => !excludedUserIds.has(userId));
+
+    return this.createForUsers({
+      ...input,
+      userIds,
+    });
+  }
+
   async listForUser(
     tenantId: string,
     userId: string,
@@ -71,7 +144,9 @@ export class NotificationsService {
         tenantId,
         OR: [{ userId }, { userId: null }],
         ...(params.unreadOnly ? { readAt: null } : {}),
-        ...(params.cursor ? { createdAt: { lt: new Date(params.cursor) } } : {}),
+        ...(params.cursor
+          ? { createdAt: { lt: new Date(params.cursor) } }
+          : {}),
       },
       orderBy: { createdAt: "desc" },
       take: limit + 1,
@@ -189,6 +264,34 @@ export class NotificationsService {
     });
 
     return pref?.enabled ?? true;
+  }
+
+  private async resolveEnabledUserIds(
+    tenantId: string,
+    userIds: string[],
+    category: NotificationCategory,
+    channel: NotificationChannel,
+  ): Promise<string[]> {
+    const preferences = await this.prisma.notificationPreference.findMany({
+      where: {
+        tenantId,
+        userId: { in: userIds },
+        category,
+        channel,
+      },
+      select: {
+        userId: true,
+        enabled: true,
+      },
+    });
+
+    const disabledUserIds = new Set(
+      preferences
+        .filter((preference) => !preference.enabled)
+        .map((preference) => preference.userId),
+    );
+
+    return userIds.filter((userId) => !disabledUserIds.has(userId));
   }
 
   private toDto(notification: {

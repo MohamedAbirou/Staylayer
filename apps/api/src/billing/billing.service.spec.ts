@@ -18,6 +18,7 @@ function buildPrismaMock() {
     },
     tenantMembership: {
       count: jest.fn(),
+      findMany: jest.fn(),
     },
     page: {
       count: jest.fn(),
@@ -57,6 +58,19 @@ function buildConfigMock() {
   };
 }
 
+function buildMailMock() {
+  return {
+    isConfigured: jest.fn().mockReturnValue(false),
+    send: jest.fn(),
+  };
+}
+
+function buildNotificationsMock() {
+  return {
+    createForTenantRoles: jest.fn().mockResolvedValue([]),
+  };
+}
+
 function buildSubscription(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "db-sub-1",
@@ -83,13 +97,22 @@ function buildSubscription(overrides: Partial<Record<string, unknown>> = {}) {
 describe("BillingService", () => {
   let prisma: ReturnType<typeof buildPrismaMock>;
   let config: ReturnType<typeof buildConfigMock>;
+  let mailer: ReturnType<typeof buildMailMock>;
+  let notifications: ReturnType<typeof buildNotificationsMock>;
   let service: BillingService;
 
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date("2026-05-02T00:00:00.000Z"));
     prisma = buildPrismaMock();
     config = buildConfigMock();
-    service = new BillingService(prisma as never, config as never);
+    mailer = buildMailMock();
+    notifications = buildNotificationsMock();
+    service = new BillingService(
+      prisma as never,
+      config as never,
+      mailer as never,
+      notifications as never,
+    );
   });
 
   afterEach(() => {
@@ -302,6 +325,81 @@ describe("BillingService", () => {
         data: expect.objectContaining({
           tenantId: "tenant-1",
           subscriptionId: "db-sub-2",
+        }),
+      }),
+    );
+  });
+
+  it("backfills an active Stripe subscription when checkout intent exists but the webhook has not synced yet", async () => {
+    prisma.tenant.findUnique.mockResolvedValue({
+      id: "tenant-1",
+      name: "Harbor House",
+      createdAt: new Date("2026-04-29T00:00:00.000Z"),
+    });
+    prisma.subscription.findFirst.mockResolvedValue(
+      buildSubscription({
+        planKey: "portfolio",
+        status: SubscriptionStatus.INACTIVE,
+        providerSubscriptionId: null,
+        providerPriceId: null,
+      }),
+    );
+    prisma.site.findMany.mockResolvedValue([
+      { id: "site-1", enabledLocales: ["en"] },
+    ]);
+    prisma.tenantMembership.count.mockResolvedValue(2);
+    prisma.page.count.mockResolvedValue(4);
+    prisma.formSubmission.count.mockResolvedValue(12);
+    prisma.domain.count.mockResolvedValue(0);
+    prisma.subscription.update.mockResolvedValue({ id: "db-sub-1" });
+    prisma.subscription.findUnique.mockResolvedValue(
+      buildSubscription({
+        id: "db-sub-1",
+        planKey: "portfolio",
+        status: SubscriptionStatus.ACTIVE,
+        providerSubscriptionId: "sub_live_123",
+        providerPriceId: "price_1TUwbaABhhopzfYDSGg2XVZX",
+        currentPeriodEnd: new Date("2026-06-01T00:00:00.000Z"),
+        lastWebhookAt: new Date("2026-05-02T00:00:00.000Z"),
+      }),
+    );
+
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        subscriptions: {
+          list: jest.fn().mockResolvedValue({
+            data: [
+              {
+                id: "sub_live_123",
+                customer: "cus_123",
+                metadata: {
+                  tenantId: "tenant-1",
+                  planKey: "portfolio",
+                },
+                status: "active",
+                items: {
+                  data: [{ price: { id: "price_1TUwbaABhhopzfYDSGg2XVZX" } }],
+                },
+                current_period_start: 1_777_000_000,
+                current_period_end: 1_779_592_000,
+                cancel_at_period_end: false,
+              },
+            ],
+          }),
+        },
+      });
+
+    const snapshot = await service.getTenantPlanSnapshot("tenant-1");
+
+    expect(snapshot.planKey).toBe("portfolio");
+    expect(snapshot.status).toBe("active");
+    expect(snapshot.actions.publishingBlocked).toBe(false);
+    expect(prisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          planKey: "portfolio",
+          status: SubscriptionStatus.ACTIVE,
+          providerSubscriptionId: "sub_live_123",
         }),
       }),
     );

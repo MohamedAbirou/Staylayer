@@ -25,6 +25,7 @@ const authUserSelect = Prisma.validator<Prisma.UserSelect>()({
   id: true,
   email: true,
   passwordHash: true,
+  emailVerifiedAt: true,
   platformRole: true,
   role: true,
   failedAttempts: true,
@@ -42,7 +43,7 @@ const authUserSelect = Prisma.validator<Prisma.UserSelect>()({
           name: true,
           status: true,
           sites: {
-            orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+            orderBy: [{ createdAt: "desc" }, { name: "asc" }],
             select: {
               id: true,
               slug: true,

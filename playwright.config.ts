@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-const apiPort = process.env.PLAYWRIGHT_API_PORT ?? "3001";
+const apiPort = process.env.PLAYWRIGHT_API_PORT ?? "4000";
 const dashboardPort = process.env.PLAYWRIGHT_DASHBOARD_PORT ?? "4174";
 const baseURL = `http://localhost:${dashboardPort}`;
 

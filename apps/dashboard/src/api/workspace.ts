@@ -33,6 +33,17 @@ export interface WorkspaceMemberRecord {
   createdAt: string;
 }
 
+export interface WorkspaceInvitationRecord {
+  id: string;
+  email: string;
+  role: WorkspaceMemberRole;
+  status: "pending";
+  createdAt: string;
+  expiresAt: string;
+  invitedByUserId: string | null;
+  invitedByEmail: string | null;
+}
+
 export interface CreateWorkspaceSitePayload {
   name: string;
   slug?: string;
@@ -83,10 +94,19 @@ export async function getWorkspaceMembers(
 export async function inviteWorkspaceMember(
   tenantId: string,
   payload: InviteWorkspaceMemberPayload,
-): Promise<WorkspaceMemberRecord> {
-  const { data } = await client.post<WorkspaceMemberRecord>(
+): Promise<WorkspaceInvitationRecord> {
+  const { data } = await client.post<WorkspaceInvitationRecord>(
     `/tenants/${tenantId}/members/invite`,
     payload,
+  );
+  return data;
+}
+
+export async function getPendingWorkspaceInvitations(
+  tenantId: string,
+): Promise<WorkspaceInvitationRecord[]> {
+  const { data } = await client.get<WorkspaceInvitationRecord[]>(
+    `/tenants/${tenantId}/members/invitations`,
   );
   return data;
 }

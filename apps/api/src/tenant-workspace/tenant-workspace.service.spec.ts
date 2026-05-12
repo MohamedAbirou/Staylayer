@@ -44,6 +44,13 @@ describe("TenantWorkspaceService", () => {
     findByEmail: jest.Mock;
     hashPassword: jest.Mock;
   };
+  let customerAccessService: {
+    createWorkspaceInvitation: jest.Mock;
+  };
+  let notificationsService: {
+    create: jest.Mock;
+    createForTenantRoles: jest.Mock;
+  };
   let service: TenantWorkspaceService;
 
   beforeEach(() => {
@@ -56,11 +63,20 @@ describe("TenantWorkspaceService", () => {
       findByEmail: jest.fn(),
       hashPassword: jest.fn(),
     };
+    customerAccessService = {
+      createWorkspaceInvitation: jest.fn(),
+    };
+    notificationsService = {
+      create: jest.fn().mockResolvedValue(null),
+      createForTenantRoles: jest.fn().mockResolvedValue([]),
+    };
 
     service = new TenantWorkspaceService(
       prisma as never,
       billingService as never,
       usersService as never,
+      customerAccessService as never,
+      notificationsService as never,
     );
   });
 
@@ -107,41 +123,33 @@ describe("TenantWorkspaceService", () => {
     expect(created.slug).toBe("azure-bay-villas");
   });
 
-  it("adds an existing user to the tenant after enforcing the seat cap", async () => {
-    usersService.findByEmail.mockResolvedValue({
-      id: "user-1",
+  it("sends a workspace invitation instead of attaching a member immediately", async () => {
+    customerAccessService.createWorkspaceInvitation.mockResolvedValue({
+      id: "invite-1",
       email: "member@example.com",
-    });
-    prisma.tenantMembership.findUnique.mockResolvedValue(null);
-    prisma.tenantMembership.count.mockResolvedValue(0);
-    prisma.tenantMembership.create.mockResolvedValue({
-      id: "membership-1",
-      tenantId: "tenant-1",
       role: TenantMembershipRole.ADMIN,
-      isDefault: true,
-      createdAt: new Date("2026-05-06T12:00:00.000Z"),
-      user: {
-        id: "user-1",
-        email: "member@example.com",
-      },
+      status: "pending",
+      createdAt: "2026-05-06T12:00:00.000Z",
+      expiresAt: "2026-05-13T12:00:00.000Z",
     });
 
-    const member = await service.inviteMember("tenant-1", {
+    const member = await service.inviteMember(
+      "tenant-1",
+      {
+        email: " MEMBER@example.com ",
+        role: TenantMembershipRole.ADMIN,
+      },
+      "user-1",
+    );
+
+    expect(
+      customerAccessService.createWorkspaceInvitation,
+    ).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
       email: " MEMBER@example.com ",
       role: TenantMembershipRole.ADMIN,
+      invitedByUserId: "user-1",
     });
-
-    expect(billingService.assertCanAddSeat).toHaveBeenCalledWith("tenant-1");
-    expect(prisma.tenantMembership.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: {
-          tenantId: "tenant-1",
-          userId: "user-1",
-          role: TenantMembershipRole.ADMIN,
-          isDefault: true,
-        },
-      }),
-    );
     expect(member.email).toBe("member@example.com");
   });
 
@@ -176,6 +184,7 @@ describe("TenantWorkspaceService", () => {
       data: {
         email: "new@example.com",
         passwordHash: "hashed-password",
+        emailVerifiedAt: expect.any(Date),
         platformRole: null,
         role: Role.EDITOR,
       },

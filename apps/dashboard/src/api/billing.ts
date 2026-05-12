@@ -77,6 +77,12 @@ export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
   },
 ];
 
+export function isBillingPlanKey(
+  value: string | null,
+): value is BillingPlanKey {
+  return Boolean(value && PLAN_CATALOG.some((plan) => plan.key === value));
+}
+
 export interface BillingPlanSnapshot {
   planId: string;
   planKey: BillingPlanKey;

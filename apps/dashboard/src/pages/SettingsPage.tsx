@@ -1007,7 +1007,7 @@ function SiteSettingsTab() {
                 setGeneralDirty(true);
               }}
               className={inputCls}
-              placeholder="https://example.com/logo.svg"
+              placeholder="https://example.com/logo.png"
             />
           </SettingsField>
           <SettingsField

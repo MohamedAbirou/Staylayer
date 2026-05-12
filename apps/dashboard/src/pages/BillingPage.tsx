@@ -1,4 +1,10 @@
-import { useState, type ElementType, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ElementType,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -12,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { BILLING_MEMBERSHIP_ROLES, hasMembershipRole } from "../auth/access";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -20,6 +27,7 @@ import {
   createCheckoutSession,
   createPortalSession,
   getBillingPlan,
+  isBillingPlanKey,
   type BillingPlanKey,
   type BillingPlanSnapshot,
   type BillingPlanStatus,
@@ -37,12 +45,20 @@ const STATUS_META: Record<BillingPlanStatus, { label: string; color: string }> =
 
 export default function BillingPage() {
   const { session } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tenantId = session?.activeTenant?.id ?? null;
   const canViewBilling = hasMembershipRole(session, BILLING_MEMBERSHIP_ROLES);
   const [selectedPlanKey, setSelectedPlanKey] = useState<BillingPlanKey | null>(
     null,
   );
   const [checkoutConfirmOpen, setCheckoutConfirmOpen] = useState(false);
+  const [checkoutFeedback, setCheckoutFeedback] = useState<
+    "none" | "syncing" | "synced"
+  >(searchParams.get("checkout") === "success" ? "syncing" : "none");
+  const [portalFeedback, setPortalFeedback] = useState<"none" | "returned">(
+    searchParams.get("portal") === "return" ? "returned" : "none",
+  );
+  const handledCheckoutIntentRef = useRef<string | null>(null);
 
   const {
     data: plan,
@@ -54,9 +70,19 @@ export default function BillingPage() {
     queryFn: () => getBillingPlan(tenantId!),
     enabled: Boolean(tenantId && canViewBilling),
     retry: false,
+    refetchInterval: searchParams.get("checkout") === "success" ? 2000 : false,
   });
 
-  console.log("PLAN: ", plan);
+  const requestedPlanParam = searchParams.get("plan");
+  const requestedPlan = isBillingPlanKey(requestedPlanParam)
+    ? requestedPlanParam
+    : null;
+  const checkoutReturn = searchParams.get("checkout");
+  const portalReturn = searchParams.get("portal");
+  const checkoutIntentKey =
+    requestedPlan && searchParams.get("intent") === "checkout"
+      ? `${requestedPlan}:checkout`
+      : null;
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -64,12 +90,13 @@ export default function BillingPage() {
         throw new Error("Select a tenant workspace before starting checkout");
       }
 
-      const returnUrl = `${window.location.origin}/billing`;
+      const returnUrl = `${window.location.origin}/billing?checkout=success`;
+      const cancelUrl = `${window.location.origin}/billing?checkout=cancelled`;
       const targetPlanKey = selectedPlanKey ?? plan.planKey;
       return createCheckoutSession(tenantId, {
         planKey: targetPlanKey,
         successUrl: returnUrl,
-        cancelUrl: returnUrl,
+        cancelUrl,
       });
     },
     onSuccess: ({ checkoutUrl }) => {
@@ -92,7 +119,7 @@ export default function BillingPage() {
       }
 
       return createPortalSession(tenantId, {
-        returnUrl: `${window.location.origin}/billing`,
+        returnUrl: `${window.location.origin}/billing?portal=return`,
       });
     },
     onSuccess: ({ portalUrl }) => {
@@ -106,6 +133,74 @@ export default function BillingPage() {
       toast.error(message);
     },
   });
+
+  const checkoutAllowed = plan ? canStartCheckout(plan) : false;
+
+  useEffect(() => {
+    if (checkoutReturn === "success") {
+      setCheckoutFeedback((current) =>
+        current === "synced" ? current : "syncing",
+      );
+    }
+  }, [checkoutReturn]);
+
+  useEffect(() => {
+    if (portalReturn !== "return") {
+      return;
+    }
+
+    setPortalFeedback("returned");
+    const next = new URLSearchParams(searchParams);
+    next.delete("portal");
+    setSearchParams(next, { replace: true });
+  }, [portalReturn, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!plan || checkoutFeedback !== "syncing") {
+      return;
+    }
+
+    if (["active", "trialing", "past_due"].includes(plan.status)) {
+      setCheckoutFeedback("synced");
+      const next = new URLSearchParams(searchParams);
+      next.delete("checkout");
+      setSearchParams(next, { replace: true });
+    }
+  }, [checkoutFeedback, plan, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!requestedPlan) {
+      return;
+    }
+
+    setSelectedPlanKey((current) =>
+      current === requestedPlan ? current : requestedPlan,
+    );
+  }, [requestedPlan]);
+
+  useEffect(() => {
+    if (!plan || !requestedPlan || !checkoutIntentKey || !checkoutAllowed) {
+      return;
+    }
+
+    const activePlan = selectedPlanKey ?? plan.planKey;
+    if (activePlan !== requestedPlan) {
+      return;
+    }
+
+    if (handledCheckoutIntentRef.current === checkoutIntentKey) {
+      return;
+    }
+
+    handledCheckoutIntentRef.current = checkoutIntentKey;
+    setCheckoutConfirmOpen(true);
+  }, [
+    checkoutAllowed,
+    checkoutIntentKey,
+    plan,
+    requestedPlan,
+    selectedPlanKey,
+  ]);
 
   if (!tenantId) {
     return (
@@ -165,7 +260,6 @@ export default function BillingPage() {
   }
 
   const { label, color } = STATUS_META[plan.status];
-  const checkoutAllowed = canStartCheckout(plan);
   const manageBillingAllowed =
     plan.source === "stripe" && !!plan.providerCustomerId;
   const overLimitItems = getOverLimitItems(plan);
@@ -193,12 +287,39 @@ export default function BillingPage() {
         </button>
       </div>
 
-      {plan.actions.publishingBlocked && (
+      {checkoutFeedback === "syncing" && (
+        <StatusBanner
+          icon={Loader2}
+          tone="info"
+          title="Payment confirmed, syncing subscription..."
+          message="Stripe accepted the payment. StayLayer is reconciling the subscription state for this workspace now."
+        />
+      )}
+
+      {checkoutFeedback === "synced" && plan.status !== "inactive" && (
+        <StatusBanner
+          icon={CheckCircle2}
+          tone="success"
+          title="Subscription synced"
+          message={`Your ${plan.planName} plan is active for ${session?.activeTenant?.name}.`}
+        />
+      )}
+
+      {checkoutReturn === "cancelled" && (
         <StatusBanner
           icon={AlertTriangle}
-          tone="danger"
-          title="Publishing is blocked for this workspace"
-          message="Resolve billing before publishing new hospitality content. Public site availability follows the current billing enforcement state below."
+          tone="warning"
+          title="Checkout canceled"
+          message="No payment was captured. You can restart checkout whenever you're ready."
+        />
+      )}
+
+      {portalFeedback === "returned" && (
+        <StatusBanner
+          icon={CreditCard}
+          tone="info"
+          title="Returned from Stripe Billing"
+          message="Your billing portal session is complete. StayLayer refreshed the live workspace billing snapshot when you came back."
         />
       )}
 
@@ -525,7 +646,7 @@ function StatusBanner({
   action,
 }: {
   icon: ElementType;
-  tone: "info" | "warning" | "danger";
+  tone: "info" | "warning" | "danger" | "success";
   title: string;
   message: string;
   action?: ReactNode;
@@ -534,6 +655,7 @@ function StatusBanner({
     info: "border-blue-200 bg-blue-50 text-blue-800",
     warning: "border-amber-200 bg-amber-50 text-amber-800",
     danger: "border-red-200 bg-red-50 text-red-800",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-800",
   };
 
   return (

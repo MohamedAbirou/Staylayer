@@ -41,12 +41,14 @@ async function upsertUser(
   role: Role,
   platformRole: PlatformRole | null = null,
 ): Promise<{ id: string; email: string; platformRole: PlatformRole | null }> {
+  const emailVerifiedAt = platformRole ? null : new Date();
   const existing = await prisma.user.findUnique({
     where: { email },
     select: {
       id: true,
       email: true,
       passwordHash: true,
+      emailVerifiedAt: true,
       role: true,
       platformRole: true,
     },
@@ -54,6 +56,7 @@ async function upsertUser(
   if (existing) {
     const updates: {
       passwordHash?: string;
+      emailVerifiedAt?: Date | null;
       role?: Role;
       platformRole?: PlatformRole | null;
     } = {};
@@ -72,6 +75,10 @@ async function upsertUser(
 
     if (existing.platformRole !== platformRole) {
       updates.platformRole = platformRole;
+    }
+
+    if (platformRole === null && existing.emailVerifiedAt === null) {
+      updates.emailVerifiedAt = emailVerifiedAt;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -93,7 +100,7 @@ async function upsertUser(
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { email, passwordHash, role, platformRole },
+    data: { email, passwordHash, emailVerifiedAt, role, platformRole },
     select: { id: true, email: true, platformRole: true },
   });
 

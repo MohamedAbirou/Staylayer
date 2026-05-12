@@ -4,17 +4,22 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  NotificationCategory,
   Prisma,
   SiteStatus,
   Subscription,
   SubscriptionStatus,
+  TenantMembershipRole,
 } from "@prisma/client";
 import Stripe = require("stripe");
+import { TransactionalEmailService } from "../mail/transactional-email.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   BILLING_DEFAULT_PLAN_KEY,
@@ -77,6 +82,18 @@ type StripeWebhookEventRecord = {
   };
 };
 
+type StripeInvoiceRecord = {
+  id: string;
+  customer: StripeCustomerReference;
+  customer_email?: string | null;
+  subscription?: string | { id: string } | null;
+  metadata?: Record<string, string>;
+  hosted_invoice_url?: string | null;
+  invoice_pdf?: string | null;
+  amount_paid: number;
+  currency: string;
+};
+
 type CheckoutUser = {
   email?: string;
 };
@@ -87,13 +104,21 @@ const ACTIVE_ADMIN_STATUSES: SubscriptionStatus[] = [
   SubscriptionStatus.PAST_DUE,
 ];
 
+const BILLABLE_SUBSCRIPTION_STATUSES: SubscriptionStatus[] = [
+  SubscriptionStatus.ACTIVE,
+  SubscriptionStatus.TRIALING,
+];
+
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
   private stripeClient: InstanceType<typeof Stripe> | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly transactionalEmailService: TransactionalEmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getTenantPlanSnapshot(
@@ -124,11 +149,15 @@ export class BillingService {
       return this.buildFreePlanSnapshot(tenant.id, usage);
     }
 
-    const planKey = this.getPlanKeyOrThrow(subscription.planKey);
+    const resolvedSubscription =
+      await this.refreshStripeSubscriptionIfNeeded(subscription);
+
+    const planKey = this.getPlanKeyOrThrow(resolvedSubscription.planKey);
     const plan = getBillingPlan(planKey);
     const limits =
-      this.parseLimitsSnapshot(subscription.limitsSnapshot) ?? plan.limits;
-    const status = this.toPublicStatus(subscription.status);
+      this.parseLimitsSnapshot(resolvedSubscription.limitsSnapshot) ??
+      plan.limits;
+    const status = this.toPublicStatus(resolvedSubscription.status);
 
     return {
       tenantId: tenant.id,
@@ -137,18 +166,21 @@ export class BillingService {
       description: plan.description,
       provider: BILLING_PROVIDER,
       status,
-      renewsAt: subscription.currentPeriodEnd,
-      currentPeriodStart: subscription.currentPeriodStart,
-      gracePeriodEndsAt: subscription.gracePeriodEndsAt,
+      renewsAt: resolvedSubscription.currentPeriodEnd,
+      currentPeriodStart: resolvedSubscription.currentPeriodStart,
+      gracePeriodEndsAt: resolvedSubscription.gracePeriodEndsAt,
       limits,
       usage,
       source: "stripe",
-      providerCustomerId: subscription.providerCustomerId,
-      providerSubscriptionId: subscription.providerSubscriptionId,
-      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-      actions: this.buildActionState(status, subscription.gracePeriodEndsAt),
-      lastWebhookAt: subscription.lastWebhookAt,
-      subscriptionId: subscription.id,
+      providerCustomerId: resolvedSubscription.providerCustomerId,
+      providerSubscriptionId: resolvedSubscription.providerSubscriptionId,
+      cancelAtPeriodEnd: resolvedSubscription.cancelAtPeriodEnd,
+      actions: this.buildActionState(
+        status,
+        resolvedSubscription.gracePeriodEndsAt,
+      ),
+      lastWebhookAt: resolvedSubscription.lastWebhookAt,
+      subscriptionId: resolvedSubscription.id,
       isFreePlan: plan.isFree,
     };
   }
@@ -622,6 +654,8 @@ export class BillingService {
       select: {
         id: true,
         tenantId: true,
+        status: true,
+        planKey: true,
         gracePeriodEndsAt: true,
       },
     });
@@ -651,8 +685,17 @@ export class BillingService {
             providerSubscriptionId: null,
           },
           orderBy: { updatedAt: "desc" },
-          select: { id: true },
+          select: {
+            id: true,
+            status: true,
+            planKey: true,
+          },
         });
+
+    const previousStatus =
+      existingByProviderId?.status ?? existingIntent?.status ?? null;
+    const previousPlanKey =
+      existingByProviderId?.planKey ?? existingIntent?.planKey ?? null;
 
     const subscriptionId = existingByProviderId?.id ?? existingIntent?.id;
     const baseData = {
@@ -689,6 +732,24 @@ export class BillingService {
           select: { id: true },
         });
 
+    await this.safeSendSubscriptionConfirmationEmail({
+      tenantId,
+      planKey,
+      nextStatus: mappedStatus,
+      previousStatus,
+      previousPlanKey,
+      renewsAt: this.fromUnixTime(stripeSubscription.current_period_end),
+    });
+
+    await this.createSubscriptionLifecycleNotifications({
+      tenantId,
+      planKey,
+      nextStatus: mappedStatus,
+      previousStatus,
+      previousPlanKey,
+      renewsAt: this.fromUnixTime(stripeSubscription.current_period_end),
+    });
+
     return {
       tenantId,
       subscriptionId: subscription.id,
@@ -711,6 +772,8 @@ export class BillingService {
         return this.recordCheckoutCompletion(
           event.data.object as StripeCheckoutSessionRecord,
         );
+      case "invoice.payment_succeeded":
+        return this.handleInvoicePaid(event.data.object as StripeInvoiceRecord);
       default:
         return {};
     }
@@ -738,6 +801,33 @@ export class BillingService {
     }
 
     await this.persistCheckoutIntent(tenantId, customerId, planKey);
+
+    return { tenantId };
+  }
+
+  private async handleInvoicePaid(
+    invoice: StripeInvoiceRecord,
+  ): Promise<StripeSyncResult> {
+    const tenantId = await this.resolveTenantIdForInvoice(invoice);
+
+    if (!tenantId) {
+      return {};
+    }
+
+    await this.safeSendInvoicePaidEmail({
+      tenantId,
+      customerEmail: invoice.customer_email ?? null,
+      hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+      invoicePdfUrl: invoice.invoice_pdf ?? null,
+      amountPaid: invoice.amount_paid,
+      currency: invoice.currency,
+    });
+
+    await this.createInvoicePaidNotification({
+      tenantId,
+      amountPaid: invoice.amount_paid,
+      currency: invoice.currency,
+    });
 
     return { tenantId };
   }
@@ -880,6 +970,52 @@ export class BillingService {
       subscriptionId: null,
       isFreePlan: true,
     };
+  }
+
+  private async refreshStripeSubscriptionIfNeeded(
+    subscription: Subscription,
+  ): Promise<Subscription> {
+    if (!subscription.providerCustomerId) {
+      return subscription;
+    }
+
+    const shouldRefreshFromStripe =
+      !subscription.providerSubscriptionId ||
+      subscription.status === SubscriptionStatus.INACTIVE;
+
+    if (!shouldRefreshFromStripe) {
+      return subscription;
+    }
+
+    try {
+      const stripeSubscription =
+        await this.findStripeSubscriptionForLocalRecord(subscription);
+
+      if (!stripeSubscription) {
+        return subscription;
+      }
+
+      const syncResult = await this.syncSubscriptionFromStripe(
+        stripeSubscription,
+        `stripe-sync:${stripeSubscription.id}`,
+        Math.floor(Date.now() / 1000),
+      );
+
+      if (!syncResult.subscriptionId) {
+        return subscription;
+      }
+
+      const refreshed = await this.prisma.subscription.findUnique({
+        where: { id: syncResult.subscriptionId },
+      });
+
+      return refreshed ?? subscription;
+    } catch (error) {
+      this.logger.warn(
+        `Stripe backfill skipped for tenant ${subscription.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return subscription;
+    }
   }
 
   private buildActionState(
@@ -1114,6 +1250,49 @@ export class BillingService {
     });
   }
 
+  private async resolveTenantIdForInvoice(
+    invoice: StripeInvoiceRecord,
+  ): Promise<string | null> {
+    if (invoice.metadata?.tenantId) {
+      return invoice.metadata.tenantId;
+    }
+
+    const subscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : (invoice.subscription?.id ?? null);
+
+    if (subscriptionId) {
+      const subscription = await this.prisma.subscription.findFirst({
+        where: {
+          provider: BILLING_PROVIDER,
+          providerSubscriptionId: subscriptionId,
+        },
+        select: { tenantId: true },
+      });
+
+      if (subscription) {
+        return subscription.tenantId;
+      }
+    }
+
+    const customerId = this.extractCustomerId(invoice.customer);
+    if (!customerId) {
+      return null;
+    }
+
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        provider: BILLING_PROVIDER,
+        providerCustomerId: customerId,
+      },
+      orderBy: { updatedAt: "desc" },
+      select: { tenantId: true },
+    });
+
+    return subscription?.tenantId ?? null;
+  }
+
   private resolvePlanKeyForStripeSubscription(
     stripeSubscription: StripeSubscriptionRecord,
   ): BillingPlanKey {
@@ -1154,6 +1333,100 @@ export class BillingService {
     });
   }
 
+  private async findStripeSubscriptionForLocalRecord(
+    subscription: Subscription,
+  ): Promise<StripeSubscriptionRecord | null> {
+    const stripe = this.getStripeClient();
+
+    if (subscription.providerSubscriptionId) {
+      const stripeSubscription = await stripe.subscriptions.retrieve(
+        subscription.providerSubscriptionId,
+      );
+
+      return this.toStripeSubscriptionRecord(stripeSubscription);
+    }
+
+    if (!subscription.providerCustomerId) {
+      return null;
+    }
+
+    const subscriptions = await stripe.subscriptions.list({
+      customer: subscription.providerCustomerId,
+      status: "all",
+      limit: 10,
+    });
+
+    const preferred = subscriptions.data.find(
+      (candidate) =>
+        candidate.metadata?.tenantId === subscription.tenantId &&
+        [
+          "active",
+          "trialing",
+          "past_due",
+          "unpaid",
+          "paused",
+          "canceled",
+        ].includes(candidate.status),
+    );
+    const matchingTenant = subscriptions.data.find(
+      (candidate) => candidate.metadata?.tenantId === subscription.tenantId,
+    );
+
+    return this.toStripeSubscriptionRecord(
+      preferred ?? matchingTenant ?? subscriptions.data[0] ?? null,
+    );
+  }
+
+  private toStripeSubscriptionRecord(
+    subscription: unknown,
+  ): StripeSubscriptionRecord | null {
+    if (!subscription || typeof subscription !== "object") {
+      return null;
+    }
+
+    const value = subscription as Record<string, unknown>;
+    const items =
+      value.items && typeof value.items === "object"
+        ? (value.items as { data?: Array<Record<string, unknown>> }).data
+        : [];
+
+    if (typeof value.id !== "string" || typeof value.status !== "string") {
+      return null;
+    }
+
+    return {
+      id: value.id,
+      customer: (value.customer as StripeCustomerReference) ?? null,
+      metadata:
+        value.metadata && typeof value.metadata === "object"
+          ? (value.metadata as Record<string, string>)
+          : undefined,
+      status: value.status,
+      items: {
+        data: (items ?? []).map((item) => ({
+          price:
+            item.price && typeof item.price === "object"
+              ? {
+                  id:
+                    typeof (item.price as { id?: unknown }).id === "string"
+                      ? ((item.price as { id: string }).id as string)
+                      : null,
+                }
+              : null,
+        })),
+      },
+      current_period_start:
+        typeof value.current_period_start === "number"
+          ? value.current_period_start
+          : null,
+      current_period_end:
+        typeof value.current_period_end === "number"
+          ? value.current_period_end
+          : null,
+      cancel_at_period_end: value.cancel_at_period_end === true,
+    };
+  }
+
   private async getOrCreateStripeCustomer(
     tenant: { id: string; name: string },
     customerEmail?: string,
@@ -1181,6 +1454,300 @@ export class BillingService {
     });
 
     return customer.id;
+  }
+
+  private async safeSendSubscriptionConfirmationEmail(input: {
+    tenantId: string;
+    planKey: BillingPlanKey;
+    nextStatus: SubscriptionStatus;
+    previousStatus: SubscriptionStatus | null;
+    previousPlanKey: string | null;
+    renewsAt: Date | null;
+  }): Promise<void> {
+    if (!this.transactionalEmailService.isConfigured()) {
+      return;
+    }
+
+    const becameBillable = BILLABLE_SUBSCRIPTION_STATUSES.includes(
+      input.nextStatus,
+    );
+    const wasBillable =
+      input.previousStatus !== null &&
+      BILLABLE_SUBSCRIPTION_STATUSES.includes(input.previousStatus);
+    const planChanged =
+      input.previousPlanKey !== null && input.previousPlanKey !== input.planKey;
+
+    if (!becameBillable || (wasBillable && !planChanged)) {
+      return;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: input.tenantId },
+      select: { name: true },
+    });
+    const email = await this.findTenantBillingContactEmail(input.tenantId);
+
+    if (!tenant || !email) {
+      return;
+    }
+
+    const plan = getBillingPlan(input.planKey);
+    const billingUrl = `${this.getDashboardBaseUrl()}/billing`;
+    const renewalLine = input.renewsAt
+      ? `Your next billing date is ${input.renewsAt.toISOString().slice(0, 10)}.`
+      : "Your billing schedule is now attached to the workspace.";
+
+    try {
+      await this.transactionalEmailService.send({
+        to: email,
+        subject: `StayLayer billing confirmed for ${tenant.name}`,
+        text: [
+          `Your ${plan.name} plan is active for ${tenant.name}.`,
+          renewalLine,
+          `Manage billing: ${billingUrl}`,
+        ].join("\n\n"),
+        html: this.buildBillingEmailHtml({
+          eyebrow: "Billing confirmed",
+          title: `${plan.name} is active for ${tenant.name}`,
+          body: `${renewalLine} You can review the subscription, invoices, and payment method from workspace billing.`,
+          ctaLabel: "Open billing",
+          ctaUrl: billingUrl,
+        }),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Billing confirmation email skipped for tenant ${input.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  private async createSubscriptionLifecycleNotifications(input: {
+    tenantId: string;
+    planKey: BillingPlanKey;
+    nextStatus: SubscriptionStatus;
+    previousStatus: SubscriptionStatus | null;
+    previousPlanKey: string | null;
+    renewsAt: Date | null;
+  }): Promise<void> {
+    const plan = getBillingPlan(input.planKey);
+    const becameBillable = BILLABLE_SUBSCRIPTION_STATUSES.includes(
+      input.nextStatus,
+    );
+    const wasBillable =
+      input.previousStatus !== null &&
+      BILLABLE_SUBSCRIPTION_STATUSES.includes(input.previousStatus);
+    const planChanged =
+      input.previousPlanKey !== null && input.previousPlanKey !== input.planKey;
+
+    let title: string | null = null;
+    let body: string | null = null;
+
+    if (becameBillable && (!wasBillable || planChanged)) {
+      title = planChanged
+        ? `Plan updated to ${plan.name}`
+        : `${plan.name} is active`;
+      body = input.renewsAt
+        ? `Billing is synced and the workspace renews on ${input.renewsAt.toISOString().slice(0, 10)}.`
+        : "Billing is synced and the workspace subscription is active.";
+    } else if (
+      input.nextStatus === SubscriptionStatus.PAST_DUE &&
+      input.previousStatus !== SubscriptionStatus.PAST_DUE
+    ) {
+      title = "Billing requires attention";
+      body =
+        "Stripe marked the subscription as past due. Review billing to protect publishing and workspace access.";
+    } else if (
+      input.nextStatus === SubscriptionStatus.CANCELED &&
+      input.previousStatus !== SubscriptionStatus.CANCELED
+    ) {
+      title = "Subscription canceled";
+      body =
+        "The workspace subscription was canceled. Review billing to restore paid features or confirm the plan change.";
+    }
+
+    if (!title || !body) {
+      return;
+    }
+
+    await this.notificationsService.createForTenantRoles({
+      tenantId: input.tenantId,
+      roles: [
+        TenantMembershipRole.OWNER,
+        TenantMembershipRole.ADMIN,
+        TenantMembershipRole.BILLING,
+      ],
+      category: NotificationCategory.BILLING,
+      title,
+      body,
+      actionUrl: "/billing",
+      metadata: {
+        planKey: input.planKey,
+        nextStatus: input.nextStatus,
+        previousStatus: input.previousStatus,
+      },
+    });
+  }
+
+  private async safeSendInvoicePaidEmail(input: {
+    tenantId: string;
+    customerEmail: string | null;
+    hostedInvoiceUrl: string | null;
+    invoicePdfUrl: string | null;
+    amountPaid: number;
+    currency: string;
+  }): Promise<void> {
+    if (!this.transactionalEmailService.isConfigured()) {
+      return;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: input.tenantId },
+      select: { name: true },
+    });
+    const email =
+      input.customerEmail ??
+      (await this.findTenantBillingContactEmail(input.tenantId));
+
+    if (!tenant || !email) {
+      return;
+    }
+
+    const amount = this.formatMoney(input.amountPaid, input.currency);
+    const billingUrl = `${this.getDashboardBaseUrl()}/billing`;
+    const invoiceUrl =
+      input.hostedInvoiceUrl ?? input.invoicePdfUrl ?? billingUrl;
+
+    try {
+      await this.transactionalEmailService.send({
+        to: email,
+        subject: `Invoice paid for ${tenant.name}`,
+        text: [
+          `We received ${amount} for ${tenant.name}.`,
+          `View the invoice: ${invoiceUrl}`,
+          `Manage billing: ${billingUrl}`,
+        ].join("\n\n"),
+        html: this.buildBillingEmailHtml({
+          eyebrow: "Invoice paid",
+          title: `Payment received for ${tenant.name}`,
+          body: `We received ${amount}. Use the link below to review the invoice and keep billing details in one place.`,
+          ctaLabel: "View invoice",
+          ctaUrl: invoiceUrl,
+        }),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Invoice email skipped for tenant ${input.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  private async createInvoicePaidNotification(input: {
+    tenantId: string;
+    amountPaid: number;
+    currency: string;
+  }): Promise<void> {
+    const amount = this.formatMoney(input.amountPaid, input.currency);
+
+    await this.notificationsService.createForTenantRoles({
+      tenantId: input.tenantId,
+      roles: [
+        TenantMembershipRole.OWNER,
+        TenantMembershipRole.ADMIN,
+        TenantMembershipRole.BILLING,
+      ],
+      category: NotificationCategory.BILLING,
+      title: `Invoice paid: ${amount}`,
+      body: `Payment was received and the billing record is up to date for this workspace.`,
+      actionUrl: "/billing",
+      metadata: {
+        amountPaid: input.amountPaid,
+        currency: input.currency,
+      },
+    });
+  }
+
+  private async findTenantBillingContactEmail(
+    tenantId: string,
+  ): Promise<string | null> {
+    const memberships = await this.prisma.tenantMembership.findMany({
+      where: {
+        tenantId,
+        role: {
+          in: [
+            TenantMembershipRole.BILLING,
+            TenantMembershipRole.OWNER,
+            TenantMembershipRole.ADMIN,
+          ],
+        },
+      },
+      select: {
+        role: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
+
+    const priority = [
+      TenantMembershipRole.BILLING,
+      TenantMembershipRole.OWNER,
+      TenantMembershipRole.ADMIN,
+    ];
+
+    for (const role of priority) {
+      const membership = memberships.find((entry) => entry.role === role);
+      if (membership?.user.email) {
+        return membership.user.email;
+      }
+    }
+
+    return null;
+  }
+
+  private buildBillingEmailHtml(input: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    ctaLabel: string;
+    ctaUrl: string;
+  }): string {
+    return [
+      "<!doctype html>",
+      '<html><body style="margin:0;padding:24px;background:#f7f2eb;font-family:Arial,sans-serif;color:#102a36;">',
+      '<div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:20px;padding:32px;border:1px solid rgba(26,72,112,0.12);">',
+      `<p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#E07038;">${this.escapeHtml(input.eyebrow)}</p>`,
+      `<h1 style="margin:0 0 16px;font-size:28px;line-height:1.2;color:#0D2840;">${this.escapeHtml(input.title)}</h1>`,
+      `<p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#102a36;">${this.escapeHtml(input.body)}</p>`,
+      `<a href="${this.escapeHtml(input.ctaUrl)}" style="display:inline-block;border-radius:999px;background:#0D2840;color:#ffffff;padding:14px 22px;text-decoration:none;font-weight:700;">${this.escapeHtml(input.ctaLabel)}</a>`,
+      "</div></body></html>",
+    ].join("");
+  }
+
+  private getDashboardBaseUrl(): string {
+    return (
+      this.configService
+        .get<string>("DASHBOARD_APP_URL")
+        ?.trim()
+        .replace(/\/$/, "") || "http://localhost:5173"
+    );
+  }
+
+  private formatMoney(amountInMinorUnits: number, currency: string): string {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(amountInMinorUnits / 100);
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   private async persistCheckoutIntent(

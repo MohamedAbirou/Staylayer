@@ -49,6 +49,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
+    if (!user.platformRole && !user.emailVerifiedAt) {
+      throw new UnauthorizedException({
+        code: "EMAIL_NOT_VERIFIED",
+        message: "Verify your email before continuing",
+      });
+    }
+
     if (payload.activeTenantId || payload.activeMembershipRole) {
       const activeMembership = user.memberships.find(
         (membership) =>

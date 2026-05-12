@@ -47,6 +47,25 @@ export class TenantMembersController {
     return this.tenantWorkspaceService.listMembers(resolvedTenantId);
   }
 
+  @Get("invitations")
+  async listPendingInvitations(
+    @Param("tenantId") tenantId: string,
+    @Req() req: Request,
+  ) {
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+
+    return this.tenantWorkspaceService.listPendingInvitations(resolvedTenantId);
+  }
+
   @Post("invite")
   @HttpCode(HttpStatus.CREATED)
   async invite(
@@ -54,6 +73,7 @@ export class TenantMembersController {
     @Body() dto: InviteTenantMemberDto,
     @Req() req: Request,
   ) {
+    const user = req.user as AuthenticatedRequestUser | undefined;
     const resolvedTenantId =
       await this.workspaceAccessService.ensureTenantAccess(
         req as Request & {
@@ -67,19 +87,20 @@ export class TenantMembersController {
     const member = await this.tenantWorkspaceService.inviteMember(
       resolvedTenantId,
       dto,
+      user?.sub ?? null,
     );
-    const user = req.user as AuthenticatedRequestUser | undefined;
 
     await this.adminService.createAuditLogForTenant({
       tenantId: resolvedTenantId,
       actorUserId: user?.sub ?? null,
       action: "tenant.member_invited",
-      targetType: "tenant_membership",
-      targetId: member.id,
+      targetType: "workspace_invitation",
+      targetId: member.email,
       metadata: {
         email: member.email,
         role: member.role,
-        userId: member.userId,
+        status: member.status,
+        expiresAt: member.expiresAt,
       },
     });
 

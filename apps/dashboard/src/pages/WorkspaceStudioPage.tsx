@@ -6,6 +6,7 @@ import {
   BedDouble,
   Building2,
   Check,
+  Clock3,
   CreditCard,
   Globe2,
   Home,
@@ -31,6 +32,7 @@ import { formatDate, formatRelativeTime } from "../lib/formatDate";
 import {
   createWorkspaceMember,
   createWorkspaceSite,
+  getPendingWorkspaceInvitations,
   getWorkspaceMembers,
   getWorkspaceSites,
   inviteWorkspaceMember,
@@ -206,6 +208,19 @@ export default function WorkspaceStudioPage() {
     retry: false,
   });
 
+  const {
+    data: pendingInvitations = [],
+    isLoading: pendingInvitationsLoading,
+    isError: pendingInvitationsError,
+    refetch: refetchPendingInvitations,
+  } = useQuery({
+    queryKey: ["workspace-invitations", tenantId],
+    queryFn: () => getPendingWorkspaceInvitations(tenantId!),
+    enabled: Boolean(tenantId && canManageWorkspace),
+    retry: false,
+    refetchInterval: 15_000,
+  });
+
   const switchSiteMutation = useMutation({
     mutationFn: async (siteId: string) => {
       if (!tenantId) {
@@ -243,9 +258,17 @@ export default function WorkspaceStudioPage() {
       });
     },
     onSuccess: async (site) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["workspace-sites", tenantId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-sites", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
       setRecentSiteId(site.id);
       setSiteForm({
         name: "",
@@ -267,23 +290,31 @@ export default function WorkspaceStudioPage() {
   const inviteMemberMutation = useMutation({
     mutationFn: async () => {
       if (!tenantId) {
-        throw new Error("Select a tenant before adding a member.");
+        throw new Error("Select a tenant before sending an invitation.");
       }
 
       return inviteWorkspaceMember(tenantId, inviteForm);
     },
     onSuccess: async (member) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["workspace-members", tenantId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-invitations", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
       setInviteForm({ email: "", role: inviteForm.role });
       toast.success(
-        `${member.email} joined the workspace as ${describeMembershipRole(member.role)}.`,
+        `Invitation sent to ${member.email} as ${describeMembershipRole(member.role)}.`,
       );
     },
     onError: (error: unknown) => {
       toast.error(
-        readApiMessage(error, "Unable to add that existing account."),
+        readApiMessage(error, "Unable to send that workspace invitation."),
       );
     },
   });
@@ -297,9 +328,17 @@ export default function WorkspaceStudioPage() {
       return createWorkspaceMember(tenantId, createForm);
     },
     onSuccess: async (member) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["workspace-members", tenantId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-members", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
       setCreateForm({ email: "", password: "", role: createForm.role });
       toast.success(`${member.email} is ready to sign in.`);
     },
@@ -347,13 +386,14 @@ export default function WorkspaceStudioPage() {
   const billingCount = members.filter(
     (member) => member.role === "BILLING",
   ).length;
+  const pendingInvitationCount = pendingInvitations.length;
   const activeSite =
     sites.find((site) => site.id === session?.activeSite?.id) ?? null;
   const recentSite = sites.find((site) => site.id === recentSiteId) ?? null;
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(226,232,240,0.82)_35%,_rgba(186,230,253,0.55)_70%,_rgba(255,255,255,0.92)_100%)] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+      <section className="relative overflow-hidden rounded-4xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(226,232,240,0.82)_35%,_rgba(186,230,253,0.55)_70%,_rgba(255,255,255,0.92)_100%)] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
         <div className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full bg-cyan-300/25 blur-3xl" />
         <div className="pointer-events-none absolute -left-12 bottom-0 h-44 w-44 rounded-full bg-amber-300/25 blur-3xl" />
         <div className="relative grid gap-8 lg:grid-cols-[1.4fr_0.9fr]">
@@ -395,7 +435,7 @@ export default function WorkspaceStudioPage() {
               <StatTile
                 label="Team seats"
                 value={String(members.length)}
-                hint={`${ownerCount} owner · ${adminCount} admin · ${editorCount} editor · ${billingCount} billing`}
+                hint={`${ownerCount} owner · ${adminCount} admin · ${editorCount} editor · ${billingCount} billing${pendingInvitationCount ? ` · ${pendingInvitationCount} pending invite${pendingInvitationCount === 1 ? "" : "s"}` : ""}`}
                 icon={Users}
               />
             </div>
@@ -445,7 +485,7 @@ export default function WorkspaceStudioPage() {
                     </p>
                     <p className="mt-1 text-sm leading-6 text-emerald-800/90">
                       The workspace now knows about your latest site. Jump
-                      straight into content, settings, or onboarding.
+                      straight into content, page creation, or site settings.
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
@@ -462,10 +502,10 @@ export default function WorkspaceStudioPage() {
                         Tune settings
                       </Link>
                       <Link
-                        to="/onboarding"
+                        to="/pages/new"
                         className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
                       >
-                        Run onboarding
+                        Create a page
                       </Link>
                     </div>
                   </div>
@@ -474,6 +514,138 @@ export default function WorkspaceStudioPage() {
             ) : null}
           </div>
         </div>
+      </section>
+
+      <section
+        id="pending-invitations"
+        className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+              Pending invitations
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-slate-950">
+              Outstanding teammate access
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              Track who still has an open invite, when it was sent, and when it
+              expires so workspace ownership never loses sight of access
+              handoff.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700">
+              {pendingInvitationCount} pending
+            </div>
+            <button
+              onClick={() => void refetchPendingInvitations()}
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {pendingInvitationsError ? (
+          <div className="mt-6">
+            <InlineErrorPanel
+              title="Pending invitations could not be loaded"
+              body="Retry to sync the latest invitation state from the active workspace."
+              actionLabel="Retry"
+              onAction={() => void refetchPendingInvitations()}
+            />
+          </div>
+        ) : pendingInvitationsLoading ? (
+          <div className="mt-6">
+            <LoadingPanel label="Loading outstanding invitations" />
+          </div>
+        ) : pendingInvitations.length === 0 ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-6">
+            <div className="flex items-start gap-4">
+              <div className="rounded-2xl bg-white p-3 text-slate-500 shadow-sm">
+                <Mail className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-slate-900">
+                  No invitations are waiting on a response.
+                </p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  New invites will appear here immediately after they are sent,
+                  so owners and admins can spot outstanding access at a glance.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 xl:grid-cols-2">
+            {pendingInvitations.map((invitation) => (
+              <article
+                key={invitation.id}
+                className="rounded-3xl border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(248,250,252,0.96),rgba(226,232,240,0.55))] p-5 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-semibold text-slate-950">
+                      {invitation.email}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Invited as {describeMembershipRole(invitation.role)}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${MEMBER_ROLE_STYLES[invitation.role]}`}
+                  >
+                    {describeMembershipRole(invitation.role)}
+                  </span>
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-white/80 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      Sent
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-slate-900">
+                      {formatRelativeTime(invitation.createdAt)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {formatDate(invitation.createdAt)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700/70">
+                      Expires
+                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-sm font-medium text-amber-900">
+                      <Clock3 className="h-4 w-4" />
+                      {formatRelativeTime(invitation.expiresAt)}
+                    </div>
+                    <p className="mt-1 text-xs text-amber-800/80">
+                      {formatDate(invitation.expiresAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      Sent by
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-800">
+                      {invitation.invitedByEmail ??
+                        user?.email ??
+                        "Workspace admin"}
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Awaiting acceptance
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -521,7 +693,7 @@ export default function WorkspaceStudioPage() {
                 return (
                   <article
                     key={site.id}
-                    className={`rounded-[24px] border p-5 transition-all ${
+                    className={`rounded-3xl border p-5 transition-all ${
                       isActive
                         ? "border-cyan-300 bg-cyan-50/70 shadow-[0_14px_40px_rgba(6,182,212,0.12)]"
                         : "border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white"
@@ -940,8 +1112,8 @@ export default function WorkspaceStudioPage() {
             Add existing accounts or mint new teammates
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Existing accounts can be linked instantly. Brand-new collaborators
-            can be created with a temporary password and signed in immediately.
+            Invite collaborators by email, or create a brand-new teammate
+            account directly when you need to hand off access right away.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -960,11 +1132,11 @@ export default function WorkspaceStudioPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
-                    Link existing account
+                    Email invitation
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Best when the teammate already has a login elsewhere in the
-                    platform.
+                    Send a secure invite link so the teammate can join the
+                    workspace from their inbox.
                   </p>
                 </div>
               </div>
@@ -998,6 +1170,10 @@ export default function WorkspaceStudioPage() {
             {memberComposerMode === "invite" ? (
               <>
                 <FieldLabel label="Existing account email" icon={Mail} />
+                <p className="text-xs leading-5 text-slate-500">
+                  StayLayer emails a secure invitation link and the recipient
+                  accepts it from the public auth flow.
+                </p>
                 <input
                   value={inviteForm.email}
                   onChange={(event) =>
@@ -1031,7 +1207,7 @@ export default function WorkspaceStudioPage() {
                   ) : (
                     <UserPlus className="h-4 w-4" />
                   )}
-                  Add existing account
+                  Send invitation
                 </button>
               </>
             ) : (
@@ -1164,7 +1340,7 @@ function StatTile({
   icon: typeof Building2;
 }) {
   return (
-    <div className="rounded-[24px] border border-white/70 bg-white/75 p-4 shadow-[0_12px_30px_rgba(148,163,184,0.14)] backdrop-blur-sm">
+    <div className="rounded-3xl border border-white/70 bg-white/75 p-4 shadow-[0_12px_30px_rgba(148,163,184,0.14)] backdrop-blur-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">

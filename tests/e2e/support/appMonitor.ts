@@ -9,6 +9,8 @@ function isApiUrl(url: string): boolean {
   return (
     url.includes("/api/") ||
     url.includes(":3001/") ||
+    url.includes(":4000/") ||
+    url.includes("127.0.0.1:4000/") ||
     url.includes("127.0.0.1:3001/")
   );
 }

@@ -1,7 +1,23 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { TriangleAlert as AlertTriangle, ArrowRight, ArrowUpRight, CircleCheck as CheckCircle2, CircleDashed, ExternalLink, Gauge, Inbox, Languages, Layers, Loader as Loader2, RefreshCw, Rocket, Sparkles, Users } from "lucide-react";
+import {
+  TriangleAlert as AlertTriangle,
+  ArrowRight,
+  ArrowUpRight,
+  CircleCheck as CheckCircle2,
+  CircleDashed,
+  ExternalLink,
+  Gauge,
+  Inbox,
+  Languages,
+  Layers,
+  Loader as Loader2,
+  RefreshCw,
+  Rocket,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../auth/useAuth";
 import {
@@ -37,7 +53,10 @@ export default function UsagePage() {
   const { session } = useAuth();
   const tenantId = session?.activeTenant?.id ?? null;
   const canViewBilling = hasMembershipRole(session, BILLING_MEMBERSHIP_ROLES);
-  const canMarkMilestones = hasMembershipRole(session, CONTENT_MEMBERSHIP_ROLES);
+  const canMarkMilestones = hasMembershipRole(
+    session,
+    CONTENT_MEMBERSHIP_ROLES,
+  );
   const queryClient = useQueryClient();
 
   const {
@@ -84,8 +103,8 @@ export default function UsagePage() {
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">Usage Center</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Select a tenant workspace to review usage, limits, and onboarding
-          progress.
+          Select a tenant workspace to review usage, limits, and launch
+          checklist progress.
         </p>
       </div>
     );
@@ -100,7 +119,7 @@ export default function UsagePage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Usage Center</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Live usage against plan limits and onboarding milestones for{" "}
+            Live usage against plan limits and launch-checklist milestones for{" "}
             {session?.activeTenant?.name}.
           </p>
         </div>
@@ -134,9 +153,7 @@ export default function UsagePage() {
         </div>
       ) : (
         <>
-          {plan && canViewBilling && (
-            <PlanSummaryCard plan={plan} />
-          )}
+          {plan && canViewBilling && <PlanSummaryCard plan={plan} />}
 
           {plan && canViewBilling && (
             <UsageGrid limits={plan.limits} usage={plan.usage} />
@@ -154,7 +171,8 @@ export default function UsagePage() {
           {!canViewBilling && (
             <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500 shadow-sm">
               Billing usage is visible only to the workspace owner and billing
-              contact. Onboarding milestones remain visible to all members.
+              contact. Launch-checklist milestones remain visible to all
+              members.
             </div>
           )}
         </>
@@ -319,11 +337,7 @@ function UsageCard({ row }: { row: UsageRow }) {
   const near = hasLimit && !over && rawPct >= 80;
   const unlimited = !hasLimit;
 
-  const barColor = over
-    ? "bg-red-600"
-    : near
-      ? "bg-amber-500"
-      : "bg-blue-500";
+  const barColor = over ? "bg-red-600" : near ? "bg-amber-500" : "bg-blue-500";
 
   const badgeTone = over
     ? "bg-red-100 text-red-700"
@@ -414,10 +428,10 @@ function OnboardingCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Onboarding
+            Launch checklist
           </p>
           <h2 className="mt-1 text-xl font-bold text-gray-900">
-            Getting your site ready
+            Getting your workspace ready
           </h2>
           <p className="mt-1 text-sm text-gray-500">
             {snapshot.completedAt

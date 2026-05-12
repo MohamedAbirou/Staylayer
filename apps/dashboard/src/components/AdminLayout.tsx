@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/useAuth";
 import { describePlatformRole } from "../auth/access";
+import { ADMIN_LOGIN_PATH } from "../lib/constants";
 
 const link = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -26,7 +27,7 @@ export function AdminLayout() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate(ADMIN_LOGIN_PATH);
   };
 
   const platformLabel = user?.platformRole

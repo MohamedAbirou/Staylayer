@@ -21,10 +21,20 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     key: "free",
     name: "Free",
     description:
-      "Trial-quality self-serve plan for solo operators validating the product.",
+      "Self-serve workspace for validating one hospitality brand before moving into live inquiry operations.",
     provider: BILLING_PROVIDER,
     stripePriceIdEnvVar: null,
     isFree: true,
+    catalog: {
+      audience: "Solo operators validating a first direct web presence",
+      promise:
+        "Launch one draft hospitality site, confirm the workflow, and keep setup intentionally lightweight.",
+      upgradeTrigger:
+        "Upgrade when you need branded domains, multilingual publishing, analytics, or more than pilot-level inquiry volume.",
+      ctaLabel: "Start free",
+      salesMotion: "self_serve",
+      featured: false,
+    },
     limits: {
       sites: 1,
       locales: 1,
@@ -46,10 +56,21 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     key: "starter_stay",
     name: "Starter Stay",
     description:
-      "Single-property plan for one site, up to two languages, and core inquiry handling.",
+      "Single-property plan for live inquiry capture, branded domains, and day-to-day hospitality publishing.",
     provider: BILLING_PROVIDER,
     stripePriceIdEnvVar: "STRIPE_PRICE_STARTER_STAY",
     isFree: false,
+    catalog: {
+      audience:
+        "Independent villas, guest houses, and smaller boutique stays going live with direct inquiries",
+      promise:
+        "Run one live hospitality site with custom domains, analytics, and the core publishing controls needed for day-to-day operations.",
+      upgradeTrigger:
+        "Upgrade when more languages, more teammates, or a heavier inquiry flow start stressing a single-site setup.",
+      ctaLabel: "Choose Starter Stay",
+      salesMotion: "workspace_checkout",
+      featured: true,
+    },
     limits: {
       sites: 1,
       locales: 2,
@@ -71,10 +92,21 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     key: "boutique_growth",
     name: "Boutique Growth",
     description:
-      "Multi-language plan for independent hotels and boutique hospitality brands.",
+      "Growth plan for multi-language hospitality brands with higher inquiry volume and team collaboration.",
     provider: BILLING_PROVIDER,
     stripePriceIdEnvVar: "STRIPE_PRICE_BOUTIQUE_GROWTH",
     isFree: false,
+    catalog: {
+      audience:
+        "Boutique hotels and higher-touch hospitality brands scaling direct demand",
+      promise:
+        "Operate a richer multi-language site, support a larger team, and keep direct inquiry operations moving without adding platform sprawl.",
+      upgradeTrigger:
+        "Upgrade when several domains, larger translation workloads, or multiple properties need to be coordinated together.",
+      ctaLabel: "Choose Boutique Growth",
+      salesMotion: "workspace_checkout",
+      featured: false,
+    },
     limits: {
       sites: 1,
       locales: 4,
@@ -96,10 +128,21 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     key: "portfolio",
     name: "Portfolio",
     description:
-      "Multi-site plan for operators or agencies managing several hospitality brands.",
+      "Multi-site plan for operators or agencies managing several hospitality brands from one platform.",
     provider: BILLING_PROVIDER,
     stripePriceIdEnvVar: "STRIPE_PRICE_PORTFOLIO",
     isFree: false,
+    catalog: {
+      audience:
+        "Multi-property groups and agencies managing several hospitality brands",
+      promise:
+        "Coordinate multiple live sites, larger teams, and portfolio-wide publishing operations with white-glove support.",
+      upgradeTrigger:
+        "Best fit once central teams need multi-brand oversight from day one instead of growing into it later.",
+      ctaLabel: "Choose Portfolio",
+      salesMotion: "workspace_checkout",
+      featured: false,
+    },
     limits: {
       sites: 5,
       locales: 4,
