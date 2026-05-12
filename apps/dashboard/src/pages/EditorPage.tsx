@@ -6,13 +6,20 @@ import {
   useBlocker,
 } from "react-router-dom";
 import { Puck, type Data } from "@puckeditor/core";
-import { puckConfig } from "@myallocator/puck-components";
+import {
+  ContactSectionRuntimeProvider,
+  puckConfig,
+  type ContactRuntimeResolvedForm,
+  type ContactRuntimeSubmitPayload,
+} from "@myallocator/puck-components";
 import { usePage } from "../hooks/usePage";
 import { useSavePage } from "../hooks/useSavePage";
 import { usePublishPage } from "../hooks/usePublishPage";
 import { useVersions } from "../hooks/useVersions";
 import { canPublishContent } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
+import client from "../api/client";
+import { getFormStudio } from "../api/forms";
 import { restoreVersion, updatePage } from "../api/pages";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -34,7 +41,7 @@ import {
   Link,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import "@puckeditor/core/puck.css";
 
 const AUTOSAVE_INTERVAL = 3_000;
@@ -49,11 +56,18 @@ export default function EditorPage() {
   const locale = searchParams.get("locale") || "en";
   const navigate = useNavigate();
   const { session } = useAuth();
+  const activeSiteId = session?.activeSite?.id ?? null;
   const queryClient = useQueryClient();
 
   const { data: page, isLoading, error } = usePage(slug, locale);
   const saveMutation = useSavePage();
   const publishMutation = usePublishPage();
+  const formStudioQuery = useQuery({
+    queryKey: ["form-studio", activeSiteId],
+    queryFn: () => getFormStudio(activeSiteId!),
+    enabled: Boolean(activeSiteId),
+    staleTime: 60_000,
+  });
 
   const [isDirty, setIsDirty] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
@@ -91,6 +105,104 @@ export default function EditorPage() {
   });
 
   const canPublish = canPublishContent(session);
+
+  const resolveContactForm = useCallback(
+    async ({
+      formKey,
+      pageSlug,
+      locale: requestedLocale,
+    }: {
+      formKey?: string;
+      pageSlug?: string | null;
+      locale?: string | null;
+    }) => {
+      if (!activeSiteId) {
+        return null;
+      }
+
+      const { data } = await client.get<ContactRuntimeResolvedForm | null>(
+        "/public/forms/resolve",
+        {
+          params: {
+            siteId: activeSiteId,
+            locale: requestedLocale || locale,
+            ...(pageSlug ? { pageSlug } : {}),
+            ...(formKey ? { formKey } : {}),
+          },
+        },
+      );
+
+      return data;
+    },
+    [activeSiteId, locale],
+  );
+
+  const submitContactPreview = useCallback(
+    async (payload: ContactRuntimeSubmitPayload) => {
+      if (!activeSiteId) {
+        throw new Error("No active site is selected for this preview.");
+      }
+
+      await client.post("/public/submissions", {
+        siteId: activeSiteId,
+        formType: payload.formType || "CONTACT",
+        ...payload,
+      });
+    },
+    [activeSiteId],
+  );
+
+  const availableForms = (formStudioQuery.data?.definitions ?? [])
+    .map((definition) => ({
+      id: definition.id,
+      key: definition.key,
+      name: definition.name,
+      status: definition.status,
+      assignment: definition.assignment,
+    }))
+    .sort((left, right) => {
+      if (left.status === right.status) {
+        return left.name.localeCompare(right.name);
+      }
+
+      if (left.status === "ACTIVE") {
+        return -1;
+      }
+
+      if (right.status === "ACTIVE") {
+        return 1;
+      }
+
+      return left.name.localeCompare(right.name);
+    });
+
+  const contactSectionRuntime = {
+    pageSlug: slug ?? null,
+    locale,
+    availableForms,
+    loadingForms: formStudioQuery.isLoading,
+    formsError: formStudioQuery.error
+      ? formStudioQuery.error instanceof Error
+        ? formStudioQuery.error.message
+        : "Failed to load Form Studio definitions."
+      : null,
+    resolveForm: activeSiteId ? resolveContactForm : undefined,
+    submitForm: activeSiteId ? submitContactPreview : undefined,
+    notify: ({
+      type,
+      message,
+    }: {
+      type: "success" | "error";
+      message: string;
+    }) => {
+      if (type === "success") {
+        toast.success(message);
+        return;
+      }
+
+      toast.error(message);
+    },
+  };
 
   // Check for local draft on mount
   useEffect(() => {
@@ -404,41 +516,46 @@ export default function EditorPage() {
         <div className="flex flex-1 overflow-hidden">
           {/* Puck Editor */}
           <div className="flex-1 overflow-hidden">
-            <Puck
-              key={puckKey}
-              config={puckConfig}
-              iframe={{ enabled: true }}
-              data={
-                (page.puckData as Data) || { content: [], root: { props: {} } }
-              }
-              headerTitle={page.title}
-              headerPath={`/pages/${slug}?locale=${locale}`}
-              onPublish={handleSave}
-              onChange={(data: Data) => {
-                latestDataRef.current = data;
-                setIsDirty(true);
-              }}
-              overrides={{
-                headerActions: () => (
-                  <button
-                    onClick={() => {
-                      if (latestDataRef.current) {
-                        handleSave(latestDataRef.current);
-                      }
-                    }}
-                    disabled={saveMutation.isPending || !isDirty}
-                    className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {saveMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    Save
-                  </button>
-                ),
-              }}
-            />
+            <ContactSectionRuntimeProvider value={contactSectionRuntime}>
+              <Puck
+                key={puckKey}
+                config={puckConfig}
+                iframe={{ enabled: true }}
+                data={
+                  (page.puckData as Data) || {
+                    content: [],
+                    root: { props: {} },
+                  }
+                }
+                headerTitle={page.title}
+                headerPath={`/pages/${slug}?locale=${locale}`}
+                onPublish={handleSave}
+                onChange={(data: Data) => {
+                  latestDataRef.current = data;
+                  setIsDirty(true);
+                }}
+                overrides={{
+                  headerActions: () => (
+                    <button
+                      onClick={() => {
+                        if (latestDataRef.current) {
+                          handleSave(latestDataRef.current);
+                        }
+                      }}
+                      disabled={saveMutation.isPending || !isDirty}
+                      className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {saveMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save
+                    </button>
+                  ),
+                }}
+              />
+            </ContactSectionRuntimeProvider>
           </div>
 
           {/* Version History Sidebar */}
@@ -644,7 +761,7 @@ function PageSeoPanel({
               <img
                 src={form.seoOgImage}
                 alt="OG preview"
-                className="aspect-[1200/630] w-full object-cover"
+                className="aspect-1200/630 w-full object-cover"
                 onError={(e) =>
                   ((e.target as HTMLImageElement).style.display = "none")
                 }

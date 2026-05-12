@@ -1,10 +1,20 @@
+import { useCallback } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Render, type Data } from "@puckeditor/core";
-import { puckConfig } from "@myallocator/puck-components";
+import {
+  ContactSectionRuntimeProvider,
+  puckConfig,
+  type ContactRuntimeResolvedForm,
+  type ContactRuntimeSubmitPayload,
+} from "@myallocator/puck-components";
+import client from "../api/client";
+import { getFormStudio } from "../api/forms";
 import { getPagePreview } from "../api/pages";
+import { useAuth } from "../auth/useAuth";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 import "@puckeditor/core/puck.css";
 
 export default function PreviewPage() {
@@ -12,20 +22,127 @@ export default function PreviewPage() {
   const [searchParams] = useSearchParams();
   const locale = searchParams.get("locale") || "en";
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const activeSiteId = session?.activeSite?.id ?? null;
 
   const {
     data: page,
     isLoading,
-    error,
+    error: pageError,
   } = useQuery({
     queryKey: ["preview", slug, locale],
     queryFn: () => getPagePreview(slug!, locale),
     enabled: !!slug,
   });
 
+  const formStudioQuery = useQuery({
+    queryKey: ["form-studio", activeSiteId],
+    queryFn: () => getFormStudio(activeSiteId!),
+    enabled: Boolean(activeSiteId),
+    staleTime: 60_000,
+  });
+
+  const resolveContactForm = useCallback(
+    async ({
+      formKey,
+      pageSlug,
+      locale: requestedLocale,
+    }: {
+      formKey?: string;
+      pageSlug?: string | null;
+      locale?: string | null;
+    }) => {
+      if (!activeSiteId) {
+        return null;
+      }
+
+      const { data } = await client.get<ContactRuntimeResolvedForm | null>(
+        "/public/forms/resolve",
+        {
+          params: {
+            siteId: activeSiteId,
+            locale: requestedLocale || locale,
+            ...(pageSlug ? { pageSlug } : {}),
+            ...(formKey ? { formKey } : {}),
+          },
+        },
+      );
+
+      return data;
+    },
+    [activeSiteId, locale],
+  );
+
+  const submitContactPreview = useCallback(
+    async (payload: ContactRuntimeSubmitPayload) => {
+      if (!activeSiteId) {
+        throw new Error("No active site is selected for this preview.");
+      }
+
+      await client.post("/public/submissions", {
+        siteId: activeSiteId,
+        formType: payload.formType || "CONTACT",
+        ...payload,
+      });
+    },
+    [activeSiteId],
+  );
+
+  const availableForms = (formStudioQuery.data?.definitions ?? [])
+    .map((definition) => ({
+      id: definition.id,
+      key: definition.key,
+      name: definition.name,
+      status: definition.status,
+      assignment: definition.assignment,
+    }))
+    .sort((left, right) => {
+      if (left.status === right.status) {
+        return left.name.localeCompare(right.name);
+      }
+
+      if (left.status === "ACTIVE") {
+        return -1;
+      }
+
+      if (right.status === "ACTIVE") {
+        return 1;
+      }
+
+      return left.name.localeCompare(right.name);
+    });
+
+  const contactSectionRuntime = {
+    pageSlug: slug ?? null,
+    locale,
+    availableForms,
+    loadingForms: formStudioQuery.isLoading,
+    formsError: formStudioQuery.error
+      ? formStudioQuery.error instanceof Error
+        ? formStudioQuery.error.message
+        : "Failed to load Form Studio definitions."
+      : null,
+    resolveForm: activeSiteId ? resolveContactForm : undefined,
+    submitForm: activeSiteId ? submitContactPreview : undefined,
+    notify: ({
+      type,
+      message,
+    }: {
+      type: "success" | "error";
+      message: string;
+    }) => {
+      if (type === "success") {
+        toast.success(message);
+        return;
+      }
+
+      toast.error(message);
+    },
+  };
+
   if (isLoading) return <LoadingSpinner />;
 
-  if (error || !page) {
+  if (pageError || !page) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <h2 className="text-lg font-semibold text-gray-900">Page not found</h2>
@@ -59,10 +176,14 @@ export default function PreviewPage() {
         </button>
       </div>
       <div>
-        <Render
-          config={puckConfig}
-          data={(page.puckData as Data) || { content: [], root: { props: {} } }}
-        />
+        <ContactSectionRuntimeProvider value={contactSectionRuntime}>
+          <Render
+            config={puckConfig}
+            data={
+              (page.puckData as Data) || { content: [], root: { props: {} } }
+            }
+          />
+        </ContactSectionRuntimeProvider>
       </div>
     </div>
   );

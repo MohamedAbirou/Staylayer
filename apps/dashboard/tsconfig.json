@@ -5,6 +5,13 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "jsx": "react-jsx",
+    "rootDir": "../..",
+    "paths": {
+      "@myallocator/puck-components": [
+        "../../packages/puck-components/src/index.ts"
+      ],
+      "@myallocator/puck-components/*": ["../../packages/puck-components/src/*"]
+    },
     "outDir": "./dist",
     "noEmit": true
   },

@@ -51,6 +51,18 @@ export {
 } from "./components/content/ContactSection";
 export type { ContactSectionProps } from "./components/content/ContactSection";
 export {
+  ContactSectionRuntimeProvider,
+  useContactSectionRuntime,
+} from "./forms/contact-section-runtime";
+export type {
+  ContactRuntimeFormOption,
+  ContactRuntimeNotification,
+  ContactRuntimeResolvedForm,
+  ContactRuntimeResolveParams,
+  ContactRuntimeSubmitPayload,
+  ContactSectionRuntimeValue,
+} from "./forms/contact-section-runtime";
+export {
   AnnualReportSection,
   annualReportSectionConfig,
 } from "./components/content/AnnualReportSection";
