@@ -264,8 +264,7 @@ const DELIVERY_INTEGRATION_PRESETS: DeliveryIntegrationPreset[] = [
       "Send inquiries into Zapier, Make, n8n, Pipedream, or another workflow tool.",
     endpointLabel: "Workflow endpoint",
     endpointPlaceholder: "https://hooks.zapier.com/hooks/catch/...",
-    endpointHelp:
-      "Paste the catch-hook URL from your automation platform.",
+    endpointHelp: "Paste the catch-hook URL from your automation platform.",
     secretLabel: "Verification token",
     secretPlaceholder: "Optional token or shared secret",
     secretHelp:
@@ -306,8 +305,7 @@ const DELIVERY_INTEGRATION_PRESETS: DeliveryIntegrationPreset[] = [
       "Bring your own endpoint when none of the presets match your delivery flow.",
     endpointLabel: "Webhook URL",
     endpointPlaceholder: "https://example.com/hooks/inquiry",
-    endpointHelp:
-      "Paste the full endpoint URL for your custom integration.",
+    endpointHelp: "Paste the full endpoint URL for your custom integration.",
     secretLabel: "Webhook secret",
     secretPlaceholder: "whsec_...",
     secretHelp:
@@ -2934,7 +2932,9 @@ function RoutingRuleEditorCard({
   onChange: (rule: RoutingRuleEditor) => void;
   onRemove: () => void;
 }) {
-  const integrationPreset = getDeliveryIntegrationPreset(rule.integrationPresetId);
+  const integrationPreset = getDeliveryIntegrationPreset(
+    rule.integrationPresetId,
+  );
 
   return (
     <div className="rounded-2xl border border-gray-200 p-4">
@@ -3074,8 +3074,8 @@ function RoutingRuleEditorCard({
             {rule.integrationPresetId === "none" ? (
               <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-4 text-sm text-gray-500">
                 This route will deliver only to the inboxes above. Add an
-                integration later if your CRM, PMS, or automation workflow
-                needs the structured payload too.
+                integration later if your CRM, PMS, or automation workflow needs
+                the structured payload too.
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">

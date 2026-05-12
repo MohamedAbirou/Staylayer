@@ -58,13 +58,17 @@ export class TranslationService {
     private readonly deepl: DeepLService,
   ) {}
 
-  async createJob(input: CreateTranslationJobInput): Promise<TranslationJobDto> {
+  async createJob(
+    input: CreateTranslationJobInput,
+  ): Promise<TranslationJobDto> {
     if (!this.deepl.isConfigured()) {
       throw new BadRequestException("Translation service is not configured");
     }
 
     if (input.sourceLocale === input.targetLocale) {
-      throw new BadRequestException("Source and target locale cannot be the same");
+      throw new BadRequestException(
+        "Source and target locale cannot be the same",
+      );
     }
 
     const site = await this.prisma.site.findFirst({
@@ -154,7 +158,10 @@ export class TranslationService {
     return { data: jobs.map((j) => this.toDto(j)), hasMore };
   }
 
-  async approveJob(tenantId: string, jobId: string): Promise<TranslationJobDto> {
+  async approveJob(
+    tenantId: string,
+    jobId: string,
+  ): Promise<TranslationJobDto> {
     const job = await this.prisma.translationJob.findFirst({
       where: { id: jobId, tenantId },
     });
@@ -205,11 +212,18 @@ export class TranslationService {
 
   async getLocaleCompleteness(
     siteId: string,
-  ): Promise<{ locale: string; total: number; translated: number; stale: number }[]> {
+  ): Promise<
+    { locale: string; total: number; translated: number; stale: number }[]
+  > {
     const site = await this.prisma.site.findUnique({ where: { id: siteId } });
     if (!site) return [];
 
-    const result: { locale: string; total: number; translated: number; stale: number }[] = [];
+    const result: {
+      locale: string;
+      total: number;
+      translated: number;
+      stale: number;
+    }[] = [];
 
     const sourcePages = await this.prisma.page.count({
       where: { siteId, locale: site.primaryLocale, deletedAt: null },
@@ -217,7 +231,12 @@ export class TranslationService {
 
     for (const locale of site.enabledLocales) {
       if (locale === site.primaryLocale) {
-        result.push({ locale, total: sourcePages, translated: sourcePages, stale: 0 });
+        result.push({
+          locale,
+          total: sourcePages,
+          translated: sourcePages,
+          stale: 0,
+        });
         continue;
       }
 
@@ -342,11 +361,7 @@ export class TranslationService {
 
     for (const sourcePage of sourcePages) {
       try {
-        const chars = await this.translatePage(
-          job,
-          sourcePage,
-          jobId,
-        );
+        const chars = await this.translatePage(job, sourcePage, jobId);
         totalCharsUsed += chars;
         completedPages++;
       } catch (err) {
@@ -397,8 +412,21 @@ export class TranslationService {
   }
 
   private async translatePage(
-    job: { siteId: string; targetLocale: string; overwrite: boolean; autoPublish: boolean },
-    sourcePage: { id: string; slug: string; title: string; puckData: unknown; seoTitle: string | null; seoDescription: string | null },
+    job: {
+      siteId: string;
+      sourceLocale: string;
+      targetLocale: string;
+      overwrite: boolean;
+      autoPublish: boolean;
+    },
+    sourcePage: {
+      id: string;
+      slug: string;
+      title: string;
+      puckData: unknown;
+      seoTitle: string | null;
+      seoDescription: string | null;
+    },
     jobId: string,
   ): Promise<number> {
     const segments = extractTranslatableText(sourcePage.puckData);
@@ -406,7 +434,11 @@ export class TranslationService {
     if (sourcePage.seoTitle) seoTexts.push(sourcePage.seoTitle);
     if (sourcePage.seoDescription) seoTexts.push(sourcePage.seoDescription);
 
-    const allTexts = [...segments.map((s) => s.text), sourcePage.title, ...seoTexts];
+    const allTexts = [
+      ...segments.map((s) => s.text),
+      sourcePage.title,
+      ...seoTexts,
+    ];
 
     if (allTexts.length === 0) return 0;
 
@@ -415,10 +447,12 @@ export class TranslationService {
       const batch = allTexts.slice(i, i + BATCH_SIZE);
       const result = await this.deepl.translate({
         texts: batch,
-        sourceLang: job.targetLocale === job.targetLocale ? "EN" : "EN",
+        sourceLang: job.sourceLocale,
         targetLang: job.targetLocale,
       });
-      allTranslated = allTranslated.concat(result.translations.map((t) => t.text));
+      allTranslated = allTranslated.concat(
+        result.translations.map((t) => t.text),
+      );
     }
 
     const translationMap = new Map<string, string>();
@@ -511,7 +545,11 @@ export class TranslationService {
       });
     }
 
-    return estimateCharacterCount(segments) + sourcePage.title.length + seoTexts.join("").length;
+    return (
+      estimateCharacterCount(segments) +
+      sourcePage.title.length +
+      seoTexts.join("").length
+    );
   }
 
   private toDto(job: {

@@ -84,12 +84,7 @@ const LOCALE_META: Record<
   de: { label: "German", flag: "🇩🇪", nativeName: "Deutsch" },
 };
 
-type InquiryDeliveryPresetId =
-  | "none"
-  | "automation"
-  | "crm"
-  | "pms"
-  | "custom";
+type InquiryDeliveryPresetId = "none" | "automation" | "crm" | "pms" | "custom";
 
 type InquiryDeliveryPreset = {
   id: InquiryDeliveryPresetId;
@@ -123,8 +118,7 @@ const INQUIRY_DELIVERY_PRESETS: InquiryDeliveryPreset[] = [
       "Send inquiries into Zapier, Make, n8n, or another workflow tool.",
     endpointLabel: "Workflow endpoint",
     endpointPlaceholder: "https://hooks.zapier.com/hooks/catch/...",
-    endpointHelp:
-      "Paste the catch-hook URL from your automation platform.",
+    endpointHelp: "Paste the catch-hook URL from your automation platform.",
     secretLabel: "Verification token",
     secretPlaceholder: "Optional token or shared secret",
     secretHelp:
@@ -971,7 +965,8 @@ function SiteSettingsTab() {
     siteName: general.siteName,
     supportEmail: general.supportEmail,
     defaultInquiryRoutingEmail: general.defaultInquiryRoutingEmail,
-    ...(general.inquiryWebhookPresetId === "none" || general.clearInquiryWebhookSecret
+    ...(general.inquiryWebhookPresetId === "none" ||
+    general.clearInquiryWebhookSecret
       ? { inquiryWebhookSecret: "" }
       : general.inquiryWebhookSecret.trim()
         ? { inquiryWebhookSecret: general.inquiryWebhookSecret.trim() }
@@ -1086,7 +1081,9 @@ function SiteSettingsTab() {
                 {INQUIRY_DELIVERY_PRESETS.map((preset) => (
                   <button
                     key={preset.id}
-                    id={preset.id === "none" ? "inquiryDeliveryPreset" : undefined}
+                    id={
+                      preset.id === "none" ? "inquiryDeliveryPreset" : undefined
+                    }
                     type="button"
                     onClick={() => {
                       setGeneral((p) => ({
@@ -1145,8 +1142,9 @@ function SiteSettingsTab() {
                         className="mb-1.5 block text-sm font-medium text-gray-700"
                       >
                         {
-                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
-                            .endpointLabel
+                          getInquiryDeliveryPreset(
+                            general.inquiryWebhookPresetId,
+                          ).endpointLabel
                         }
                       </label>
                       <input
@@ -1162,14 +1160,16 @@ function SiteSettingsTab() {
                         }}
                         className={inputCls}
                         placeholder={
-                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
-                            .endpointPlaceholder
+                          getInquiryDeliveryPreset(
+                            general.inquiryWebhookPresetId,
+                          ).endpointPlaceholder
                         }
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         {
-                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
-                            .endpointHelp
+                          getInquiryDeliveryPreset(
+                            general.inquiryWebhookPresetId,
+                          ).endpointHelp
                         }
                       </p>
                     </div>
@@ -1180,8 +1180,9 @@ function SiteSettingsTab() {
                         className="mb-1.5 block text-sm font-medium text-gray-700"
                       >
                         {
-                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
-                            .secretLabel
+                          getInquiryDeliveryPreset(
+                            general.inquiryWebhookPresetId,
+                          ).secretLabel
                         }
                       </label>
                       <input
@@ -1208,8 +1209,9 @@ function SiteSettingsTab() {
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         {
-                          getInquiryDeliveryPreset(general.inquiryWebhookPresetId)
-                            .secretHelp
+                          getInquiryDeliveryPreset(
+                            general.inquiryWebhookPresetId,
+                          ).secretHelp
                         }
                       </p>
                       {general.inquiryWebhookSecretConfigured &&
