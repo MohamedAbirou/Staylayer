@@ -148,6 +148,7 @@ export interface SaveFormDefinitionPayload {
     visibilityRules?: Record<string, unknown>;
   }>;
   routingRules?: Array<{
+    id?: string;
     name?: string;
     pageSlug?: string;
     locale?: string;

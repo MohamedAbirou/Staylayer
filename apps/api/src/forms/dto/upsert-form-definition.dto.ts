@@ -73,6 +73,10 @@ export class FormFieldDraftDto {
 export class FormRoutingRuleDraftDto {
   @IsOptional()
   @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(120)
   name?: string;
 

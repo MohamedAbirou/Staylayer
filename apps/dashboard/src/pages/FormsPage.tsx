@@ -65,6 +65,7 @@ type FieldEditor = {
 };
 
 type RoutingRuleEditor = {
+  id?: string;
   name: string;
   pageSlug: string;
   locale: string;
@@ -1302,6 +1303,7 @@ function createBlankFieldEditor(sortOrder = 0): FieldEditor {
 
 function createBlankRoutingRuleEditor(): RoutingRuleEditor {
   return {
+    id: undefined,
     name: "",
     pageSlug: "",
     locale: "",
@@ -1416,6 +1418,7 @@ function mapDefinitionToEditor(definition: FormDefinition): FormEditorState {
 
 function mapRoutingRuleToEditor(rule: FormRoutingRule): RoutingRuleEditor {
   return {
+    id: rule.id,
     name: rule.name,
     pageSlug: rule.pageSlug ?? "",
     locale: rule.locale ?? "",
@@ -1501,6 +1504,7 @@ function serializeFormEditor(formEditor: FormEditorState) {
 
 function serializeRoutingRuleEditor(rule: RoutingRuleEditor) {
   return {
+    id: rule.id,
     name: rule.name.trim(),
     pageSlug: rule.pageSlug.trim() || undefined,
     locale: rule.locale.trim() || undefined,

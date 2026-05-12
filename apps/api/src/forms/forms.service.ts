@@ -267,6 +267,7 @@ export class FormsService {
         include: {
           draftFields: { orderBy: { sortOrder: "asc" } },
           routingRules: {
+            where: { isActive: true },
             orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
           },
           activeSchemaVersion: {
@@ -298,7 +299,7 @@ export class FormsService {
         orderBy: { createdAt: "asc" },
       }),
       this.prisma.formRoutingRule.findMany({
-        where: { siteId, formDefinitionId: null },
+        where: { siteId, formDefinitionId: null, isActive: true },
         orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
       }),
     ]);
@@ -440,44 +441,19 @@ export class FormsService {
         })),
       });
 
-      await tx.formRoutingRule.deleteMany({
-        where: { siteId, formDefinitionId: definition.id },
+      await this.syncRoutingRules(tx, {
+        siteId,
+        formDefinitionId: definition.id,
+        rules: dto.routingRules,
+        defaultName: `${dto.name.trim()} route`,
       });
-
-      if (dto.routingRules && dto.routingRules.length > 0) {
-        await tx.formRoutingRule.createMany({
-          data: dto.routingRules.map((rule) => ({
-            siteId,
-            formDefinitionId: definition.id,
-            name: rule.name?.trim() || `${dto.name.trim()} route`,
-            pageSlug: rule.pageSlug
-              ? this.normalizePageSlug(rule.pageSlug)
-              : null,
-            locale: rule.locale?.trim() || null,
-            priority: rule.priority ?? 0,
-            isActive: rule.isActive ?? true,
-            saveToInbox: rule.saveToInbox ?? true,
-            emailRecipients: Array.from(
-              new Set(
-                (rule.emailRecipients ?? [])
-                  .map((value) => value.trim())
-                  .filter(Boolean),
-              ),
-            ),
-            webhookUrl: rule.webhookUrl?.trim() ?? "",
-            webhookSecret: rule.webhookSecret?.trim() ?? "",
-            sendConfirmationEmail: rule.sendConfirmationEmail ?? false,
-            confirmationReplyToFieldKey:
-              rule.confirmationReplyToFieldKey?.trim() || "email",
-          })),
-        });
-      }
 
       return tx.formDefinition.findUniqueOrThrow({
         where: { id: definition.id },
         include: {
           draftFields: { orderBy: { sortOrder: "asc" } },
           routingRules: {
+            where: { isActive: true },
             orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
           },
           activeSchemaVersion: {
@@ -500,42 +476,11 @@ export class FormsService {
     await this.ensureStudioDefaults(siteId);
 
     return this.prisma.$transaction(async (tx) => {
-      await tx.formRoutingRule.deleteMany({
-        where: { siteId, formDefinitionId: null },
-      });
-
-      if (routingRules.length > 0) {
-        await tx.formRoutingRule.createMany({
-          data: routingRules.map((rule) => ({
-            siteId,
-            formDefinitionId: null,
-            name: rule.name?.trim() || "Site fallback route",
-            pageSlug: rule.pageSlug
-              ? this.normalizePageSlug(rule.pageSlug)
-              : null,
-            locale: rule.locale?.trim() || null,
-            priority: rule.priority ?? 0,
-            isActive: rule.isActive ?? true,
-            saveToInbox: rule.saveToInbox ?? true,
-            emailRecipients: Array.from(
-              new Set(
-                (rule.emailRecipients ?? [])
-                  .map((value) => value.trim())
-                  .filter(Boolean),
-              ),
-            ),
-            webhookUrl: rule.webhookUrl?.trim() ?? "",
-            webhookSecret: rule.webhookSecret?.trim() ?? "",
-            sendConfirmationEmail: rule.sendConfirmationEmail ?? false,
-            confirmationReplyToFieldKey:
-              rule.confirmationReplyToFieldKey?.trim() || "email",
-          })),
-        });
-      }
-
-      return tx.formRoutingRule.findMany({
-        where: { siteId, formDefinitionId: null },
-        orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+      return this.syncRoutingRules(tx, {
+        siteId,
+        formDefinitionId: null,
+        rules: routingRules,
+        defaultName: "Site fallback route",
       });
     });
   }
@@ -554,6 +499,7 @@ export class FormsService {
         include: {
           draftFields: { orderBy: { sortOrder: "asc" } },
           routingRules: {
+            where: { isActive: true },
             orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
           },
           schemaVersions: {
@@ -633,6 +579,7 @@ export class FormsService {
           },
           draftFields: { orderBy: { sortOrder: "asc" } },
           routingRules: {
+            where: { isActive: true },
             orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
           },
         },
@@ -1219,6 +1166,86 @@ export class FormsService {
       .sort((left, right) => right.score - left.score);
 
     return ranked[0]?.rule ?? null;
+  }
+
+  private async syncRoutingRules(
+    tx: Prisma.TransactionClient,
+    params: {
+      siteId: string;
+      formDefinitionId: string | null;
+      rules?: UpsertFormDefinitionDto["routingRules"];
+      defaultName: string;
+    },
+  ) {
+    const incomingRules = params.rules ?? [];
+    const existingRules = await tx.formRoutingRule.findMany({
+      where: {
+        siteId: params.siteId,
+        formDefinitionId: params.formDefinitionId,
+      },
+      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+    });
+    const existingById = new Map(existingRules.map((rule) => [rule.id, rule]));
+    const retainedRuleIds = new Set<string>();
+
+    for (const rule of incomingRules) {
+      const data = {
+        siteId: params.siteId,
+        formDefinitionId: params.formDefinitionId,
+        name: rule.name?.trim() || params.defaultName,
+        pageSlug: rule.pageSlug ? this.normalizePageSlug(rule.pageSlug) : null,
+        locale: rule.locale?.trim() || null,
+        priority: rule.priority ?? 0,
+        isActive: rule.isActive ?? true,
+        saveToInbox: rule.saveToInbox ?? true,
+        emailRecipients: Array.from(
+          new Set(
+            (rule.emailRecipients ?? [])
+              .map((value) => value.trim())
+              .filter(Boolean),
+          ),
+        ),
+        webhookUrl: rule.webhookUrl?.trim() ?? "",
+        webhookSecret: rule.webhookSecret?.trim() ?? "",
+        sendConfirmationEmail: rule.sendConfirmationEmail ?? false,
+        confirmationReplyToFieldKey:
+          rule.confirmationReplyToFieldKey?.trim() || "email",
+      };
+
+      if (rule.id && existingById.has(rule.id)) {
+        retainedRuleIds.add(rule.id);
+        await tx.formRoutingRule.update({
+          where: { id: rule.id },
+          data,
+        });
+        continue;
+      }
+
+      const createdRule = await tx.formRoutingRule.create({
+        data,
+      });
+      retainedRuleIds.add(createdRule.id);
+    }
+
+    const retiredRuleIds = existingRules
+      .filter((rule) => !retainedRuleIds.has(rule.id) && rule.isActive)
+      .map((rule) => rule.id);
+
+    if (retiredRuleIds.length > 0) {
+      await tx.formRoutingRule.updateMany({
+        where: { id: { in: retiredRuleIds } },
+        data: { isActive: false },
+      });
+    }
+
+    return tx.formRoutingRule.findMany({
+      where: {
+        siteId: params.siteId,
+        formDefinitionId: params.formDefinitionId,
+        isActive: true,
+      },
+      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+    });
   }
 
   private buildSchemaSnapshot(definition: {

@@ -17,6 +17,7 @@ import { SubmissionOperationsService } from "./submission-operations.service";
 describe("FormsService", () => {
   let service: FormsService;
   let prisma: {
+    $transaction: jest.Mock;
     site: {
       findUnique: jest.Mock;
       findMany: jest.Mock;
@@ -25,10 +26,21 @@ describe("FormsService", () => {
     formDefinition: {
       count: jest.Mock;
       findMany: jest.Mock;
+      findUnique: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
+      create: jest.Mock;
     };
     formRoutingRule: {
       count: jest.Mock;
       findMany: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
+      create: jest.Mock;
+    };
+    formField: {
+      deleteMany: jest.Mock;
+      createMany: jest.Mock;
     };
     page: {
       findFirst: jest.Mock;
@@ -57,6 +69,7 @@ describe("FormsService", () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn(async (callback) => callback(prisma)),
       site: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
@@ -65,10 +78,21 @@ describe("FormsService", () => {
       formDefinition: {
         count: jest.fn(),
         findMany: jest.fn(),
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
+        create: jest.fn(),
       },
       formRoutingRule: {
         count: jest.fn(),
         findMany: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+        create: jest.fn(),
+      },
+      formField: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
       },
       page: {
         findFirst: jest.fn(),
@@ -356,6 +380,99 @@ describe("FormsService", () => {
     );
     expect(prisma.formSubmission.count).toHaveBeenCalledWith({
       where: expectedWhere,
+    });
+  });
+
+  it("deactivates removed fallback routing rules instead of deleting them", async () => {
+    prisma.site.findUnique.mockResolvedValue({ id: "site-1" });
+    prisma.formRoutingRule.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "rule-1",
+          siteId: "site-1",
+          formDefinitionId: null,
+          name: "Keep me",
+          pageSlug: null,
+          locale: null,
+          priority: 0,
+          isActive: true,
+          saveToInbox: true,
+          emailRecipients: ["ops@example.com"],
+          webhookUrl: "",
+          webhookSecret: "",
+          sendConfirmationEmail: false,
+          confirmationReplyToFieldKey: "email",
+          createdAt: new Date("2026-05-05T10:00:00.000Z"),
+        },
+        {
+          id: "rule-2",
+          siteId: "site-1",
+          formDefinitionId: null,
+          name: "Retire me",
+          pageSlug: "contact",
+          locale: "en",
+          priority: 10,
+          isActive: true,
+          saveToInbox: false,
+          emailRecipients: ["ops@example.com"],
+          webhookUrl: "",
+          webhookSecret: "",
+          sendConfirmationEmail: false,
+          confirmationReplyToFieldKey: "email",
+          createdAt: new Date("2026-05-05T10:05:00.000Z"),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "rule-1",
+          siteId: "site-1",
+          formDefinitionId: null,
+          name: "Keep me updated",
+          pageSlug: null,
+          locale: null,
+          priority: 5,
+          isActive: true,
+          saveToInbox: true,
+          emailRecipients: ["sales@example.com"],
+          webhookUrl: "",
+          webhookSecret: "",
+          sendConfirmationEmail: false,
+          confirmationReplyToFieldKey: "email",
+          createdAt: new Date("2026-05-05T10:00:00.000Z"),
+        },
+      ]);
+    prisma.formRoutingRule.update.mockResolvedValue({ id: "rule-1" });
+    prisma.formRoutingRule.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.updateSiteRoutingRules("site-1", [
+        {
+          id: "rule-1",
+          name: "Keep me updated",
+          priority: 5,
+          emailRecipients: ["sales@example.com"],
+        },
+      ]),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: "rule-1",
+        name: "Keep me updated",
+        priority: 5,
+      }),
+    ]);
+
+    expect(prisma.formRoutingRule.update).toHaveBeenCalledWith({
+      where: { id: "rule-1" },
+      data: expect.objectContaining({
+        name: "Keep me updated",
+        priority: 5,
+        saveToInbox: true,
+        emailRecipients: ["sales@example.com"],
+      }),
+    });
+    expect(prisma.formRoutingRule.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["rule-2"] } },
+      data: { isActive: false },
     });
   });
 
