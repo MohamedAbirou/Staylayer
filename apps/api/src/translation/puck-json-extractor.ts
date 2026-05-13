@@ -8,6 +8,8 @@
 const NON_TRANSLATABLE_VALUE_KEYS = new Set([
   "id",
   "type",
+  "formKey",
+  "emailAddress",
   "readOnly",
   "index",
   "zone",

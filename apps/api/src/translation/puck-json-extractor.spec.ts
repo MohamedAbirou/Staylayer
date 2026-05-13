@@ -102,4 +102,69 @@ describe("puck-json-extractor", () => {
       "Azure Bay Villas da la bienvenida a parejas, familias y estancias restauradoras más largas.",
     );
   });
+
+  it("preserves contact form bindings while translating surrounding copy", () => {
+    const puckData = {
+      content: [
+        {
+          type: "ContactSection",
+          props: {
+            formKey: "contact-primary",
+            heading: "Let's Connect",
+            description:
+              "Have a question? Fill out the form and our team will get back to you quickly.",
+            emailAddress: "contact@example.com",
+            emailLabel: "contact@example.com",
+          },
+        },
+      ],
+      root: { props: { title: "Contact" } },
+    };
+
+    const segments = extractTranslatableText(puckData);
+
+    expect(segments).toEqual([
+      {
+        path: "content[0].props.heading",
+        text: "Let's Connect",
+      },
+      {
+        path: "content[0].props.description",
+        text: "Have a question? Fill out the form and our team will get back to you quickly.",
+      },
+      {
+        path: "content[0].props.emailLabel",
+        text: "contact@example.com",
+      },
+      {
+        path: "root.props.title",
+        text: "Contact",
+      },
+    ]);
+
+    const translated = injectTranslatedText(
+      puckData,
+      new Map([
+        ["content[0].props.heading", "Conectemos"],
+        [
+          "content[0].props.description",
+          "¿Tienes alguna pregunta? Completa el formulario y nuestro equipo te respondera pronto.",
+        ],
+      ]),
+    ) as {
+      content: Array<{
+        props: {
+          formKey?: string;
+          heading?: string;
+          description?: string;
+        };
+      }>;
+    };
+
+    expect(translated.content[0].props.formKey).toBe("contact-primary");
+    expect(translated.content[0].props.heading).toBe("Conectemos");
+    expect(translated.content[0].props.description).toBe(
+      "¿Tienes alguna pregunta? Completa el formulario y nuestro equipo te respondera pronto.",
+    );
+  });
 });
