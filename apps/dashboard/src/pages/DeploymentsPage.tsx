@@ -64,6 +64,11 @@ export default function DeploymentsPage() {
   const [editingEnvironmentVariable, setEditingEnvironmentVariable] =
     useState<SiteDeploymentEnvironmentVariable | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
+  const [runtimeChangeNotice, setRuntimeChangeNotice] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+  const [runtimeChangePromptOpen, setRuntimeChangePromptOpen] = useState(false);
   const [environmentDraft, setEnvironmentDraft] = useState({
     key: "",
     value: "",
@@ -119,6 +124,8 @@ export default function DeploymentsPage() {
     mutationFn: () => provisionDeployment(siteId!),
     onSuccess: () => {
       setProvisionConfirmOpen(false);
+      setRuntimeChangePromptOpen(false);
+      setRuntimeChangeNotice(null);
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ["deployments", siteId] }),
         queryClient.invalidateQueries({
@@ -175,6 +182,11 @@ export default function DeploymentsPage() {
     onSuccess: () => {
       setEnvironmentError(null);
       resetEnvironmentForm();
+      queueRuntimeChangeNotice(
+        latest
+          ? "The saved variable will not affect the live site until you run a new deployment."
+          : "The saved variable will apply once you provision the first production deployment.",
+      );
       Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["deployments-page", "environment", siteId],
@@ -195,6 +207,11 @@ export default function DeploymentsPage() {
     mutationFn: (variableId: string) =>
       deleteDeploymentEnvironmentVariable(siteId!, variableId),
     onSuccess: () => {
+      queueRuntimeChangeNotice(
+        latest
+          ? "The live site keeps the previous runtime values until you redeploy after this removal."
+          : "The removed variable is saved, and the first production deployment will use the current environment set.",
+      );
       Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["deployments-page", "environment", siteId],
@@ -276,6 +293,9 @@ export default function DeploymentsPage() {
   const pendingPrimaryDomain = domains.find((domain) => domain.isPrimary);
   const providerTarget = latest?.providerUrl ?? latest?.url ?? null;
   const billingBlocked = billingPlan?.actions.publishingBlocked ?? false;
+  const deploymentBusy = Boolean(
+    latest && POLLING_STATUSES.includes(latest.status),
+  );
   const readinessTone =
     latest?.status === "FAILED"
       ? "danger"
@@ -284,6 +304,29 @@ export default function DeploymentsPage() {
         : activePrimaryDomain
           ? "success"
           : "warning";
+
+  function queueRuntimeChangeNotice(message: string) {
+    setRuntimeChangeNotice({
+      title: latest
+        ? "Runtime changes are waiting for redeploy"
+        : "Runtime changes are waiting for the first deployment",
+      message,
+    });
+
+    if (!deploymentBusy && !billingBlocked && canManageDeployments) {
+      setRuntimeChangePromptOpen(true);
+    } else {
+      setRuntimeChangePromptOpen(false);
+    }
+  }
+
+  function startRuntimeDeployment() {
+    if (deploymentBusy || billingBlocked || !canManageDeployments) {
+      return;
+    }
+
+    provisionMutation.mutate();
+  }
 
   return (
     <div className="space-y-6">
@@ -298,10 +341,7 @@ export default function DeploymentsPage() {
         {canManageDeployments ? (
           <button
             onClick={() => setProvisionConfirmOpen(true)}
-            disabled={
-              provisionMutation.isPending ||
-              Boolean(latest && POLLING_STATUSES.includes(latest.status))
-            }
+            disabled={provisionMutation.isPending || deploymentBusy}
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {provisionMutation.isPending ? (
@@ -329,6 +369,55 @@ export default function DeploymentsPage() {
         providerTarget={providerTarget}
         billingBlocked={billingBlocked}
       />
+
+      {runtimeChangeNotice ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+              <div>
+                <p className="text-sm font-semibold">
+                  {runtimeChangeNotice.title}
+                </p>
+                <p className="mt-1 text-sm text-amber-800">
+                  {runtimeChangeNotice.message}
+                </p>
+                <p className="mt-2 text-xs text-amber-700">
+                  {deploymentBusy
+                    ? "A deployment is already running. These runtime changes will apply after you start the next one."
+                    : billingBlocked
+                      ? "Billing currently blocks new deployments, so the live site will keep the previous runtime values until publishing access is restored."
+                      : latest
+                        ? "The live site is still running the previous deployment until you redeploy."
+                        : "These runtime values will be picked up by the first production deployment."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 lg:shrink-0">
+              <button
+                onClick={() => setRuntimeChangeNotice(null)}
+                className="rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-white"
+              >
+                Dismiss
+              </button>
+              {canManageDeployments ? (
+                <button
+                  onClick={() => setRuntimeChangePromptOpen(true)}
+                  disabled={
+                    deploymentBusy ||
+                    billingBlocked ||
+                    provisionMutation.isPending
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Rocket className="h-3.5 w-3.5" />
+                  {latest ? "Redeploy now" : "Provision now"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -800,6 +889,25 @@ export default function DeploymentsPage() {
           rollbackTarget && rollbackMutation.mutate(rollbackTarget)
         }
         onCancel={() => setRollbackTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={runtimeChangePromptOpen}
+        title={
+          latest
+            ? "Redeploy to apply runtime changes?"
+            : "Provision deployment to apply runtime changes?"
+        }
+        message={
+          latest
+            ? "Environment variable changes are saved, but the live site will not use them until you run a new deployment. Start that deployment now, or do it later from this page."
+            : "Environment variable changes are saved, but the site has not been provisioned yet. Start the first production deployment now, or do it later from this page."
+        }
+        confirmLabel={latest ? "Redeploy now" : "Provision now"}
+        cancelLabel="Do it later"
+        isPending={provisionMutation.isPending}
+        onConfirm={startRuntimeDeployment}
+        onCancel={() => setRuntimeChangePromptOpen(false)}
       />
     </div>
   );
