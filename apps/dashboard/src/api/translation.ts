@@ -56,6 +56,26 @@ export interface TranslationGlossaryTerm {
   createdAt: string;
 }
 
+export interface GlossaryPreviewEntry {
+  source: string;
+  target: string;
+  scope: "site" | "global";
+  glossaryId: string;
+  glossaryName: string;
+  caseSensitive: boolean;
+}
+
+export interface GlossaryPreview {
+  sourceLocale: string;
+  targetLocale: string;
+  entryCount: number;
+  siteSpecificCount: number;
+  globalCount: number;
+  providerStatus: "none" | "not_synced" | "out_of_date" | "ready";
+  lastSyncedAt: string | null;
+  entries: GlossaryPreviewEntry[];
+}
+
 export async function createTranslationJob(
   siteId: string,
   body: {
@@ -143,6 +163,24 @@ export async function getGlossaries(
   const { data } = await client.get<TranslationGlossary[]>(
     "/translation/glossaries",
     { params: siteId ? { siteId } : {} },
+  );
+  return data;
+}
+
+export async function getGlossaryPreview(
+  siteId: string,
+  sourceLocale: string,
+  targetLocale: string,
+): Promise<GlossaryPreview> {
+  const { data } = await client.get<GlossaryPreview>(
+    "/translation/glossary-preview",
+    {
+      params: {
+        siteId,
+        sourceLocale,
+        targetLocale,
+      },
+    },
   );
   return data;
 }

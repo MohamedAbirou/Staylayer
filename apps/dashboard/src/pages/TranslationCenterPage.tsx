@@ -17,10 +17,12 @@ import { getBillingPlan } from "../api/billing";
 import { getPages } from "../api/pages";
 import {
   createTranslationJob,
+  getGlossaryPreview,
   getTranslationJobs,
   getLocaleCompleteness,
   approveTranslationJob,
   retryTranslationJob,
+  type GlossaryPreview,
   type TranslationJob,
   type TranslationJobStatus,
 } from "../api/translation";
@@ -60,6 +62,28 @@ const STATUS_CONFIG: Record<
 };
 
 const EMPTY_PAGE_LIST: PageListItem[] = [];
+
+const GLOSSARY_STATUS_LABELS: Record<
+  GlossaryPreview["providerStatus"],
+  { label: string; tone: string }
+> = {
+  none: {
+    label: "No matching glossary terms",
+    tone: "text-gray-700 bg-gray-100",
+  },
+  not_synced: {
+    label: "Will sync on next translation job",
+    tone: "text-blue-700 bg-blue-100",
+  },
+  out_of_date: {
+    label: "Will refresh on next translation job",
+    tone: "text-amber-700 bg-amber-100",
+  },
+  ready: {
+    label: "Provider glossary is ready",
+    tone: "text-emerald-700 bg-emerald-100",
+  },
+};
 
 export default function TranslationCenterPage() {
   const { session } = useAuth();
@@ -102,6 +126,23 @@ export default function TranslationCenterPage() {
     queryKey: ["translation", "source-pages", siteId, sourceLocale],
     queryFn: () => getPages({ locale: sourceLocale, limit: 500 }),
     enabled: Boolean(siteId && showNewJob && sourceLocale),
+    staleTime: 30_000,
+  });
+
+  const {
+    data: glossaryPreview,
+    isLoading: glossaryPreviewLoading,
+    isError: glossaryPreviewError,
+  } = useQuery({
+    queryKey: [
+      "translation",
+      "glossary-preview",
+      siteId,
+      sourceLocale,
+      targetLocale,
+    ],
+    queryFn: () => getGlossaryPreview(siteId!, sourceLocale, targetLocale),
+    enabled: Boolean(siteId && showNewJob && sourceLocale && targetLocale),
     staleTime: 30_000,
   });
 
@@ -418,6 +459,13 @@ export default function TranslationCenterPage() {
             Source locales require existing pages. Target locales must already
             be active in site settings.
           </div>
+          {sourceLocale && targetLocale && (
+            <GlossaryPreviewPanel
+              preview={glossaryPreview}
+              isLoading={glossaryPreviewLoading}
+              isError={glossaryPreviewError}
+            />
+          )}
           <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
             <div className="flex flex-wrap items-center gap-4">
               <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -628,6 +676,140 @@ export default function TranslationCenterPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function GlossaryPreviewPanel({
+  preview,
+  isLoading,
+  isError,
+}: {
+  preview: GlossaryPreview | undefined;
+  isLoading: boolean;
+  isError: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading glossary preview...
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        Glossary preview is temporarily unavailable. Translation jobs can still
+        start, but this preview could not be loaded.
+      </div>
+    );
+  }
+
+  if (!preview) {
+    return null;
+  }
+
+  const providerStatus = GLOSSARY_STATUS_LABELS[preview.providerStatus];
+  const visibleEntries = preview.entries.slice(0, 8);
+  const hiddenCount = preview.entries.length - visibleEntries.length;
+
+  return (
+    <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900">
+            Glossary preview for this locale pair
+          </h4>
+          <p className="mt-1 text-xs text-gray-600">
+            These entries will be applied when the translation job runs.
+          </p>
+        </div>
+        <span
+          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${providerStatus.tone}`}
+        >
+          {providerStatus.label}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Applied terms
+          </p>
+          <p className="mt-1 text-lg font-semibold text-gray-900">
+            {preview.entryCount}
+          </p>
+        </div>
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Site overrides
+          </p>
+          <p className="mt-1 text-lg font-semibold text-gray-900">
+            {preview.siteSpecificCount}
+          </p>
+        </div>
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Tenant global
+          </p>
+          <p className="mt-1 text-lg font-semibold text-gray-900">
+            {preview.globalCount}
+          </p>
+        </div>
+      </div>
+
+      {preview.lastSyncedAt && preview.providerStatus === "ready" && (
+        <p className="mt-3 text-xs text-gray-500">
+          Provider glossary last synced on {formatDate(preview.lastSyncedAt)}.
+        </p>
+      )}
+
+      {preview.entries.length === 0 ? (
+        <div className="mt-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-500">
+          No glossary terms match {preview.sourceLocale.toUpperCase()} to{" "}
+          {preview.targetLocale.toUpperCase()} yet. This job will use standard
+          machine translation only.
+        </div>
+      ) : (
+        <div className="mt-4 overflow-hidden rounded-lg border border-gray-100">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 text-left text-[11px] uppercase tracking-wide text-gray-500">
+              <tr>
+                <th className="px-3 py-2 font-semibold">Source</th>
+                <th className="px-3 py-2 font-semibold">Target</th>
+                <th className="px-3 py-2 font-semibold">Scope</th>
+                <th className="px-3 py-2 font-semibold">Glossary</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {visibleEntries.map((entry) => (
+                <tr key={`${entry.glossaryId}:${entry.source}:${entry.target}`}>
+                  <td className="px-3 py-2 font-medium text-gray-900">
+                    {entry.source}
+                  </td>
+                  <td className="px-3 py-2 text-gray-700">{entry.target}</td>
+                  <td className="px-3 py-2 text-xs text-gray-500">
+                    {entry.scope === "site" ? "Site override" : "Tenant global"}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-gray-500">
+                    {entry.glossaryName}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {hiddenCount > 0 && (
+            <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+              Showing 8 of {preview.entries.length} matching terms. The full set
+              will still be applied to the job.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

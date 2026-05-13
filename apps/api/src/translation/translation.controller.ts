@@ -145,6 +145,28 @@ export class TranslationController {
     return this.translationService.getLocaleCompleteness(siteId);
   }
 
+  @Get("glossary-preview")
+  @MembershipRoles(
+    TenantMembershipRole.OWNER,
+    TenantMembershipRole.ADMIN,
+    TenantMembershipRole.EDITOR,
+  )
+  async getGlossaryPreview(
+    @Req() req: Request,
+    @Query("siteId") siteId: string,
+    @Query("sourceLocale") sourceLocale: string,
+    @Query("targetLocale") targetLocale: string,
+  ) {
+    await this.ensureSiteAccess(req);
+    const user = this.getUser(req);
+    return this.translationService.getGlossaryPreview(
+      user.activeTenantId!,
+      siteId,
+      sourceLocale,
+      targetLocale,
+    );
+  }
+
   // ── Glossary ────────────────────────────────────────────────────────────────
 
   @Get("glossaries")

@@ -223,6 +223,7 @@ model Tenant {
     webhookEvents        BillingWebhookEvent[]
     translationJobs      TranslationJob[]
     glossaries           TranslationGlossary[]
+    providerGlossaries   TranslationProviderGlossary[]
     workspaceInvitations WorkspaceInvitation[]
 
     createdAt DateTime @default(now()) @map("created_at")
@@ -305,6 +306,7 @@ model Site {
     auditLogs                      AuditLog[]
     translationJobs                TranslationJob[]
     glossaries                     TranslationGlossary[]
+    providerGlossaries             TranslationProviderGlossary[]
     redirects                      Redirect[]
     structuredData                 SiteStructuredData?
 
@@ -486,7 +488,7 @@ model Deployment {
     errorMessage      String?          @map("error_message")
     createdAt         DateTime         @default(now()) @map("created_at")
     updatedAt         DateTime         @updatedAt @map("updated_at")
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    site              Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
     @@index([siteId])
     @@index([siteId, status])
@@ -945,6 +947,30 @@ model TranslationGlossaryTerm {
     @@unique([glossaryId, sourceTerm, sourceLocale, targetLocale])
     @@index([glossaryId])
     @@map("translation_glossary_terms")
+}
+
+model TranslationProviderGlossary {
+    id                 String    @id @default(cuid())
+    tenantId           String    @map("tenant_id")
+    siteId             String    @map("site_id")
+    provider           String
+    sourceLocale       String    @map("source_locale")
+    targetLocale       String    @map("target_locale")
+    providerGlossaryId String    @map("provider_glossary_id")
+    entriesHash        String    @map("entries_hash")
+    entryCount         Int       @default(0) @map("entry_count")
+    isStale            Boolean   @default(false) @map("is_stale")
+    lastSyncedAt       DateTime? @map("last_synced_at")
+    createdAt          DateTime  @default(now()) @map("created_at")
+    updatedAt          DateTime  @updatedAt @map("updated_at")
+
+    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+    site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@unique([siteId, provider, sourceLocale, targetLocale])
+    @@index([tenantId])
+    @@index([siteId])
+    @@map("translation_provider_glossaries")
 }
 
 // ─── Page Translation Metadata ────────────────────────────
