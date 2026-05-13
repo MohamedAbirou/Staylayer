@@ -11,6 +11,10 @@ import {
   type TranslationGlossary,
 } from "../api/translation";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { LOCALES } from "../lib/constants";
+
+const DEFAULT_SOURCE_LOCALE = "en";
+const DEFAULT_TARGET_LOCALE = "es";
 
 export default function GlossaryPage() {
   const { session } = useAuth();
@@ -19,14 +23,16 @@ export default function GlossaryPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
-  const [expandedGlossaryId, setExpandedGlossaryId] = useState<string | null>(null);
+  const [expandedGlossaryId, setExpandedGlossaryId] = useState<string | null>(
+    null,
+  );
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // New term form state
   const [newSourceTerm, setNewSourceTerm] = useState("");
   const [newTargetTerm, setNewTargetTerm] = useState("");
-  const [newSourceLocale, setNewSourceLocale] = useState("en");
-  const [newTargetLocale, setNewTargetLocale] = useState("");
+  const [newSourceLocale, setNewSourceLocale] = useState(DEFAULT_SOURCE_LOCALE);
+  const [newTargetLocale, setNewTargetLocale] = useState(DEFAULT_TARGET_LOCALE);
 
   const { data: glossaries = [], isLoading } = useQuery({
     queryKey: ["translation", "glossaries", siteId],
@@ -35,9 +41,12 @@ export default function GlossaryPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createGlossary({ name: newName, siteId: siteId ?? undefined }),
+    mutationFn: () =>
+      createGlossary({ name: newName, siteId: siteId ?? undefined }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["translation", "glossaries"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["translation", "glossaries"],
+      });
       setShowCreate(false);
       setNewName("");
     },
@@ -46,7 +55,9 @@ export default function GlossaryPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteGlossary(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["translation", "glossaries"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["translation", "glossaries"],
+      });
       setDeleteTarget(null);
     },
   });
@@ -60,17 +71,22 @@ export default function GlossaryPage() {
         targetLocale: newTargetLocale,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["translation", "glossaries"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["translation", "glossaries"],
+      });
       setNewSourceTerm("");
       setNewTargetTerm("");
-      setNewTargetLocale("");
+      setNewSourceLocale(DEFAULT_SOURCE_LOCALE);
+      setNewTargetLocale(DEFAULT_TARGET_LOCALE);
     },
   });
 
   const removeTermMutation = useMutation({
     mutationFn: (termId: string) => removeGlossaryTerm(termId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["translation", "glossaries"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["translation", "glossaries"],
+      });
     },
   });
 
@@ -78,9 +94,12 @@ export default function GlossaryPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Translation Glossary</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Translation Glossary
+          </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Define brand terms, property names, and hospitality vocabulary for consistent translations.
+            Define brand terms, property names, and hospitality vocabulary for
+            consistent translations.
           </p>
         </div>
         <button
@@ -95,13 +114,17 @@ export default function GlossaryPage() {
       {/* Create glossary form */}
       {showCreate && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">Create glossary</h3>
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">
+            Create glossary
+          </h3>
           <div className="flex items-center gap-3">
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && newName.trim() && createMutation.mutate()}
+              onKeyDown={(e) =>
+                e.key === "Enter" && newName.trim() && createMutation.mutate()
+              }
               placeholder="e.g. Brand Terms, Room Types..."
               className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
             />
@@ -110,11 +133,16 @@ export default function GlossaryPage() {
               disabled={!newName.trim() || createMutation.isPending}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-blue-700"
             >
-              {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {createMutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
               Create
             </button>
             <button
-              onClick={() => { setShowCreate(false); setNewName(""); }}
+              onClick={() => {
+                setShowCreate(false);
+                setNewName("");
+              }}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
@@ -226,8 +254,12 @@ function GlossaryCard({
         >
           <BookOpen className="h-4 w-4 text-gray-400" />
           <div>
-            <p className="text-sm font-semibold text-gray-900">{glossary.name}</p>
-            <p className="text-xs text-gray-500">{glossary.terms.length} terms</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {glossary.name}
+            </p>
+            <p className="text-xs text-gray-500">
+              {glossary.terms.length} terms
+            </p>
           </div>
         </button>
         <button
@@ -255,10 +287,15 @@ function GlossaryCard({
                 <tbody className="divide-y divide-gray-50">
                   {glossary.terms.map((term) => (
                     <tr key={term.id}>
-                      <td className="py-2 pr-4 font-medium text-gray-900">{term.sourceTerm}</td>
-                      <td className="py-2 pr-4 text-gray-700">{term.targetTerm}</td>
+                      <td className="py-2 pr-4 font-medium text-gray-900">
+                        {term.sourceTerm}
+                      </td>
+                      <td className="py-2 pr-4 text-gray-700">
+                        {term.targetTerm}
+                      </td>
                       <td className="py-2 pr-4 text-xs text-gray-500">
-                        {term.sourceLocale.toUpperCase()} → {term.targetLocale.toUpperCase()}
+                        {term.sourceLocale.toUpperCase()} →{" "}
+                        {term.targetLocale.toUpperCase()}
                       </td>
                       <td className="py-2">
                         <button
@@ -294,29 +331,49 @@ function GlossaryCard({
                 placeholder="Target term"
                 className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
               />
-              <input
-                type="text"
+              <select
                 value={newSourceLocale}
                 onChange={(e) => setNewSourceLocale(e.target.value)}
-                placeholder="en"
                 className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-              />
-              <input
-                type="text"
+              >
+                {LOCALES.map((locale) => (
+                  <option key={locale} value={locale}>
+                    {locale.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+              <select
                 value={newTargetLocale}
                 onChange={(e) => setNewTargetLocale(e.target.value)}
-                placeholder="es"
                 className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
-              />
+              >
+                {LOCALES.filter((locale) => locale !== newSourceLocale).map(
+                  (locale) => (
+                    <option key={locale} value={locale}>
+                      {locale.toUpperCase()}
+                    </option>
+                  ),
+                )}
+              </select>
               <button
                 onClick={onAddTerm}
-                disabled={!newSourceTerm.trim() || !newTargetTerm.trim() || !newTargetLocale.trim() || isAddPending}
+                disabled={
+                  !newSourceTerm.trim() ||
+                  !newTargetTerm.trim() ||
+                  !newTargetLocale.trim() ||
+                  newSourceLocale === newTargetLocale ||
+                  isAddPending
+                }
                 className="flex items-center justify-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-blue-700"
               >
                 {isAddPending && <Loader2 className="h-3 w-3 animate-spin" />}
                 Add
               </button>
             </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Choose the exact source and target locale pair this term should
+              apply to.
+            </p>
           </div>
         </div>
       )}
