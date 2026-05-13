@@ -46,6 +46,10 @@ const POLLING_STATUSES: SiteDeployment["status"][] = [
   "RETRYING",
 ];
 
+function isDeploymentInFlight(status: SiteDeployment["status"]) {
+  return POLLING_STATUSES.includes(status);
+}
+
 export default function DeploymentsPage() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -86,10 +90,8 @@ export default function DeploymentsPage() {
     enabled: !!siteId,
     refetchInterval: (query) => {
       const rows = query.state.data ?? [];
-      return rows.some((deployment) =>
-        POLLING_STATUSES.includes(deployment.status),
-      )
-        ? 10_000
+      return rows.some((deployment) => isDeploymentInFlight(deployment.status))
+        ? 5_000
         : false;
     },
     retry: false,
@@ -293,9 +295,7 @@ export default function DeploymentsPage() {
   const pendingPrimaryDomain = domains.find((domain) => domain.isPrimary);
   const providerTarget = latest?.providerUrl ?? latest?.url ?? null;
   const billingBlocked = billingPlan?.actions.publishingBlocked ?? false;
-  const deploymentBusy = Boolean(
-    latest && POLLING_STATUSES.includes(latest.status),
-  );
+  const deploymentBusy = Boolean(latest && isDeploymentInFlight(latest.status));
   const readinessTone =
     latest?.status === "FAILED"
       ? "danger"
@@ -445,26 +445,19 @@ export default function DeploymentsPage() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
           {latest?.url ? (
-            <a
+            <DeploymentAccessLink
               href={latest.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-800"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open live site
-            </a>
+              label="Open live site"
+              disabled={deploymentBusy}
+            />
           ) : null}
           {latest?.providerUrl && latest.providerUrl !== latest.url ? (
-            <a
+            <DeploymentAccessLink
               href={latest.providerUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 font-medium text-gray-600 hover:text-gray-800"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open provider target
-            </a>
+              label="Open provider target"
+              disabled={deploymentBusy}
+              tone="secondary"
+            />
           ) : null}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -526,125 +519,131 @@ export default function DeploymentsPage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {deployments.map((deployment) => (
-              <div
-                key={deployment.id}
-                className="flex flex-col justify-between gap-4 px-6 py-5"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <DeploymentStatusBadge status={deployment.status} />
-                      <span
-                        className="text-xs text-gray-400"
-                        title={formatDate(deployment.createdAt)}
-                      >
-                        Created {formatRelativeTime(deployment.createdAt)}
-                      </span>
-                      <span
-                        className="text-xs text-gray-400"
-                        title={formatDate(deployment.updatedAt)}
-                      >
-                        Updated {formatRelativeTime(deployment.updatedAt)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700">
-                      {describeDeployment(deployment)}
-                    </p>
-                    {deployment.errorMessage ? (
-                      <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>{deployment.errorMessage}</span>
+            {deployments.map((deployment) =>
+              (() => {
+                const accessDisabled = isDeploymentInFlight(deployment.status);
+
+                return (
+                  <div
+                    key={deployment.id}
+                    className="flex flex-col justify-between gap-4 px-6 py-5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <DeploymentStatusBadge status={deployment.status} />
+                          <span
+                            className="text-xs text-gray-400"
+                            title={formatDate(deployment.createdAt)}
+                          >
+                            Created {formatRelativeTime(deployment.createdAt)}
+                          </span>
+                          <span
+                            className="text-xs text-gray-400"
+                            title={formatDate(deployment.updatedAt)}
+                          >
+                            Updated {formatRelativeTime(deployment.updatedAt)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {describeDeployment(deployment)}
+                        </p>
+                        {deployment.errorMessage ? (
+                          <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>{deployment.errorMessage}</span>
+                          </div>
+                        ) : null}
+                        {deployment.status === "FAILED" && (
+                          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                            <div>
+                              <span className="font-semibold">Next step: </span>
+                              {getFailedNextAction(deployment.errorMessage)}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ) : null}
-                    {deployment.status === "FAILED" && (
-                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                        <div>
-                          <span className="font-semibold">Next step: </span>
-                          {getFailedNextAction(deployment.errorMessage)}
+
+                      <div className="flex items-center gap-2">
+                        {deployment.url ? (
+                          <DeploymentAccessLink
+                            href={deployment.url}
+                            label="Open live site"
+                            disabled={accessDisabled}
+                            compact
+                          />
+                        ) : null}
+                        {deployment.providerUrl &&
+                        deployment.providerUrl !== deployment.url ? (
+                          <DeploymentAccessLink
+                            href={deployment.providerUrl}
+                            label="Provider target"
+                            disabled={accessDisabled}
+                            compact
+                            tone="secondary"
+                          />
+                        ) : null}
+                        {canManageDeployments &&
+                        deployment.status === "FAILED" ? (
+                          <button
+                            onClick={() => setRetryTarget(deployment.id)}
+                            disabled={retryMutation.isPending}
+                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                          >
+                            {retryMutation.isPending ? (
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Clock4 className="h-3.5 w-3.5" />
+                            )}
+                            Retry
+                          </button>
+                        ) : null}
+                        {canManageDeployments &&
+                        deployment.status === "LIVE" &&
+                        deployment.id !== deployments[0]?.id ? (
+                          <button
+                            onClick={() => setRollbackTarget(deployment.id)}
+                            disabled={
+                              rollbackMutation.isPending || deploymentBusy
+                            }
+                            className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                          >
+                            {rollbackMutation.isPending ? (
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Clock4 className="h-3.5 w-3.5" />
+                            )}
+                            Rollback to this
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <DeploymentTimeline phases={deployment.timeline} />
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          {deployment.providerDeployId ? (
+                            <span>
+                              Provider deployment: {deployment.providerDeployId}
+                            </span>
+                          ) : null}
+                          {deployment.url ? (
+                            <span>Public URL: {deployment.url}</span>
+                          ) : null}
+                          {deployment.providerUrl &&
+                          deployment.providerUrl !== deployment.url ? (
+                            <span>Provider URL: {deployment.providerUrl}</span>
+                          ) : null}
                         </div>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {deployment.url ? (
-                      <a
-                        href={deployment.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        Open live site
-                      </a>
-                    ) : null}
-                    {deployment.providerUrl &&
-                    deployment.providerUrl !== deployment.url ? (
-                      <a
-                        href={deployment.providerUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        Provider target
-                      </a>
-                    ) : null}
-                    {canManageDeployments && deployment.status === "FAILED" ? (
-                      <button
-                        onClick={() => setRetryTarget(deployment.id)}
-                        disabled={retryMutation.isPending}
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                      >
-                        {retryMutation.isPending ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Clock4 className="h-3.5 w-3.5" />
-                        )}
-                        Retry
-                      </button>
-                    ) : null}
-                    {canManageDeployments &&
-                    deployment.status === "LIVE" &&
-                    deployment.id !== deployments[0]?.id ? (
-                      <button
-                        onClick={() => setRollbackTarget(deployment.id)}
-                        disabled={rollbackMutation.isPending}
-                        className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
-                      >
-                        {rollbackMutation.isPending ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Clock4 className="h-3.5 w-3.5" />
-                        )}
-                        Rollback to this
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <DeploymentTimeline phases={deployment.timeline} />
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                      {deployment.providerDeployId ? (
-                        <span>
-                          Provider deployment: {deployment.providerDeployId}
-                        </span>
-                      ) : null}
-                      {deployment.url ? (
-                        <span>Public URL: {deployment.url}</span>
-                      ) : null}
-                      {deployment.providerUrl &&
-                      deployment.providerUrl !== deployment.url ? (
-                        <span>Provider URL: {deployment.providerUrl}</span>
-                      ) : null}
+                      <DeploymentLogs logs={deployment.recentLogs} />
                     </div>
                   </div>
-                  <DeploymentLogs logs={deployment.recentLogs} />
-                </div>
-              </div>
-            ))}
+                );
+              })(),
+            )}
           </div>
         )}
       </div>
@@ -1179,6 +1178,56 @@ function DeploymentLogs({ logs }: { logs: SiteDeployment["recentLogs"] }) {
         )}
       </div>
     </details>
+  );
+}
+
+function DeploymentAccessLink({
+  href,
+  label,
+  disabled,
+  tone = "primary",
+  compact = false,
+}: {
+  href: string;
+  label: string;
+  disabled: boolean;
+  tone?: "primary" | "secondary";
+  compact?: boolean;
+}) {
+  const enabledClassName = compact
+    ? "rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium hover:bg-gray-50"
+    : "inline-flex items-center gap-1 font-medium";
+  const toneClassName =
+    tone === "secondary"
+      ? compact
+        ? " text-gray-700"
+        : " text-gray-600 hover:text-gray-800"
+      : compact
+        ? " text-gray-700"
+        : " text-blue-600 hover:text-blue-800";
+
+  if (disabled) {
+    return (
+      <span
+        className={`${enabledClassName}${tone === "secondary" || compact ? " text-gray-400" : " text-blue-300"} cursor-not-allowed border-gray-100 bg-gray-50`}
+        title="Available after the deployment finishes"
+      >
+        {compact ? null : <ExternalLink className="h-4 w-4" />}
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={`${enabledClassName}${toneClassName}`}
+    >
+      {compact ? null : <ExternalLink className="h-4 w-4" />}
+      {label}
+    </a>
   );
 }
 

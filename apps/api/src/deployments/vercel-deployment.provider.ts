@@ -14,6 +14,7 @@ import {
   EnsureDeploymentProjectInput,
   GetDomainAttachmentStatusInput,
   GetDeploymentStatusInput,
+  RollbackDeploymentInput,
   SyncDeploymentEnvironmentInput,
   TriggerDeploymentInput,
 } from "./deployment-provider.port";
@@ -45,6 +46,18 @@ type VercelDeploymentResponse = {
 type VercelDeploymentEventResponse = Array<{
   type?: string;
   created?: number | string;
+  id?: string;
+  text?: string;
+  date?: number | string;
+  statusCode?: number | string;
+  info?: {
+    type?: string;
+    name?: string;
+    entrypoint?: string;
+    path?: string;
+    step?: string;
+    readyState?: string;
+  };
   payload?: {
     text?: string;
     id?: string;
@@ -225,6 +238,15 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     return this.toDeploymentSnapshot(deployment, events);
   }
 
+  async rollbackDeployment(input: RollbackDeploymentInput): Promise<void> {
+    await this.request(
+      `/v1/projects/${encodeURIComponent(input.projectId)}/rollback/${encodeURIComponent(input.providerDeployId)}`,
+      {
+        method: "POST",
+      },
+    );
+  }
+
   async ensureDomainAttachment(
     input: EnsureDomainAttachmentInput,
   ): Promise<DomainAttachmentSnapshot> {
@@ -319,7 +341,7 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       },
       {
         builds: "1",
-        direction: "asc",
+        direction: "forward",
         limit: "-1",
       },
     );
@@ -598,10 +620,8 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     text: string | null;
     level: DeploymentLogEntry["level"];
   } | null {
-    const info =
-      event.payload && typeof event.payload === "object"
-        ? event.payload.info
-        : undefined;
+    const payload = this.getDeploymentEventPayload(event);
+    const info = payload?.info ?? event.info;
     const phaseSource =
       info?.step ??
       info?.name ??
@@ -610,14 +630,14 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       event.type ??
       "deployment";
     const createdAt = this.toIsoTimestamp(
-      event.payload?.created ?? event.payload?.date ?? event.created,
+      payload?.created ?? payload?.date ?? event.created ?? event.date,
     );
 
     if (!createdAt) {
       return null;
     }
 
-    const text = this.normalizeText(event.payload?.text);
+    const text = this.normalizeText(payload?.text ?? event.text);
     const derivedSummary = [info?.readyState, info?.entrypoint]
       .filter(
         (value): value is string =>
@@ -632,14 +652,38 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         : `${phaseLabel} in progress`);
 
     return {
-      id: event.payload?.id ?? `${phaseSource}-${index}`,
+      id: payload?.id ?? event.id ?? `${phaseSource}-${index}`,
       createdAt,
       phaseKey: `provider:${this.toIdentifier(phaseSource)}`,
       label: phaseLabel,
       summary,
       text: text ?? summary,
-      level: this.toLogLevel(text, event.payload?.statusCode),
+      level: this.toLogLevel(text, payload?.statusCode ?? event.statusCode),
     };
+  }
+
+  private getDeploymentEventPayload(
+    event: VercelDeploymentEventResponse[number],
+  ): {
+    text?: string;
+    id?: string;
+    created?: number | string;
+    date?: number | string;
+    statusCode?: number | string;
+    info?: {
+      type?: string;
+      name?: string;
+      entrypoint?: string;
+      path?: string;
+      step?: string;
+      readyState?: string;
+    };
+  } | null {
+    if (!event.payload || typeof event.payload !== "object") {
+      return null;
+    }
+
+    return event.payload;
   }
 
   private buildFallbackDeploymentPhase(status: {

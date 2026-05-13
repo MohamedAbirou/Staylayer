@@ -216,7 +216,7 @@ describe("VercelDeploymentProvider", () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "https://api.vercel.com/v3/deployments/dpl_123/events?builds=1&direction=asc&limit=-1",
+      "https://api.vercel.com/v3/deployments/dpl_123/events?builds=1&direction=forward&limit=-1",
       expect.objectContaining({
         method: "GET",
       }),
@@ -249,6 +249,74 @@ describe("VercelDeploymentProvider", () => {
         text: "Compiling website",
       }),
     ]);
+  });
+
+  it("maps flattened deployment event payloads into timeline phases and logs", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        createResponse({
+          id: "dpl_flat",
+          aliasFinal: "existing-project.vercel.app",
+          alias: ["existing-project.vercel.app"],
+          target: "production",
+          name: "existing-project",
+          readyState: "BUILDING",
+          status: "BUILDING",
+          url: "existing-project-r4nd0m.vercel.app",
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse([
+          {
+            type: "build",
+            id: "evt_flat_1",
+            created: "1715076000000",
+            text: "Restoring build cache",
+            statusCode: 200,
+            info: {
+              step: "build",
+            },
+          },
+        ]),
+      );
+
+    const result = await provider.getDeploymentStatus({
+      providerDeployId: "dpl_flat",
+      projectId: "prj_123",
+    });
+
+    expect(result.timeline).toEqual([
+      expect.objectContaining({
+        key: "provider:build",
+        label: "Build",
+        status: "active",
+      }),
+    ]);
+    expect(result.logs).toEqual([
+      expect.objectContaining({
+        id: "evt_flat_1",
+        phaseKey: "provider:build",
+        text: "Restoring build cache",
+      }),
+    ]);
+  });
+
+  it("calls the Vercel rollback endpoint for an existing deployment", async () => {
+    fetchMock.mockResolvedValue(createResponse({ ok: true }));
+
+    await expect(
+      provider.rollbackDeployment({
+        projectId: "prj_123",
+        providerDeployId: "dpl_live",
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.vercel.com/v1/projects/prj_123/rollback/dpl_live",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
   });
 
   it("maps Vercel domain config recommendations into DNS diagnostics", async () => {

@@ -147,6 +147,14 @@ export class DeploymentsService {
       });
     }
 
+    if (!target.providerProjectId) {
+      throw new ConflictException({
+        code: "DEPLOYMENT_NO_PROVIDER_PROJECT",
+        message:
+          "Target deployment has no provider project reference for rollback",
+      });
+    }
+
     const currentActive = await this.prisma.deployment.findFirst({
       where: {
         siteId,
@@ -180,26 +188,22 @@ export class DeploymentsService {
     });
 
     try {
-      const snapshot = await this.deploymentProvider.getDeploymentStatus({
-        providerDeployId: target.providerDeployId!,
+      await this.deploymentProvider.rollbackDeployment({
         projectId: target.providerProjectId,
+        providerDeployId: target.providerDeployId,
       });
 
-      if (snapshot.isLive) {
-        return this.updateDeployment(rollbackDeployment.id, {
-          status: DeploymentStatus.LIVE,
-          url: snapshot.url ?? target.url,
-          providerDeployId: target.providerDeployId,
-        });
-      }
-
-      return this.failDeployment(
-        rollbackDeployment.id,
-        rollbackDeployment.metadata,
-        new Error(
-          "Rollback target is no longer live at the provider. Use a fresh provision instead.",
-        ),
-      );
+      return this.updateDeployment(rollbackDeployment.id, {
+        status: DeploymentStatus.LIVE,
+        url: target.url,
+        providerDeployId: target.providerDeployId,
+        providerProjectId: target.providerProjectId,
+        errorMessage: null,
+        metadata: this.mergeMetadata(rollbackDeployment.metadata, {
+          rollbackCompletedAt: new Date().toISOString(),
+          rollbackProviderDeployId: target.providerDeployId,
+        }),
+      });
     } catch (error) {
       return this.failDeployment(
         rollbackDeployment.id,

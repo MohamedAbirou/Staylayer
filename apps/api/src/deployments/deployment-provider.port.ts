@@ -100,6 +100,11 @@ export type GetDeploymentStatusInput = {
   projectId?: string | null;
 };
 
+export type RollbackDeploymentInput = {
+  projectId: string;
+  providerDeployId: string;
+};
+
 export type EnsureDomainAttachmentInput = {
   projectId: string;
   domain: string;
@@ -154,6 +159,8 @@ export interface DeploymentProvider {
   getDeploymentStatus(
     input: GetDeploymentStatusInput,
   ): Promise<DeploymentStatusSnapshot>;
+
+  rollbackDeployment(input: RollbackDeploymentInput): Promise<void>;
 
   ensureDomainAttachment(
     input: EnsureDomainAttachmentInput,

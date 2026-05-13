@@ -57,6 +57,7 @@ describe("DeploymentsService", () => {
       syncEnvironmentVariables: jest.fn(),
       triggerDeployment: jest.fn(),
       getDeploymentStatus: jest.fn(),
+      rollbackDeployment: jest.fn(),
       ensureDomainAttachment: jest.fn(),
       getDomainAttachmentStatus: jest.fn(),
     };
@@ -579,6 +580,88 @@ describe("DeploymentsService", () => {
       status: DeploymentStatus.LIVE,
       providerProjectId: "prj_1",
       providerDeployId: "dpl_2",
+    });
+  });
+
+  it("calls the provider rollback endpoint before marking a rollback attempt live", async () => {
+    const createdAt = new Date("2026-05-13T19:25:00.000Z");
+
+    prisma.deployment.findUnique.mockResolvedValue({
+      id: "dep-live-prev",
+      siteId: "site-1",
+      status: DeploymentStatus.LIVE,
+      provider: "vercel",
+      providerProjectId: "prj_1",
+      providerDeployId: "dpl_live_prev",
+      url: "https://harbor-house.vercel.app",
+      metadata: null,
+      errorMessage: null,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    prisma.deployment.findFirst.mockResolvedValue(null);
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      name: "Harbor House",
+      slug: "harbor-house",
+      primaryLocale: "en",
+      enabledLocales: ["en"],
+      settings: { siteName: "Harbor House" },
+      domains: [],
+      deployments: [
+        {
+          id: "dep-live-current",
+          providerProjectId: "prj_1",
+          providerDeployId: "dpl_live_current",
+          status: DeploymentStatus.LIVE,
+        },
+      ],
+    });
+    prisma.deployment.create.mockResolvedValue({
+      id: "dep-rollback",
+      siteId: "site-1",
+      status: DeploymentStatus.DEPLOYING,
+      provider: "vercel",
+      providerProjectId: "prj_1",
+      providerDeployId: "dpl_live_prev",
+      url: "https://harbor-house.vercel.app",
+      metadata: null,
+      errorMessage: null,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    prisma.deployment.update.mockResolvedValue({
+      id: "dep-rollback",
+      siteId: "site-1",
+      status: DeploymentStatus.LIVE,
+      provider: "vercel",
+      providerProjectId: "prj_1",
+      providerDeployId: "dpl_live_prev",
+      url: "https://harbor-house.vercel.app",
+      metadata: {
+        rollbackOfDeploymentId: "dep-live-prev",
+      },
+      errorMessage: null,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    provider.rollbackDeployment.mockResolvedValue();
+
+    const result = await service.rollbackSiteDeployment(
+      "site-1",
+      "dep-live-prev",
+    );
+
+    expect(provider.rollbackDeployment).toHaveBeenCalledWith({
+      projectId: "prj_1",
+      providerDeployId: "dpl_live_prev",
+    });
+    expect(provider.getDeploymentStatus).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      id: "dep-rollback",
+      status: DeploymentStatus.LIVE,
+      providerDeployId: "dpl_live_prev",
     });
   });
 
