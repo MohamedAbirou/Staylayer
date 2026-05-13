@@ -62,6 +62,7 @@ export async function createTranslationJob(
     sourceLocale: string;
     targetLocale: string;
     pageIds?: string[];
+    publishedOnly?: boolean;
     overwrite?: boolean;
     autoPublish?: boolean;
   },

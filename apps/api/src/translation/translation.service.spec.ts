@@ -102,6 +102,152 @@ describe("TranslationService", () => {
     expect(result.autoPublish).toBe(true);
   });
 
+  it("rejects selected pages that are outside the chosen source locale", async () => {
+    const prisma = buildPrismaMock();
+    const billing = {
+      assertCanConsumeTranslationCharacters: jest
+        .fn()
+        .mockResolvedValue(undefined),
+    };
+    const deepl = {
+      isConfigured: jest.fn().mockReturnValue(true),
+    };
+    const revalidation = {
+      revalidatePage: jest.fn().mockResolvedValue(undefined),
+    };
+
+    prisma.site.findFirst.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      enabledLocales: ["en", "es"],
+    });
+    prisma.page.findMany.mockResolvedValue([
+      {
+        id: "page-source-1",
+        puckData: {
+          hero: {
+            heading: "Hello",
+          },
+        },
+      },
+    ]);
+
+    const service = new TranslationService(
+      prisma as never,
+      billing as never,
+      deepl as never,
+      revalidation as never,
+    );
+
+    await expect(
+      service.createJob({
+        tenantId: "tenant-1",
+        siteId: "site-1",
+        sourceLocale: "en",
+        targetLocale: "es",
+        pageIds: ["page-source-1", "page-source-2"],
+        createdBy: "user-1",
+      }),
+    ).rejects.toThrow(
+      "Some selected pages were not found in the chosen source locale",
+    );
+
+    expect(prisma.translationJob.create).not.toHaveBeenCalled();
+  });
+
+  it("captures a published-only page snapshot for translation jobs", async () => {
+    const prisma = buildPrismaMock();
+    const billing = {
+      assertCanConsumeTranslationCharacters: jest
+        .fn()
+        .mockResolvedValue(undefined),
+    };
+    const deepl = {
+      isConfigured: jest.fn().mockReturnValue(true),
+    };
+    const revalidation = {
+      revalidatePage: jest.fn().mockResolvedValue(undefined),
+    };
+
+    prisma.site.findFirst.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      enabledLocales: ["en", "es"],
+    });
+    prisma.page.findMany.mockResolvedValue([
+      {
+        id: "page-published-1",
+        puckData: {
+          hero: {
+            heading: "Hello",
+          },
+        },
+      },
+      {
+        id: "page-published-2",
+        puckData: {
+          hero: {
+            heading: "Pricing",
+          },
+        },
+      },
+    ]);
+    prisma.translationJob.create.mockResolvedValue({
+      id: "job-2",
+      tenantId: "tenant-1",
+      siteId: "site-1",
+      sourceLocale: "en",
+      targetLocale: "es",
+      status: TranslationJobStatus.QUEUED,
+      totalPages: 2,
+      completedPages: 0,
+      failedPages: 0,
+      charactersUsed: 0,
+      overwrite: false,
+      autoPublish: true,
+      error: null,
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date("2026-05-13T10:00:00.000Z"),
+      createdBy: "user-1",
+    });
+
+    const service = new TranslationService(
+      prisma as never,
+      billing as never,
+      deepl as never,
+      revalidation as never,
+    );
+
+    jest
+      .spyOn(service as never, "processJob")
+      .mockResolvedValue(undefined as never);
+
+    await service.createJob({
+      tenantId: "tenant-1",
+      siteId: "site-1",
+      sourceLocale: "en",
+      targetLocale: "es",
+      publishedOnly: true,
+      createdBy: "user-1",
+    });
+
+    expect(prisma.page.findMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        siteId: "site-1",
+        locale: "en",
+        deletedAt: null,
+        published: true,
+      }),
+    });
+    expect(prisma.translationJob.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        pageIds: ["page-published-1", "page-published-2"],
+        totalPages: 2,
+      }),
+    });
+  });
+
   it("passes the requested source locale through to DeepL", async () => {
     const prisma = buildPrismaMock();
     const billing = {

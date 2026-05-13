@@ -24,6 +24,7 @@ export interface CreateTranslationJobInput {
   sourceLocale: string;
   targetLocale: string;
   pageIds?: string[];
+  publishedOnly?: boolean;
   overwrite?: boolean;
   autoPublish?: boolean;
   createdBy: string;
@@ -86,19 +87,45 @@ export class TranslationService {
       );
     }
 
+    const selectedPageIds = input.pageIds?.length
+      ? Array.from(new Set(input.pageIds.filter(Boolean)))
+      : undefined;
+
+    if (selectedPageIds?.length && input.publishedOnly) {
+      throw new BadRequestException(
+        "Choose either specific pages or published-only scope, not both",
+      );
+    }
+
     const pageWhere: Record<string, unknown> = {
       siteId: input.siteId,
       locale: input.sourceLocale,
       deletedAt: null,
     };
-    if (input.pageIds?.length) {
-      pageWhere.id = { in: input.pageIds };
+    if (selectedPageIds?.length) {
+      pageWhere.id = { in: selectedPageIds };
+    } else if (input.publishedOnly) {
+      pageWhere.published = true;
     }
 
     const sourcePages = await this.prisma.page.findMany({ where: pageWhere });
     if (sourcePages.length === 0) {
-      throw new BadRequestException("No source pages found for translation");
+      throw new BadRequestException(
+        input.publishedOnly
+          ? "No published source pages found for translation"
+          : "No source pages found for translation",
+      );
     }
+
+    if (selectedPageIds?.length && sourcePages.length !== selectedPageIds.length) {
+      throw new BadRequestException(
+        "Some selected pages were not found in the chosen source locale",
+      );
+    }
+
+    const persistedPageIds =
+      selectedPageIds ??
+      (input.publishedOnly ? sourcePages.map((page) => page.id) : undefined);
 
     const totalChars = sourcePages.reduce((sum, page) => {
       const segments = extractTranslatableText(page.puckData);
@@ -119,7 +146,8 @@ export class TranslationService {
         totalPages: sourcePages.length,
         overwrite: input.overwrite ?? false,
         autoPublish: input.autoPublish ?? true,
-        pageIds: (input.pageIds as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+        pageIds:
+          (persistedPageIds as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         createdBy: input.createdBy,
       },
     });
@@ -343,7 +371,7 @@ export class TranslationService {
       locale: job.sourceLocale,
       deletedAt: null,
     };
-    if (job.pageIds) {
+    if (Array.isArray(job.pageIds) && job.pageIds.length > 0) {
       pageWhere.id = { in: job.pageIds as string[] };
     }
 

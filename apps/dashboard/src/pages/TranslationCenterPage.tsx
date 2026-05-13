@@ -14,6 +14,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { getBillingPlan } from "../api/billing";
+import { getPages } from "../api/pages";
 import {
   createTranslationJob,
   getTranslationJobs,
@@ -24,6 +25,7 @@ import {
   type TranslationJobStatus,
 } from "../api/translation";
 import { formatDate } from "../lib/formatDate";
+import type { PageListItem } from "../lib/constants";
 
 const STATUS_CONFIG: Record<
   TranslationJobStatus,
@@ -66,6 +68,8 @@ export default function TranslationCenterPage() {
   const [showNewJob, setShowNewJob] = useState(false);
   const [sourceLocale, setSourceLocale] = useState("");
   const [targetLocale, setTargetLocale] = useState("");
+  const [pageScope, setPageScope] = useState<"all" | "published" | "selected">("all");
+  const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
   const [overwrite, setOverwrite] = useState(false);
   const [autoPublish, setAutoPublish] = useState(true);
 
@@ -90,11 +94,20 @@ export default function TranslationCenterPage() {
     refetchInterval: 10_000,
   });
 
+  const { data: sourcePagesData, isLoading: sourcePagesLoading } = useQuery({
+    queryKey: ["translation", "source-pages", siteId, sourceLocale],
+    queryFn: () => getPages({ locale: sourceLocale, limit: 500 }),
+    enabled: Boolean(siteId && showNewJob && sourceLocale),
+    staleTime: 30_000,
+  });
+
   const createMutation = useMutation({
     mutationFn: () =>
       createTranslationJob(siteId!, {
         sourceLocale,
         targetLocale,
+        pageIds: pageScope === "selected" ? selectedPageIds : undefined,
+        publishedOnly: pageScope === "published",
         overwrite,
         autoPublish,
       }),
@@ -105,6 +118,8 @@ export default function TranslationCenterPage() {
       setShowNewJob(false);
       setSourceLocale("");
       setTargetLocale("");
+      setPageScope("all");
+      setSelectedPageIds([]);
       setOverwrite(false);
       setAutoPublish(true);
     },
@@ -149,6 +164,12 @@ export default function TranslationCenterPage() {
     : false;
   const translationBlocked =
     !machineTranslationIncluded || needsMoreLocales || !hasSourceLocale;
+  const sourcePages = sourcePagesData?.data ?? [];
+  const selectedPageCount = selectedPageIds.length;
+  const requiresPageSelection = pageScope === "selected";
+  const allSourcePageIds = sourcePages.map((page) => page.id);
+  const publishedSourcePages = sourcePages.filter((page) => page.published);
+  const publishedSourcePageCount = publishedSourcePages.length;
 
   useEffect(() => {
     if (sourceLocale && !sourceLocaleOptions.includes(sourceLocale)) {
@@ -161,6 +182,31 @@ export default function TranslationCenterPage() {
       setTargetLocale("");
     }
   }, [sourceLocale, targetLocale, targetLocaleOptions]);
+
+  useEffect(() => {
+    setPageScope("all");
+    setSelectedPageIds([]);
+  }, [sourceLocale]);
+
+  useEffect(() => {
+    if (!sourcePages.length) {
+      setSelectedPageIds([]);
+      return;
+    }
+
+    const validIds = new Set(sourcePages.map((page) => page.id));
+    setSelectedPageIds((current) =>
+      current.filter((pageId) => validIds.has(pageId)),
+    );
+  }, [sourcePages]);
+
+  function togglePageSelection(pageId: string) {
+    setSelectedPageIds((current) =>
+      current.includes(pageId)
+        ? current.filter((id) => id !== pageId)
+        : [...current, pageId],
+    );
+  }
 
   if (!siteId) {
     return (
@@ -362,6 +408,108 @@ export default function TranslationCenterPage() {
             Source locales require existing pages. Target locales must already
             be active in site settings.
           </div>
+          <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name="page-scope"
+                  checked={pageScope === "all"}
+                  onChange={() => setPageScope("all")}
+                  className="border-gray-300"
+                />
+                Translate all pages in {sourceLocale ? sourceLocale.toUpperCase() : "the source locale"}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name="page-scope"
+                  checked={pageScope === "published"}
+                  onChange={() => setPageScope("published")}
+                  disabled={
+                    !sourceLocale ||
+                    sourcePagesLoading ||
+                    publishedSourcePageCount === 0
+                  }
+                  className="border-gray-300"
+                />
+                Translate published pages only
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="radio"
+                  name="page-scope"
+                  checked={pageScope === "selected"}
+                  onChange={() => setPageScope("selected")}
+                  disabled={!sourceLocale || sourcePagesLoading || sourcePages.length === 0}
+                  className="border-gray-300"
+                />
+                Translate selected pages only
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-gray-600">
+              Choose whether the job should include all source pages, only published pages, or a hand-picked page set.
+            </p>
+
+            {pageScope === "published" && (
+              <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
+                This job will translate {publishedSourcePageCount} published page{publishedSourcePageCount === 1 ? "" : "s"} from the {sourceLocale.toUpperCase()} locale and exclude drafts.
+              </div>
+            )}
+
+            {pageScope === "selected" && (
+              <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-gray-900">
+                    Choose pages to translate
+                  </p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPageIds(allSourcePageIds)}
+                      disabled={sourcePagesLoading || sourcePages.length === 0}
+                      className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Select all
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPageIds([])}
+                      disabled={selectedPageCount === 0}
+                      className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {selectedPageCount} of {sourcePages.length} page{sourcePages.length === 1 ? "" : "s"} selected.
+                </p>
+
+                {sourcePagesLoading ? (
+                  <div className="mt-3 flex items-center text-sm text-gray-500">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading source pages...
+                  </div>
+                ) : sourcePages.length === 0 ? (
+                  <div className="mt-3 rounded-md border border-dashed border-gray-200 bg-white px-3 py-4 text-sm text-gray-500">
+                    No pages were found in this source locale.
+                  </div>
+                ) : (
+                  <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+                    {sourcePages.map((page) => (
+                      <PageSelectionRow
+                        key={page.id}
+                        page={page}
+                        checked={selectedPageIds.includes(page.id)}
+                        onToggle={() => togglePageSelection(page.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div className="mt-4 flex items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input
@@ -399,7 +547,11 @@ export default function TranslationCenterPage() {
             <button
               onClick={() => createMutation.mutate()}
               disabled={
-                !sourceLocale || !targetLocale || createMutation.isPending
+                !sourceLocale ||
+                !targetLocale ||
+                createMutation.isPending ||
+                (requiresPageSelection && selectedPageCount === 0) ||
+                (pageScope === "published" && publishedSourcePageCount === 0)
               }
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-blue-700"
             >
@@ -456,6 +608,47 @@ export default function TranslationCenterPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function PageSelectionRow({
+  page,
+  checked,
+  onToggle,
+}: {
+  page: PageListItem;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 hover:border-blue-200 hover:bg-blue-50/40">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        className="mt-1 rounded border-gray-300"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-gray-900">{page.title}</span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium uppercase text-gray-600">
+            /{page.slug}
+          </span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              page.published
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {page.published ? "Published" : "Draft"}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          Last updated {formatDate(page.updatedAt)}
+        </p>
+      </div>
+    </label>
   );
 }
 

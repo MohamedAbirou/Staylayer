@@ -55,6 +55,7 @@ export class TranslationController {
       sourceLocale: string;
       targetLocale: string;
       pageIds?: string[];
+      publishedOnly?: boolean;
       overwrite?: boolean;
       autoPublish?: boolean;
     },
@@ -67,6 +68,7 @@ export class TranslationController {
       sourceLocale: body.sourceLocale,
       targetLocale: body.targetLocale,
       pageIds: body.pageIds,
+      publishedOnly: body.publishedOnly,
       overwrite: body.overwrite,
       autoPublish: body.autoPublish,
       createdBy: user.sub,
