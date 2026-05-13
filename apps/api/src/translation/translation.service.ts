@@ -220,43 +220,34 @@ export class TranslationService {
     const site = await this.prisma.site.findUnique({ where: { id: siteId } });
     if (!site) return [];
 
-    const result: {
-      locale: string;
-      total: number;
-      translated: number;
-      stale: number;
-    }[] = [];
-
-    const sourcePages = await this.prisma.page.count({
-      where: { siteId, locale: site.primaryLocale, deletedAt: null },
+    const distinctSlugs = await this.prisma.page.findMany({
+      where: { siteId, deletedAt: null },
+      distinct: ["slug"],
+      select: { slug: true },
     });
+    const totalPages = distinctSlugs.length;
 
-    for (const locale of site.enabledLocales) {
-      if (locale === site.primaryLocale) {
-        result.push({
-          locale,
-          total: sourcePages,
-          translated: sourcePages,
-          stale: 0,
+    return Promise.all(
+      site.enabledLocales.map(async (locale) => {
+        const translated = await this.prisma.page.count({
+          where: { siteId, locale, deletedAt: null },
         });
-        continue;
-      }
 
-      const translated = await this.prisma.page.count({
-        where: { siteId, locale, deletedAt: null },
-      });
+        const stale = await this.prisma.pageTranslationMeta.count({
+          where: {
+            page: { siteId, locale, deletedAt: null },
+            isStale: true,
+          },
+        });
 
-      const stale = await this.prisma.pageTranslationMeta.count({
-        where: {
-          page: { siteId, locale, deletedAt: null },
-          isStale: true,
-        },
-      });
-
-      result.push({ locale, total: sourcePages, translated, stale });
-    }
-
-    return result;
+        return {
+          locale,
+          total: totalPages,
+          translated,
+          stale,
+        };
+      }),
+    );
   }
 
   // ── Glossary Management ─────────────────────────────────────────────────────

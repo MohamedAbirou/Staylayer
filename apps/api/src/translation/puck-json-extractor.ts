@@ -5,16 +5,12 @@
  * values, booleans, and any technical/structural keys.
  */
 
-const NON_TRANSLATABLE_KEYS = new Set([
+const NON_TRANSLATABLE_VALUE_KEYS = new Set([
   "id",
   "type",
-  "props",
   "readOnly",
   "index",
   "zone",
-  "zones",
-  "root",
-  "content",
   "href",
   "src",
   "url",
@@ -117,7 +113,6 @@ function walk(value: unknown, path: string, segments: TextSegment[]): void {
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
     for (const key of Object.keys(obj)) {
-      if (NON_TRANSLATABLE_KEYS.has(key)) continue;
       walk(obj[key], path ? `${path}.${key}` : key, segments);
     }
   }
@@ -145,7 +140,6 @@ function walkAndReplace(
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
     for (const key of Object.keys(obj)) {
-      if (NON_TRANSLATABLE_KEYS.has(key)) continue;
       obj[key] = walkAndReplace(
         obj[key],
         path ? `${path}.${key}` : key,
@@ -160,13 +154,14 @@ function walkAndReplace(
 
 function isTranslatableString(text: string, path: string): boolean {
   if (/^https?:\/\//.test(text)) return false;
+  if (/^(\/|#|mailto:|tel:|\.\/|\.\.\/)/.test(text)) return false;
   if (/^#[0-9a-fA-F]{3,8}$/.test(text)) return false;
   if (/^\d+(\.\d+)?(px|rem|em|%|vh|vw|s|ms)?$/.test(text)) return false;
   if (/^[a-z_-]+$/.test(text) && text.length < 30) return false;
   if (/^[A-Z_]+$/.test(text) && text.length < 30) return false;
 
   const lastKey = path.split(".").pop() ?? "";
-  if (NON_TRANSLATABLE_KEYS.has(lastKey)) return false;
+  if (NON_TRANSLATABLE_VALUE_KEYS.has(lastKey)) return false;
 
   return text.length >= 2;
 }

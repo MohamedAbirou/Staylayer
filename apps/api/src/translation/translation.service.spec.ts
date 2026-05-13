@@ -7,17 +7,20 @@ function buildPrismaMock() {
   return {
     site: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
     },
     page: {
       findFirst: jest.fn(),
       create: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
     },
     translationJob: {
       create: jest.fn(),
     },
     pageTranslationMeta: {
       create: jest.fn(),
+      count: jest.fn(),
     },
   };
 }
@@ -26,7 +29,9 @@ describe("TranslationService", () => {
   it("defaults new translation jobs to auto-publish", async () => {
     const prisma = buildPrismaMock();
     const billing = {
-      assertCanConsumeTranslationCharacters: jest.fn().mockResolvedValue(undefined),
+      assertCanConsumeTranslationCharacters: jest
+        .fn()
+        .mockResolvedValue(undefined),
     };
     const deepl = {
       isConfigured: jest.fn().mockReturnValue(true),
@@ -257,5 +262,45 @@ describe("TranslationService", () => {
     );
 
     expect(revalidation.revalidatePage).toHaveBeenCalledWith("site-1", "home");
+  });
+
+  it("computes locale coverage from the site's actual slug footprint", async () => {
+    const prisma = buildPrismaMock();
+    const billing = {
+      assertCanConsumeTranslationCharacters: jest.fn(),
+    };
+    const deepl = {
+      isConfigured: jest.fn().mockReturnValue(true),
+    };
+    const revalidation = {
+      revalidatePage: jest.fn().mockResolvedValue(undefined),
+    };
+
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      primaryLocale: "es",
+      enabledLocales: ["en", "es"],
+    });
+    prisma.page.findMany.mockResolvedValue([
+      { slug: "home" },
+      { slug: "pricing" },
+      { slug: "contact" },
+    ]);
+    prisma.page.count.mockResolvedValueOnce(3).mockResolvedValueOnce(3);
+    prisma.pageTranslationMeta.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
+
+    const service = new TranslationService(
+      prisma as never,
+      billing as never,
+      deepl as never,
+      revalidation as never,
+    );
+
+    await expect(service.getLocaleCompleteness("site-1")).resolves.toEqual([
+      { locale: "en", total: 3, translated: 3, stale: 0 },
+      { locale: "es", total: 3, translated: 3, stale: 0 },
+    ]);
   });
 });

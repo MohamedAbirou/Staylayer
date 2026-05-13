@@ -13,7 +13,8 @@ import { getFormStudio } from "../api/forms";
 import { getPagePreview } from "../api/pages";
 import { useAuth } from "../auth/useAuth";
 import { LoadingSpinner } from "../components/LoadingSpinner";
-import { ArrowLeft } from "lucide-react";
+import { useSettings } from "../hooks/useSettings";
+import { ArrowLeft, Languages } from "lucide-react";
 import toast from "react-hot-toast";
 import "@puckeditor/core/puck.css";
 
@@ -24,6 +25,10 @@ export default function PreviewPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
   const activeSiteId = session?.activeSite?.id ?? null;
+  const { data: settings } = useSettings();
+  const previewLocales = Array.from(
+    new Set([...(settings?.activeLocales ?? []), locale].filter(Boolean)),
+  );
 
   const {
     data: page,
@@ -167,13 +172,39 @@ export default function PreviewPage() {
               : "— this page is not publicly visible (draft)"}
           </span>
         </div>
-        <button
-          onClick={() => navigate(`/editor/${slug}?locale=${locale}`)}
-          className="flex items-center gap-1.5 text-sm font-medium text-yellow-800 hover:text-yellow-900"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Editor
-        </button>
+        <div className="flex items-center gap-3">
+          {previewLocales.length > 1 && slug ? (
+            <div className="flex items-center gap-1 rounded-full border border-yellow-300 bg-white/70 px-2 py-1 text-sm text-yellow-900">
+              <Languages className="h-3.5 w-3.5" />
+              {previewLocales.map((previewLocale) => {
+                const isActive = previewLocale === locale;
+
+                return (
+                  <button
+                    key={previewLocale}
+                    onClick={() =>
+                      navigate(`/preview/${slug}?locale=${previewLocale}`)
+                    }
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold transition ${
+                      isActive
+                        ? "bg-yellow-200 text-yellow-950"
+                        : "text-yellow-800 hover:bg-yellow-100"
+                    }`}
+                  >
+                    {previewLocale.toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <button
+            onClick={() => navigate(`/editor/${slug}?locale=${locale}`)}
+            className="flex items-center gap-1.5 text-sm font-medium text-yellow-800 hover:text-yellow-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Editor
+          </button>
+        </div>
       </div>
       <div>
         <ContactSectionRuntimeProvider value={contactSectionRuntime}>
