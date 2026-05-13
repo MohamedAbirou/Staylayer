@@ -84,6 +84,7 @@ export type TriggerDeploymentInput = {
 export type DeploymentStatusSnapshot = {
   providerDeployId: string;
   url?: string | null;
+  providerUrl?: string | null;
   readyState?: string | null;
   rawStatus?: string | null;
   errorMessage?: string | null;

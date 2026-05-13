@@ -1,10 +1,47 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, ArrowLeft, CircleCheck as CheckCircle2, Globe, Loader as Loader2, Copy, Check, TriangleAlert as AlertTriangle, ExternalLink } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowLeft,
+  CircleCheck as CheckCircle2,
+  Globe,
+  Loader as Loader2,
+  Copy,
+  Check,
+  TriangleAlert as AlertTriangle,
+  ExternalLink,
+} from "lucide-react";
 import { useAuth } from "../auth/useAuth";
-import { addDomain, retryDomainVerification, type SiteDomain } from "../api/domains";
+import {
+  addDomain,
+  retryDomainVerification,
+  type SiteDomain,
+} from "../api/domains";
 
 type WizardStep = "enter" | "dns" | "verify" | "done";
+
+function getInitialStep(existingDomain?: SiteDomain | null): WizardStep {
+  if (!existingDomain) {
+    return "enter";
+  }
+
+  if (existingDomain.status === "ACTIVE" || existingDomain.sslActive) {
+    return "done";
+  }
+
+  if (
+    existingDomain.dnsConfigured ||
+    existingDomain.providerAttached ||
+    existingDomain.providerVerified ||
+    existingDomain.status === "VERIFYING" ||
+    existingDomain.status === "PROVIDER_ATTACH_PENDING" ||
+    existingDomain.status === "SSL_PROVISIONING"
+  ) {
+    return "verify";
+  }
+
+  return "dns";
+}
 
 export function DomainSetupWizard({
   onClose,
@@ -16,9 +53,10 @@ export function DomainSetupWizard({
   const { session } = useAuth();
   const siteId = session?.activeSite?.id ?? null;
   const queryClient = useQueryClient();
+  const isExistingDomainFlow = Boolean(existingDomain);
 
-  const [step, setStep] = useState<WizardStep>(
-    existingDomain ? "dns" : "enter",
+  const [step, setStep] = useState<WizardStep>(() =>
+    getInitialStep(existingDomain),
   );
   const [hostname, setHostname] = useState(existingDomain?.hostname ?? "");
   const [domain, setDomain] = useState<SiteDomain | null>(
@@ -71,7 +109,8 @@ export function DomainSetupWizard({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const dnsTarget = domain?.dnsTarget ?? domain?.recommendedRecords?.[0]?.value ?? null;
+  const dnsTarget =
+    domain?.dnsTarget ?? domain?.recommendedRecords?.[0]?.value ?? null;
   const records = domain?.recommendedRecords ?? [];
 
   return (
@@ -86,12 +125,16 @@ export function DomainSetupWizard({
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
                     step === s
                       ? "bg-blue-600 text-white ring-4 ring-blue-100"
-                      : (["enter", "dns", "verify", "done"] as WizardStep[]).indexOf(step) > idx
+                      : (
+                            ["enter", "dns", "verify", "done"] as WizardStep[]
+                          ).indexOf(step) > idx
                         ? "bg-blue-600 text-white"
                         : "bg-gray-100 text-gray-400"
                   }`}
                 >
-                  {(["enter", "dns", "verify", "done"] as WizardStep[]).indexOf(step) > idx ? (
+                  {(["enter", "dns", "verify", "done"] as WizardStep[]).indexOf(
+                    step,
+                  ) > idx ? (
                     <CheckCircle2 className="h-4 w-4" />
                   ) : (
                     idx + 1
@@ -100,7 +143,9 @@ export function DomainSetupWizard({
                 {idx < 3 && (
                   <div
                     className={`h-0.5 w-6 rounded-full ${
-                      (["enter", "dns", "verify", "done"] as WizardStep[]).indexOf(step) > idx
+                      (
+                        ["enter", "dns", "verify", "done"] as WizardStep[]
+                      ).indexOf(step) > idx
                         ? "bg-blue-400"
                         : "bg-gray-200"
                     }`}
@@ -135,9 +180,7 @@ export function DomainSetupWizard({
                   className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
-              {error && (
-                <p className="mt-2 text-xs text-red-600">{error}</p>
-              )}
+              {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             </div>
             <div className="mt-6 flex items-center justify-between">
               <button
@@ -252,14 +295,24 @@ export function DomainSetupWizard({
             </p>
 
             <div className="mt-6 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setStep("enter")}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </button>
+              {isExistingDomainFlow ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="text-sm text-gray-500 hover:text-gray-800"
+                >
+                  Close
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStep("enter")}
+                  className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => retryMutation.mutate()}
@@ -288,13 +341,10 @@ export function DomainSetupWizard({
             {domain && (
               <div className="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-5">
                 <div className="space-y-3 text-sm">
-                  <StatusRow
-                    label="DNS configured"
-                    ok={domain.dnsConfigured}
-                  />
+                  <StatusRow label="DNS configured" ok={domain.dnsConfigured} />
                   <StatusRow
                     label="Provider attached"
-                    ok={domain.providerAttachmentStatus === "verified"}
+                    ok={domain.providerAttached}
                   />
                   <StatusRow label="SSL active" ok={domain.sslActive} />
                 </div>

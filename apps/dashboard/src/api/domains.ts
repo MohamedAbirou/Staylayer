@@ -40,6 +40,8 @@ export interface SiteDomain {
   dnsMatchesExpected: boolean | null;
   providerAttachmentStatus: string | null;
   providerVerificationStatus: string | null;
+  providerAttached: boolean;
+  providerVerified: boolean;
   providerError: string | null;
   providerConfiguredBy: string | null;
   providerMisconfigured: boolean | null;

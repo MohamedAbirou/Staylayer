@@ -196,11 +196,12 @@ export class DomainVerificationService
           domain: domain.host,
         });
 
-      details.providerAttachmentStatus =
-        providerDomain.providerStatus ??
-        (providerDomain.isAssigned ? "attached" : "pending");
-      details.providerVerificationStatus =
-        providerDomain.verificationStatus ?? null;
+      details.providerAttachmentStatus = providerDomain.isAssigned
+        ? "attached"
+        : "pending";
+      details.providerVerificationStatus = providerDomain.isVerified
+        ? "verified"
+        : (providerDomain.verificationStatus ?? null);
       details.providerAttached = providerDomain.isAssigned;
       details.providerVerified = providerDomain.isVerified;
       details.providerConfiguredBy =
@@ -235,7 +236,34 @@ export class DomainVerificationService
             ? this.normalizeHost(dnsState.cname) === expectedTarget
             : null;
 
-      if (!details.dnsConfigured) {
+      if (providerDomain.isAssigned && providerDomain.isVerified) {
+        const sslState = await this.probeHttps(domain.host);
+        details.sslActive = sslState.active;
+        details.httpStatus = sslState.httpStatus;
+        details.sslError = sslState.errorMessage;
+
+        if (sslState.active) {
+          details.sslStatus = "active";
+          details.dnsMatchesExpected = true;
+          nextStatus = DomainStatus.ACTIVE;
+          verifiedAt = now;
+          lastError = null;
+        } else if (!details.dnsConfigured) {
+          details.sslStatus = null;
+          nextStatus = DomainStatus.DNS_REQUIRED;
+          lastError =
+            this.describeRecommendedRecordIssue(details.recommendedRecords) ??
+            `No DNS record found for ${domain.host}`;
+        } else {
+          details.sslStatus = "provisioning";
+          lastError =
+            sslState.errorMessage ??
+            `HTTPS is not yet reachable for ${domain.host}`;
+          nextStatus = this.isWithinGraceWindow(domain, now)
+            ? DomainStatus.SSL_PROVISIONING
+            : DomainStatus.FAILED;
+        }
+      } else if (!details.dnsConfigured) {
         nextStatus = DomainStatus.DNS_REQUIRED;
         lastError =
           this.describeRecommendedRecordIssue(details.recommendedRecords) ??
@@ -254,31 +282,11 @@ export class DomainVerificationService
       ) {
         nextStatus = DomainStatus.DNS_REQUIRED;
         lastError = `CNAME points to ${dnsState.cname}; expected ${expectedTarget}`;
-      } else if (!providerDomain.isAssigned || !providerDomain.isVerified) {
+      } else {
         nextStatus = DomainStatus.PROVIDER_ATTACH_PENDING;
         lastError =
           providerDomain.errorMessage ??
           `Provider attachment is still pending for ${domain.host}`;
-      } else {
-        const sslState = await this.probeHttps(domain.host);
-        details.sslActive = sslState.active;
-        details.httpStatus = sslState.httpStatus;
-        details.sslError = sslState.errorMessage;
-
-        if (sslState.active) {
-          details.sslStatus = "active";
-          nextStatus = DomainStatus.ACTIVE;
-          verifiedAt = now;
-          lastError = null;
-        } else {
-          details.sslStatus = "provisioning";
-          lastError =
-            sslState.errorMessage ??
-            `HTTPS is not yet reachable for ${domain.host}`;
-          nextStatus = this.isWithinGraceWindow(domain, now)
-            ? DomainStatus.SSL_PROVISIONING
-            : DomainStatus.FAILED;
-        }
       }
     }
 

@@ -633,6 +633,9 @@ describe("DeploymentsService", () => {
         siteId: "site-1",
         status: DeploymentStatus.LIVE,
         url: "https://harbor-house.vercel.app",
+        metadata: {
+          providerUrl: "https://harbor-house-abc123.vercel.app",
+        },
         errorMessage: null,
         providerDeployId: "dpl_live",
         createdAt: new Date("2026-05-04T08:00:00.000Z"),
@@ -640,8 +643,31 @@ describe("DeploymentsService", () => {
       } as never),
     ).resolves.toMatchObject({
       url: "https://stay.harborhouse.example",
-      providerUrl: "https://harbor-house.vercel.app",
+      providerUrl: "https://harbor-house-abc123.vercel.app",
       providerDeployId: "dpl_live",
+    });
+  });
+
+  it("uses the stable deployment alias when no primary domain is active", async () => {
+    prisma.domain.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.resolveCustomerSiteDeployment("site-1", {
+        id: "dep-live",
+        siteId: "site-1",
+        status: DeploymentStatus.LIVE,
+        url: "https://harbor-house.vercel.app",
+        metadata: {
+          providerUrl: "https://harbor-house-abc123.vercel.app",
+        },
+        errorMessage: null,
+        providerDeployId: "dpl_live",
+        createdAt: new Date("2026-05-04T08:00:00.000Z"),
+        updatedAt: new Date("2026-05-04T08:05:00.000Z"),
+      } as never),
+    ).resolves.toMatchObject({
+      url: "https://harbor-house.vercel.app",
+      providerUrl: "https://harbor-house-abc123.vercel.app",
     });
   });
 });

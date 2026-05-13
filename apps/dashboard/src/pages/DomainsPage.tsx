@@ -3,12 +3,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth/useAuth";
 import { hasActiveSite, hasMembershipRole } from "../auth/access";
 import { Link } from "react-router-dom";
-import { Globe, CircleCheck as CheckCircle2, TriangleAlert as AlertTriangle, Clock, Plus, ExternalLink, Trash2, Star, RefreshCw, Copy, Check, Wand as Wand2 } from "lucide-react";
+import {
+  Globe,
+  CircleCheck as CheckCircle2,
+  TriangleAlert as AlertTriangle,
+  Clock,
+  ExternalLink,
+  Trash2,
+  Star,
+  RefreshCw,
+  Copy,
+  Check,
+  Wand as Wand2,
+} from "lucide-react";
 
 import { getLatestDeployment } from "../api/deployments";
 import {
   getDomains,
-  addDomain,
   setDomainPrimary,
   removeDomain,
   retryDomainVerification,
@@ -72,9 +83,6 @@ export default function DomainsPage() {
   const queryClient = useQueryClient();
   const canManageDomains = hasMembershipRole(session, DOMAIN_ADMIN_ROLES);
   const siteId = session?.activeSite?.id ?? null;
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [hostname, setHostname] = useState("");
-  const [addError, setAddError] = useState<string | null>(null);
   const [wizardDomain, setWizardDomain] = useState<SiteDomain | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
@@ -94,23 +102,6 @@ export default function DomainsPage() {
     queryFn: () => getLatestDeployment(siteId!),
     enabled: !!siteId,
     retry: false,
-  });
-
-  const addMutation = useMutation({
-    mutationFn: (h: string) => addDomain(siteId!, h),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["domains", siteId] });
-      setShowAddForm(false);
-      setHostname("");
-      setAddError(null);
-    },
-    onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ??
-        "Failed to add domain. Check the hostname and try again.";
-      setAddError(msg);
-    },
   });
 
   const primaryMutation = useMutation({
@@ -143,13 +134,6 @@ export default function DomainsPage() {
     );
   }
 
-  const handleAdd = () => {
-    setAddError(null);
-    const trimmed = hostname.trim().toLowerCase();
-    if (!trimmed) return;
-    addMutation.mutate(trimmed);
-  };
-
   const activePrimaryDomain = domains.find(
     (domain) => domain.isPrimary && domain.status === "ACTIVE",
   );
@@ -166,26 +150,17 @@ export default function DomainsPage() {
             View the current domain state for your hospitality site.
           </p>
         </div>
-        {canManageDomains && !showAddForm && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setWizardDomain(null);
-                setShowWizard(true);
-              }}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-            >
-              <Wand2 className="h-4 w-4" />
-              Setup wizard
-            </button>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800"
-            >
-              <Plus className="h-4 w-4" />
-              Add domain
-            </button>
-          </div>
+        {canManageDomains && (
+          <button
+            onClick={() => {
+              setWizardDomain(null);
+              setShowWizard(true);
+            }}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800"
+          >
+            <Wand2 className="h-4 w-4" />
+            Connect domain
+          </button>
         )}
       </div>
 
@@ -255,58 +230,6 @@ export default function DomainsPage() {
         </div>
       )}
 
-      {/* Add domain form */}
-      {canManageDomains && showAddForm && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">
-            Add a custom domain
-          </h3>
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={hostname}
-                onChange={(e) =>
-                  setHostname(e.target.value.toLowerCase().trim())
-                }
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                placeholder="yourdomain.com"
-                className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <button
-              onClick={handleAdd}
-              disabled={!hostname.trim() || addMutation.isPending}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-700"
-            >
-              {addMutation.isPending ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              ) : null}
-              Connect
-            </button>
-            <button
-              onClick={() => {
-                setShowAddForm(false);
-                setHostname("");
-                setAddError(null);
-              }}
-              className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-          </div>
-          {addError && <p className="mt-2 text-xs text-red-600">{addError}</p>}
-          <p className="mt-2 text-xs text-gray-500">
-            After connecting, the platform will attach the domain at the hosting
-            provider, check DNS automatically, and keep retrying SSL issuance.
-            {providerTarget
-              ? ` Point your DNS to ${providerTarget}.`
-              : " Provision a deployment first so a DNS target exists."}
-          </p>
-        </div>
-      )}
-
       {/* Error state */}
       {isError && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
@@ -324,7 +247,10 @@ export default function DomainsPage() {
         ) : domains.length === 0 ? (
           <EmptyDomains
             canManageDomains={canManageDomains}
-            onAdd={() => setShowAddForm(true)}
+            onAdd={() => {
+              setWizardDomain(null);
+              setShowWizard(true);
+            }}
           />
         ) : (
           <div className="divide-y divide-gray-50">
@@ -387,7 +313,7 @@ function EmptyDomains({
           onClick={onAdd}
           className="text-sm font-medium text-blue-600 hover:text-blue-800"
         >
-          Add your first domain →
+          Connect your first domain →
         </button>
       )}
     </div>
@@ -610,8 +536,18 @@ function DomainStateChip({
 }
 
 function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
+  const records = getDisplayRecommendedRecords(domain);
+
   if (
-    domain.recommendedRecords.length === 0 &&
+    (domain.status === "ACTIVE" || domain.sslActive) &&
+    !domain.providerError &&
+    !domain.providerMisconfigured
+  ) {
+    return null;
+  }
+
+  if (
+    records.length === 0 &&
     !domain.providerConfiguredBy &&
     !domain.providerError
   ) {
@@ -643,7 +579,7 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
         ) : null}
       </div>
 
-      {domain.recommendedRecords.length > 0 ? (
+      {records.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100 text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase tracking-[0.14em] text-gray-400">
@@ -656,7 +592,7 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {domain.recommendedRecords.map((record, index) => (
+              {records.map((record, index) => (
                 <tr
                   key={`${record.type}-${record.name}-${record.value}-${index}`}
                 >
@@ -701,6 +637,12 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
       )}
 
       <div className="space-y-2 border-t border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-500">
+        {domain.recommendedRecords.length > records.length ? (
+          <p>
+            The provider returned alternative DNS targets. The table shows the
+            matched or highest-priority records to act on.
+          </p>
+        ) : null}
         {domain.providerAcceptedChallenges.length > 0 ? (
           <p>
             Accepted certificate challenges:{" "}
@@ -727,6 +669,37 @@ function getObservedRecordValue(
   return domain.observedAddresses.length > 0
     ? domain.observedAddresses.join(", ")
     : "No A record detected";
+}
+
+function getDisplayRecommendedRecords(domain: SiteDomain) {
+  const grouped = new Map<string, SiteDomain["recommendedRecords"]>();
+
+  for (const record of domain.recommendedRecords) {
+    const key = `${record.type}:${record.name}`;
+    const current = grouped.get(key) ?? [];
+    current.push(record);
+    grouped.set(key, current);
+  }
+
+  return Array.from(grouped.values()).flatMap((records) => {
+    const matching = records.filter((record) => record.isMatch === true);
+
+    if (matching.length > 0) {
+      return matching;
+    }
+
+    const ranked = records.filter((record) => record.rank !== null);
+
+    if (ranked.length > 0) {
+      const bestRank = Math.min(
+        ...ranked.map((record) => record.rank ?? Number.MAX_SAFE_INTEGER),
+      );
+
+      return ranked.filter((record) => record.rank === bestRank);
+    }
+
+    return records.slice(0, 1);
+  });
 }
 
 function getDomainStatusDetail(domain: SiteDomain) {

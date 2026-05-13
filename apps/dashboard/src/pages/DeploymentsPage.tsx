@@ -1030,7 +1030,7 @@ function DeploymentTimeline({
                     Started {formatRelativeTime(phase.startedAt)}
                   </span>
                 ) : (
-                  <span>Waiting</span>
+                  <span>{formatTimelineTimestampStatus(phase.status)}</span>
                 )}
               </div>
             </div>
@@ -1113,6 +1113,21 @@ function formatTimelineStatus(
       return "Failed";
     default:
       return "Pending";
+  }
+}
+
+function formatTimelineTimestampStatus(
+  status: SiteDeployment["timeline"][number]["status"],
+) {
+  switch (status) {
+    case "completed":
+      return "Complete";
+    case "active":
+      return "In progress";
+    case "failed":
+      return "Failed";
+    default:
+      return "Waiting";
   }
 }
 

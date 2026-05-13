@@ -164,6 +164,47 @@ describe("PagesController", () => {
     );
   });
 
+  it("revalidates when saving a published page", async () => {
+    workspaceAccessService.ensureSiteAccess.mockResolvedValue("site-1");
+    pagesService.updatePage.mockResolvedValue({
+      id: "page-1",
+      slug: "home",
+      locale: "en",
+      published: true,
+    });
+
+    await controller.update(
+      "home",
+      { siteId: "site-2", locale: "en" } as never,
+      { title: "Updated home" } as never,
+      buildRequest(),
+    );
+
+    expect(revalidationService.revalidatePage).toHaveBeenCalledWith(
+      "site-1",
+      "home",
+    );
+  });
+
+  it("does not revalidate when saving an unpublished page", async () => {
+    workspaceAccessService.ensureSiteAccess.mockResolvedValue("site-1");
+    pagesService.updatePage.mockResolvedValue({
+      id: "page-1",
+      slug: "home",
+      locale: "en",
+      published: false,
+    });
+
+    await controller.update(
+      "home",
+      { siteId: "site-2", locale: "en" } as never,
+      { title: "Draft home" } as never,
+      buildRequest(),
+    );
+
+    expect(revalidationService.revalidatePage).not.toHaveBeenCalled();
+  });
+
   it("fails closed before updating a page when site access is denied", async () => {
     const error = new ForbiddenException();
     workspaceAccessService.ensureSiteAccess.mockRejectedValue(error);

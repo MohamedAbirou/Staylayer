@@ -100,37 +100,45 @@ describe("VercelDeploymentProvider", () => {
     fetchMock.mockResolvedValue(
       createResponse({
         id: "dpl_123",
+        aliasFinal: "existing-project.vercel.app",
+        alias: ["existing-project.vercel.app"],
+        target: "production",
         readyState: "QUEUED",
         status: "QUEUED",
-        url: "existing-project.vercel.app",
+        url: "existing-project-r4nd0m.vercel.app",
       }),
     );
 
-    await provider.triggerDeployment({
-      projectId: "prj_123",
-      projectName: "existing-project",
-      previousDeploymentId: "dpl_prev",
-      site: {
-        siteId: "site_123",
-        siteSlug: "azure-bay-villas",
-        siteName: "Azure Bay Villas",
-        tenantId: "tenant_123",
-        primaryLocale: "en",
-        enabledLocales: ["en"],
-        primaryDomain: "stay.example.com",
-      },
-      projectSettings: {
-        framework: "nextjs",
-        rootDirectory: "apps/website",
-        buildCommand: "cd ../.. && pnpm --filter @myallocator/website build",
-        outputDirectory: ".next",
-        installCommand: "cd ../.. && pnpm install --frozen-lockfile",
-        nodeVersion: "20.x",
-      },
-      meta: {
-        siteId: "site_123",
-        deploymentId: "dep_123",
-      },
+    await expect(
+      provider.triggerDeployment({
+        projectId: "prj_123",
+        projectName: "existing-project",
+        previousDeploymentId: "dpl_prev",
+        site: {
+          siteId: "site_123",
+          siteSlug: "azure-bay-villas",
+          siteName: "Azure Bay Villas",
+          tenantId: "tenant_123",
+          primaryLocale: "en",
+          enabledLocales: ["en"],
+          primaryDomain: "stay.example.com",
+        },
+        projectSettings: {
+          framework: "nextjs",
+          rootDirectory: "apps/website",
+          buildCommand: "cd ../.. && pnpm --filter @myallocator/website build",
+          outputDirectory: ".next",
+          installCommand: "cd ../.. && pnpm install --frozen-lockfile",
+          nodeVersion: "20.x",
+        },
+        meta: {
+          siteId: "site_123",
+          deploymentId: "dep_123",
+        },
+      }),
+    ).resolves.toMatchObject({
+      url: "https://existing-project.vercel.app",
+      providerUrl: "https://existing-project-r4nd0m.vercel.app",
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -165,9 +173,13 @@ describe("VercelDeploymentProvider", () => {
       .mockResolvedValueOnce(
         createResponse({
           id: "dpl_123",
+          aliasFinal: "existing-project.vercel.app",
+          alias: ["existing-project.vercel.app"],
+          target: "production",
+          name: "existing-project",
           readyState: "BUILDING",
           status: "QUEUED",
-          url: "existing-project.vercel.app",
+          url: "existing-project-r4nd0m.vercel.app",
         }),
       )
       .mockResolvedValueOnce(
@@ -221,6 +233,10 @@ describe("VercelDeploymentProvider", () => {
         status: "active",
       }),
     ]);
+    expect(result).toMatchObject({
+      url: "https://existing-project.vercel.app",
+      providerUrl: "https://existing-project-r4nd0m.vercel.app",
+    });
     expect(result.logs).toEqual([
       expect.objectContaining({
         id: "evt_1",

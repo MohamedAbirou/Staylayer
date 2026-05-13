@@ -95,7 +95,11 @@ export default function EditorPage() {
   const saveSeoMutation = useMutation({
     mutationFn: (form: typeof seoForm) => updatePage(slug!, locale, form),
     onSuccess: () => {
-      toast.success("SEO settings saved");
+      toast.success(
+        page?.published
+          ? "SEO settings saved. Published changes update automatically; no redeploy needed."
+          : "SEO settings saved to draft.",
+      );
       setSeoDirty(false);
       void queryClient.invalidateQueries({ queryKey: ["page", slug, locale] });
     },
@@ -294,7 +298,11 @@ export default function EditorPage() {
           onSuccess: () => {
             setIsDirty(false);
             localStorage.removeItem(getDraftKey(slug, locale));
-            toast.success("Page saved");
+            toast.success(
+              page?.published
+                ? "Page saved. Published changes update automatically; no redeploy needed."
+                : "Draft saved. Publish when ready.",
+            );
           },
           onError: () => {
             toast.error("Save failed — please retry");

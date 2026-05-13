@@ -31,10 +31,14 @@ type VercelProjectResponse = {
 
 type VercelDeploymentResponse = {
   id: string;
+  name?: string;
   readyState?: string;
   readyStateReason?: string;
   status?: string;
   errorMessage?: string;
+  alias?: unknown[];
+  aliasFinal?: string;
+  target?: string | null;
   url?: string;
 };
 
@@ -408,6 +412,7 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     const rawStatus = deployment.status ?? null;
     const errorMessage =
       deployment.errorMessage ?? deployment.readyStateReason ?? null;
+    const providerUrl = this.normalizeUrl(deployment.url);
     const telemetry = this.toDeploymentTelemetry(events, {
       readyState,
       rawStatus,
@@ -416,7 +421,8 @@ export class VercelDeploymentProvider implements DeploymentProvider {
 
     return {
       providerDeployId: deployment.id,
-      url: this.normalizeUrl(deployment.url),
+      url: this.resolvePublicDeploymentUrl(deployment, providerUrl),
+      providerUrl,
       readyState,
       rawStatus,
       errorMessage,
@@ -433,6 +439,40 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         rawStatus === "ERROR" ||
         rawStatus === "CANCELED",
     };
+  }
+
+  private resolvePublicDeploymentUrl(
+    deployment: VercelDeploymentResponse,
+    providerUrl: string | null,
+  ): string | null {
+    const aliasFinal = this.normalizeUrl(deployment.aliasFinal);
+
+    if (aliasFinal) {
+      return aliasFinal;
+    }
+
+    const aliases = Array.isArray(deployment.alias)
+      ? deployment.alias
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => this.normalizeUrl(value))
+          .filter((value): value is string => Boolean(value))
+      : [];
+
+    if (aliases.length > 0) {
+      return aliases[0];
+    }
+
+    if (deployment.target === "production") {
+      const projectDomain = this.normalizeUrl(
+        deployment.name ? `${deployment.name}.vercel.app` : undefined,
+      );
+
+      if (projectDomain) {
+        return projectDomain;
+      }
+    }
+
+    return providerUrl;
   }
 
   private toDeploymentTelemetry(
@@ -584,15 +624,20 @@ export class VercelDeploymentProvider implements DeploymentProvider {
           typeof value === "string" && value.length > 0,
       )
       .join(" ");
-    const summary = text ?? (derivedSummary.length > 0 ? derivedSummary : null);
+    const phaseLabel = this.toPhaseLabel(phaseSource);
+    const summary =
+      text ??
+      (derivedSummary.length > 0
+        ? derivedSummary
+        : `${phaseLabel} in progress`);
 
     return {
       id: event.payload?.id ?? `${phaseSource}-${index}`,
       createdAt,
       phaseKey: `provider:${this.toIdentifier(phaseSource)}`,
-      label: this.toPhaseLabel(phaseSource),
+      label: phaseLabel,
       summary,
-      text,
+      text: text ?? summary,
       level: this.toLogLevel(text, event.payload?.statusCode),
     };
   }

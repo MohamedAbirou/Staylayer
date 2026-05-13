@@ -236,13 +236,19 @@ export class PagesController {
     const siteId = await this.ensureAuthenticatedSiteAccess(req);
     const user = req.user as { sub: string };
 
-    return this.pagesService.updatePage(
+    const updated = await this.pagesService.updatePage(
       siteId,
       slug,
       query.locale || "en",
       dto,
       user.sub,
     );
+
+    if (updated.published === true) {
+      await this.revalidationService.revalidatePage(siteId, slug);
+    }
+
+    return updated;
   }
 
   @Delete(":slug")

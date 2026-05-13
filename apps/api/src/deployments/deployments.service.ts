@@ -134,14 +134,16 @@ export class DeploymentsService {
     if (target.status !== DeploymentStatus.LIVE) {
       throw new ConflictException({
         code: "DEPLOYMENT_NOT_ROLLBACK_TARGET",
-        message: "Only previously-live deployments can be used as rollback targets",
+        message:
+          "Only previously-live deployments can be used as rollback targets",
       });
     }
 
     if (!target.providerDeployId) {
       throw new ConflictException({
         code: "DEPLOYMENT_NO_PROVIDER_DEPLOY",
-        message: "Target deployment has no provider deploy reference for rollback",
+        message:
+          "Target deployment has no provider deploy reference for rollback",
       });
     }
 
@@ -563,6 +565,7 @@ export class DeploymentsService {
         status === DeploymentStatus.FAILED ? snapshot.errorMessage : null,
       metadata: this.mergeMetadata(context.currentMetadata, {
         projectName: context.projectName,
+        providerUrl: snapshot.providerUrl ?? null,
         providerReadyState: snapshot.readyState ?? null,
         providerStatus: snapshot.rawStatus ?? null,
         providerMetadata: snapshot.metadata ?? null,
@@ -711,13 +714,18 @@ export class DeploymentsService {
     const metadata = asDeploymentMetadata(deployment.metadata);
     const providerTimeline = asDeploymentTimeline(metadata.providerTimeline);
     const recentLogs = asDeploymentLogs(metadata.providerLogs);
-    const providerUrl = deployment.url
+    const deploymentUrl = deployment.url
       ? this.normalizeUrl(deployment.url)
       : null;
+    const metadataProviderUrl =
+      typeof metadata.providerUrl === "string"
+        ? this.normalizeUrl(metadata.providerUrl)
+        : null;
+    const providerUrl = metadataProviderUrl ?? deploymentUrl;
     const publicUrl =
       primaryDomain && deployment.status === DeploymentStatus.LIVE
         ? `https://${primaryDomain}`
-        : providerUrl;
+        : deploymentUrl;
 
     return {
       id: deployment.id,

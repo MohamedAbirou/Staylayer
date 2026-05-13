@@ -265,6 +265,8 @@ export class DomainsService {
       dnsMatchesExpected: details.dnsMatchesExpected,
       providerAttachmentStatus: details.providerAttachmentStatus,
       providerVerificationStatus: details.providerVerificationStatus,
+      providerAttached: details.providerAttached,
+      providerVerified: details.providerVerified,
       providerError: details.providerError,
       providerConfiguredBy: details.providerConfiguredBy,
       providerMisconfigured: details.providerMisconfigured,
@@ -299,6 +301,8 @@ export class DomainsService {
       expectedTarget: details.expectedTarget,
       providerAttachmentStatus: details.providerAttachmentStatus,
       providerVerificationStatus: details.providerVerificationStatus,
+      providerAttached: details.providerAttached,
+      providerVerified: details.providerVerified,
       providerError: details.providerError,
       providerConfiguredBy: details.providerConfiguredBy,
       providerMisconfigured: details.providerMisconfigured,
@@ -320,6 +324,8 @@ export class DomainsService {
         expectedTarget: null,
         providerAttachmentStatus: null,
         providerVerificationStatus: null,
+        providerAttached: false,
+        providerVerified: false,
         providerError: null,
         providerConfiguredBy: null,
         providerMisconfigured: null,
@@ -358,6 +364,14 @@ export class DomainsService {
         typeof details.providerVerificationStatus === "string"
           ? details.providerVerificationStatus
           : null,
+      providerAttached:
+        typeof details.providerAttached === "boolean"
+          ? details.providerAttached
+          : false,
+      providerVerified:
+        typeof details.providerVerified === "boolean"
+          ? details.providerVerified
+          : false,
       providerError:
         typeof details.providerError === "string"
           ? details.providerError

@@ -1760,6 +1760,10 @@ function LocalizationTab() {
   const [activeLocales, setActiveLocales] = useState<string[]>([]);
   const [defaultLocale, setDefaultLocale] = useState("en");
   const [dirty, setDirty] = useState(false);
+  const [pendingLocaleChange, setPendingLocaleChange] = useState<{
+    activeLocales: string[];
+    defaultLocale: string;
+  } | null>(null);
 
   // Load page counts per locale
   const localeStats = useQuery({
@@ -1811,17 +1815,27 @@ function LocalizationTab() {
     setDirty(true);
   };
 
-  const save = () => {
-    updateMutation.mutate(
-      { activeLocales, defaultLocale },
-      {
-        onSuccess: () => {
-          toast.success("Localization settings saved");
-          setDirty(false);
-        },
-        onError: () => toast.error("Failed to save localization settings"),
+  const runSave = (payload: {
+    activeLocales: string[];
+    defaultLocale: string;
+  }) => {
+    updateMutation.mutate(payload, {
+      onSuccess: () => {
+        toast.success("Localization settings saved");
+        setDirty(false);
+        setPendingLocaleChange(null);
       },
-    );
+      onError: () => toast.error("Failed to save localization settings"),
+    });
+  };
+
+  const save = () => {
+    if (settings && defaultLocale !== settings.defaultLocale) {
+      setPendingLocaleChange({ activeLocales, defaultLocale });
+      return;
+    }
+
+    runSave({ activeLocales, defaultLocale });
   };
 
   if (settingsLoading) return <LoadingSpinner />;
@@ -1882,6 +1896,8 @@ function LocalizationTab() {
       <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
         Saving locale changes triggers a fresh site deployment so the public
         site picks up new language routes and switcher options automatically.
+        Changing the canonical locale also updates PRIMARY_LOCALE for the next
+        deployment and decides which language owns the root / URL.
       </div>
 
       {/* Default locale */}
@@ -1889,13 +1905,14 @@ function LocalizationTab() {
         <div className="border-b border-gray-100 bg-gray-50 px-5 py-3.5 flex items-center gap-2">
           <Globe className="h-4 w-4 text-gray-500" />
           <h2 className="text-sm font-semibold text-gray-800">
-            Default Locale
+            Primary / Canonical Locale
           </h2>
         </div>
         <div className="p-5">
           <p className="mb-3 text-sm text-gray-600">
-            The default locale is used for canonical URLs and as a fallback when
-            no locale-specific content exists.
+            This locale becomes PRIMARY_LOCALE during deployment, owns the root
+            / URL, and is used for canonical URLs and fallbacks when no
+            locale-specific content exists.
           </p>
           <div className="flex flex-wrap gap-2">
             {LOCALES.map((locale) => {
@@ -2061,6 +2078,16 @@ function LocalizationTab() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingLocaleChange !== null}
+        title="Change canonical locale?"
+        message={`This will update PRIMARY_LOCALE on the next deployment and make ${pendingLocaleChange?.defaultLocale.toUpperCase() ?? "the selected locale"} own the root / URL while other locales move behind a locale prefix.`}
+        confirmLabel="Change locale"
+        isPending={updateMutation.isPending}
+        onConfirm={() => pendingLocaleChange && runSave(pendingLocaleChange)}
+        onCancel={() => setPendingLocaleChange(null)}
+      />
     </div>
   );
 }
