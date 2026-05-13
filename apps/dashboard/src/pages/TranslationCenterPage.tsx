@@ -59,6 +59,8 @@ const STATUS_CONFIG: Record<
   },
 };
 
+const EMPTY_PAGE_LIST: PageListItem[] = [];
+
 export default function TranslationCenterPage() {
   const { session } = useAuth();
   const siteId = session?.activeSite?.id ?? null;
@@ -68,7 +70,9 @@ export default function TranslationCenterPage() {
   const [showNewJob, setShowNewJob] = useState(false);
   const [sourceLocale, setSourceLocale] = useState("");
   const [targetLocale, setTargetLocale] = useState("");
-  const [pageScope, setPageScope] = useState<"all" | "published" | "selected">("all");
+  const [pageScope, setPageScope] = useState<"all" | "published" | "selected">(
+    "all",
+  );
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
   const [overwrite, setOverwrite] = useState(false);
   const [autoPublish, setAutoPublish] = useState(true);
@@ -164,7 +168,7 @@ export default function TranslationCenterPage() {
     : false;
   const translationBlocked =
     !machineTranslationIncluded || needsMoreLocales || !hasSourceLocale;
-  const sourcePages = sourcePagesData?.data ?? [];
+  const sourcePages = sourcePagesData?.data ?? EMPTY_PAGE_LIST;
   const selectedPageCount = selectedPageIds.length;
   const requiresPageSelection = pageScope === "selected";
   const allSourcePageIds = sourcePages.map((page) => page.id);
@@ -190,14 +194,20 @@ export default function TranslationCenterPage() {
 
   useEffect(() => {
     if (!sourcePages.length) {
-      setSelectedPageIds([]);
+      setSelectedPageIds((current) => (current.length === 0 ? current : []));
       return;
     }
 
     const validIds = new Set(sourcePages.map((page) => page.id));
-    setSelectedPageIds((current) =>
-      current.filter((pageId) => validIds.has(pageId)),
-    );
+    setSelectedPageIds((current) => {
+      const next = current.filter((pageId) => validIds.has(pageId));
+
+      if (next.length === current.length) {
+        return current;
+      }
+
+      return next;
+    });
   }, [sourcePages]);
 
   function togglePageSelection(pageId: string) {
@@ -418,7 +428,10 @@ export default function TranslationCenterPage() {
                   onChange={() => setPageScope("all")}
                   className="border-gray-300"
                 />
-                Translate all pages in {sourceLocale ? sourceLocale.toUpperCase() : "the source locale"}
+                Translate all pages in{" "}
+                {sourceLocale
+                  ? sourceLocale.toUpperCase()
+                  : "the source locale"}
               </label>
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
@@ -441,19 +454,26 @@ export default function TranslationCenterPage() {
                   name="page-scope"
                   checked={pageScope === "selected"}
                   onChange={() => setPageScope("selected")}
-                  disabled={!sourceLocale || sourcePagesLoading || sourcePages.length === 0}
+                  disabled={
+                    !sourceLocale ||
+                    sourcePagesLoading ||
+                    sourcePages.length === 0
+                  }
                   className="border-gray-300"
                 />
                 Translate selected pages only
               </label>
             </div>
             <p className="mt-2 text-xs text-gray-600">
-              Choose whether the job should include all source pages, only published pages, or a hand-picked page set.
+              Choose whether the job should include all source pages, only
+              published pages, or a hand-picked page set.
             </p>
 
             {pageScope === "published" && (
               <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
-                This job will translate {publishedSourcePageCount} published page{publishedSourcePageCount === 1 ? "" : "s"} from the {sourceLocale.toUpperCase()} locale and exclude drafts.
+                This job will translate {publishedSourcePageCount} published
+                page{publishedSourcePageCount === 1 ? "" : "s"} from the{" "}
+                {sourceLocale.toUpperCase()} locale and exclude drafts.
               </div>
             )}
 
@@ -483,7 +503,8 @@ export default function TranslationCenterPage() {
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  {selectedPageCount} of {sourcePages.length} page{sourcePages.length === 1 ? "" : "s"} selected.
+                  {selectedPageCount} of {sourcePages.length} page
+                  {sourcePages.length === 1 ? "" : "s"} selected.
                 </p>
 
                 {sourcePagesLoading ? (
@@ -630,7 +651,9 @@ function PageSelectionRow({
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-900">{page.title}</span>
+          <span className="text-sm font-medium text-gray-900">
+            {page.title}
+          </span>
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium uppercase text-gray-600">
             /{page.slug}
           </span>

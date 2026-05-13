@@ -117,7 +117,10 @@ export class TranslationService {
       );
     }
 
-    if (selectedPageIds?.length && sourcePages.length !== selectedPageIds.length) {
+    if (
+      selectedPageIds?.length &&
+      sourcePages.length !== selectedPageIds.length
+    ) {
       throw new BadRequestException(
         "Some selected pages were not found in the chosen source locale",
       );
@@ -146,8 +149,7 @@ export class TranslationService {
         totalPages: sourcePages.length,
         overwrite: input.overwrite ?? false,
         autoPublish: input.autoPublish ?? true,
-        pageIds:
-          (persistedPageIds as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+        pageIds: (persistedPageIds as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         createdBy: input.createdBy,
       },
     });

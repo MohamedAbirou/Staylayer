@@ -79,16 +79,16 @@ export async function getTranslationJobs(
   siteId: string,
   params?: { limit?: number; cursor?: string },
 ): Promise<{ data: TranslationJob[]; hasMore: boolean }> {
-  const { data } = await client.get<{ data: TranslationJob[]; hasMore: boolean }>(
-    "/translation/jobs",
-    {
-      params: {
-        siteId,
-        ...(params?.limit ? { limit: params.limit } : {}),
-        ...(params?.cursor ? { cursor: params.cursor } : {}),
-      },
+  const { data } = await client.get<{
+    data: TranslationJob[];
+    hasMore: boolean;
+  }>("/translation/jobs", {
+    params: {
+      siteId,
+      ...(params?.limit ? { limit: params.limit } : {}),
+      ...(params?.cursor ? { cursor: params.cursor } : {}),
     },
-  );
+  });
   return data;
 }
 

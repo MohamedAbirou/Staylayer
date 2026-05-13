@@ -109,10 +109,7 @@ export class TranslationController {
 
   @Post("jobs/:jobId/approve")
   @HttpCode(HttpStatus.OK)
-  @MembershipRoles(
-    TenantMembershipRole.OWNER,
-    TenantMembershipRole.ADMIN,
-  )
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
   async approveJob(@Req() req: Request, @Param("jobId") jobId: string) {
     await this.ensureSiteAccess(req);
     const user = this.getUser(req);
@@ -156,19 +153,13 @@ export class TranslationController {
     TenantMembershipRole.ADMIN,
     TenantMembershipRole.EDITOR,
   )
-  async listGlossaries(
-    @Req() req: Request,
-    @Query("siteId") siteId?: string,
-  ) {
+  async listGlossaries(@Req() req: Request, @Query("siteId") siteId?: string) {
     const user = this.getUser(req);
     return this.translationService.listGlossaries(user.activeTenantId!, siteId);
   }
 
   @Post("glossaries")
-  @MembershipRoles(
-    TenantMembershipRole.OWNER,
-    TenantMembershipRole.ADMIN,
-  )
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
   async createGlossary(
     @Req() req: Request,
     @Body() body: { name: string; siteId?: string },
@@ -179,16 +170,16 @@ export class TranslationController {
 
   @Delete("glossaries/:glossaryId")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @MembershipRoles(
-    TenantMembershipRole.OWNER,
-    TenantMembershipRole.ADMIN,
-  )
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
   async deleteGlossary(
     @Req() req: Request,
     @Param("glossaryId") glossaryId: string,
   ) {
     const user = this.getUser(req);
-    await this.translationService.deleteGlossary(user.activeTenantId!, glossaryId);
+    await this.translationService.deleteGlossary(
+      user.activeTenantId!,
+      glossaryId,
+    );
   }
 
   @Post("glossaries/:glossaryId/terms")
@@ -219,15 +210,15 @@ export class TranslationController {
 
   @Delete("glossary-terms/:termId")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @MembershipRoles(
-    TenantMembershipRole.OWNER,
-    TenantMembershipRole.ADMIN,
-  )
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
   async removeGlossaryTerm(
     @Req() req: Request,
     @Param("termId") termId: string,
   ) {
     const user = this.getUser(req);
-    await this.translationService.removeGlossaryTerm(user.activeTenantId!, termId);
+    await this.translationService.removeGlossaryTerm(
+      user.activeTenantId!,
+      termId,
+    );
   }
 }
