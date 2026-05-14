@@ -45,6 +45,11 @@ enum SiteType {
     GUEST_HOUSE
 }
 
+enum HostVariant {
+    APEX
+    WWW
+}
+
 enum SubscriptionStatus {
     TRIALING
     ACTIVE
@@ -278,17 +283,21 @@ model TenantMembership {
 // ─── Site ──────────────────────────────────────────────────
 
 model Site {
-    id             String     @id @default(cuid())
-    tenantId       String     @map("tenant_id")
-    name           String
-    slug           String
-    status         SiteStatus @default(DRAFT)
-    templateKey    String?    @map("template_key")
-    primaryLocale  String     @default("en") @map("primary_locale")
-    enabledLocales String[]   @default(["en"]) @map("enabled_locales")
-    siteType       SiteType   @default(VACATION_RENTAL) @map("site_type")
-    createdAt      DateTime   @default(now()) @map("created_at")
-    updatedAt      DateTime   @updatedAt @map("updated_at")
+    id                   String      @id @default(cuid())
+    tenantId             String      @map("tenant_id")
+    name                 String
+    slug                 String
+    publicSubdomain      String?     @unique @map("public_subdomain")
+    preferredHostVariant HostVariant @default(APEX) @map("preferred_host_variant")
+    publishedRevision    Int         @default(1) @map("published_revision")
+    previewTokenVersion  Int         @default(1) @map("preview_token_version")
+    status               SiteStatus  @default(DRAFT)
+    templateKey          String?     @map("template_key")
+    primaryLocale        String      @default("en") @map("primary_locale")
+    enabledLocales       String[]    @default(["en"]) @map("enabled_locales")
+    siteType             SiteType    @default(VACATION_RENTAL) @map("site_type")
+    createdAt            DateTime    @default(now()) @map("created_at")
+    updatedAt            DateTime    @updatedAt @map("updated_at")
 
     tenant                         Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
     pages                          Page[]
@@ -309,6 +318,7 @@ model Site {
     providerGlossaries             TranslationProviderGlossary[]
     redirects                      Redirect[]
     structuredData                 SiteStructuredData?
+    publishedRevisions             SitePublishedRevision[]
 
     @@unique([tenantId, slug])
     @@index([tenantId])
@@ -494,6 +504,27 @@ model Deployment {
     @@index([siteId, status])
     @@index([siteId, createdAt])
     @@map("deployments")
+}
+
+// ─── Site Published Revision (content snapshots for shared-runtime rollback) ──
+
+model SitePublishedRevision {
+    id               String   @id @default(cuid())
+    siteId           String   @map("site_id")
+    revision         Int
+    pagesSnapshot    Json     @map("pages_snapshot")
+    settingsSnapshot Json?    @map("settings_snapshot")
+    deploymentId     String?  @map("deployment_id")
+    rolledBackFrom   Int?     @map("rolled_back_from")
+    createdById      String?  @map("created_by_id")
+    createdAt        DateTime @default(now()) @map("created_at")
+
+    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+    @@unique([siteId, revision])
+    @@index([siteId, createdAt])
+    @@index([deploymentId])
+    @@map("site_published_revisions")
 }
 
 model SiteDeploymentEnvironmentVariable {

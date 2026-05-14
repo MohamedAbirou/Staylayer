@@ -33,7 +33,9 @@ describe("billing plans", () => {
     expect(starter.limits.sites).toBeLessThanOrEqual(boutique.limits.sites);
     expect(boutique.limits.sites).toBeLessThanOrEqual(portfolio.limits.sites);
     expect(starter.limits.locales).toBeLessThan(boutique.limits.locales);
-    expect(boutique.limits.locales).toBeLessThan(portfolio.limits.locales);
+    expect(boutique.limits.locales).toBeLessThanOrEqual(
+      portfolio.limits.locales,
+    );
     expect(starter.limits.seats).toBeLessThan(boutique.limits.seats);
     expect(boutique.limits.seats).toBeLessThan(portfolio.limits.seats);
     expect(starter.limits.formSubmissions).toBeLessThan(

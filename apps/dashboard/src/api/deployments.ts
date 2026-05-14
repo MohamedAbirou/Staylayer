@@ -59,6 +59,9 @@ export interface SiteDeployment {
   recentLogs: SiteDeploymentLogEntry[];
   createdAt: string;
   updatedAt: string;
+  sharedRuntime: boolean;
+  publishedRevision: number | null;
+  publishedAt: string | null;
 }
 
 // ─── Customer endpoints ─────────────────────────────────────────────────────────

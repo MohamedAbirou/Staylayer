@@ -2,11 +2,20 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { DomainStatus, Prisma } from "@prisma/client";
+import { ConfigService } from "@nestjs/config";
+import { DomainStatus, HostVariant, Prisma } from "@prisma/client";
 import { BillingService } from "../billing/billing.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { PublicRuntimeCacheService } from "../public-runtime/public-runtime.cache.service";
+import {
+  classifyHostname,
+  companionHost as deriveCompanionHost,
+  normalizeHostname,
+} from "../public-runtime/public-runtime.util";
+import { RevalidationService } from "../revalidation/revalidation.service";
 import { DomainVerificationService } from "./domain-verification.service";
 
 const MAX_DOMAINS_PER_SITE = 10;
@@ -17,24 +26,170 @@ type DomainWithSite = Prisma.DomainGetPayload<{
 
 @Injectable()
 export class DomainsService {
+  private readonly logger = new Logger(DomainsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
     private readonly billingService: BillingService,
     private readonly domainVerificationService: DomainVerificationService,
+    private readonly cacheService: PublicRuntimeCacheService,
+    private readonly revalidationService: RevalidationService,
   ) {}
 
   // ─── Customer ────────────────────────────────────────────────────────────────
+
+  async getRuntimeProfile(siteId: string) {
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId },
+      select: {
+        id: true,
+        publicSubdomain: true,
+        preferredHostVariant: true,
+        publishedRevision: true,
+      },
+    });
+
+    if (!site) {
+      throw new NotFoundException({
+        code: "SITE_NOT_FOUND",
+        message: "Site not found",
+      });
+    }
+
+    const platformRootDomain = this.normalizeConfiguredString(
+      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    );
+    const websiteProjectId =
+      this.domainVerificationService.getConfiguredWebsiteProjectId();
+    const websiteProjectTarget =
+      this.domainVerificationService.getConfiguredWebsiteExpectedTarget();
+    const defaultHostname =
+      site.publicSubdomain && platformRootDomain
+        ? `${site.publicSubdomain}.${platformRootDomain}`
+        : null;
+
+    const latestLivePublish = await this.prisma.deployment.findFirst({
+      where: { siteId, status: "LIVE" },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, updatedAt: true, metadata: true },
+    });
+
+    const latestMetadata =
+      latestLivePublish &&
+      latestLivePublish.metadata &&
+      typeof latestLivePublish.metadata === "object" &&
+      !Array.isArray(latestLivePublish.metadata)
+        ? (latestLivePublish.metadata as Record<string, unknown>)
+        : null;
+    const lastPublishedAt =
+      latestMetadata && typeof latestMetadata.publishedAt === "string"
+        ? latestMetadata.publishedAt
+        : (latestLivePublish?.updatedAt.toISOString() ?? null);
+    const lastPublishedDeploymentId = latestLivePublish?.id ?? null;
+
+    return {
+      siteId: site.id,
+      publicSubdomain: site.publicSubdomain,
+      preferredHostVariant: site.preferredHostVariant,
+      platformRootDomain,
+      defaultHostname,
+      websiteProjectId,
+      websiteProjectTarget,
+      sharedRuntimeReady: Boolean(
+        platformRootDomain && websiteProjectId && websiteProjectTarget,
+      ),
+      publishedRevision: site.publishedRevision,
+      lastPublishedAt,
+      lastPublishedDeploymentId,
+    };
+  }
+
+  async setPreferredHostVariant(siteId: string, variant: HostVariant) {
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId },
+      select: { id: true, preferredHostVariant: true },
+    });
+
+    if (!site) {
+      throw new NotFoundException({
+        code: "SITE_NOT_FOUND",
+        message: "Site not found",
+      });
+    }
+
+    if (site.preferredHostVariant !== variant) {
+      await this.prisma.site.update({
+        where: { id: siteId },
+        data: { preferredHostVariant: variant },
+      });
+    }
+
+    await this.bustHostCache(siteId);
+
+    try {
+      await this.revalidationService.revalidateSite(siteId, { paths: ["/"] });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to revalidate runtime after canonical change for site ${siteId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    return this.getRuntimeProfile(siteId);
+  }
+
+  async addCompanionForDomain(siteId: string, domainId: string) {
+    const domain = await this.prisma.domain.findUnique({
+      where: { id: domainId },
+    });
+
+    if (!domain || domain.siteId !== siteId) {
+      throw new NotFoundException({
+        code: "DOMAIN_NOT_FOUND",
+        message: "Domain not found in this site",
+      });
+    }
+
+    const platformRootDomain = this.normalizeConfiguredString(
+      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    );
+    const classification = classifyHostname(domain.host, platformRootDomain);
+
+    if (!classification.companionHost) {
+      throw new BadRequestException({
+        code: "COMPANION_UNAVAILABLE",
+        message:
+          "This hostname does not have an apex/www companion (subdomains and platform hostnames are not eligible).",
+      });
+    }
+
+    return this.add(siteId, classification.companionHost, {
+      skipCompanionAlreadyPresent: true,
+    });
+  }
 
   async listForSite(siteId: string) {
     const rows = await this.prisma.domain.findMany({
       where: { siteId },
       orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     });
-    return rows.map((d) => this.toCustomerDto(d));
+
+    const platformRootDomain = this.normalizeConfiguredString(
+      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    );
+    const hostIndex = new Map(rows.map((row) => [row.host, row.id] as const));
+
+    return rows.map((row) =>
+      this.toCustomerDto(row, { platformRootDomain, hostIndex }),
+    );
   }
 
-  async add(siteId: string, hostname: string) {
-    const normalized = hostname.toLowerCase().trim();
+  async add(
+    siteId: string,
+    hostname: string,
+    options: { skipCompanionAlreadyPresent?: boolean } = {},
+  ) {
+    const normalized = normalizeHostname(hostname);
 
     const existing = await this.prisma.domain.findUnique({
       where: { host: normalized },
@@ -46,7 +201,19 @@ export class DomainsService {
       });
     }
 
-    await this.billingService.assertCanAddDomain(siteId);
+    const companion = deriveCompanionHost(normalized);
+    const companionRow = companion
+      ? await this.prisma.domain.findFirst({
+          where: { siteId, host: companion },
+          select: { id: true },
+        })
+      : null;
+
+    const isFreeCompanion = Boolean(companionRow);
+
+    if (!isFreeCompanion) {
+      await this.billingService.assertCanAddDomain(siteId);
+    }
 
     const count = await this.prisma.domain.count({ where: { siteId } });
     if (count >= MAX_DOMAINS_PER_SITE) {
@@ -73,7 +240,23 @@ export class DomainsService {
       "created",
     );
 
-    return this.toCustomerDto(domain);
+    // Bust host cache so resolve-host immediately reflects the new pair.
+    await this.bustHostCacheForHosts([
+      normalized,
+      ...(companion ? [companion] : []),
+    ]);
+
+    if (options.skipCompanionAlreadyPresent && companionRow) {
+      this.logger.log(
+        `Added companion ${normalized} to site ${siteId} alongside existing ${companion}`,
+      );
+    }
+
+    return this.toCustomerDto(domain, {
+      platformRootDomain: this.normalizeConfiguredString(
+        this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+      ),
+    });
   }
 
   async setPrimary(siteId: string, domainId: string) {
@@ -105,7 +288,12 @@ export class DomainsService {
       updated.id,
       "manual",
     );
-    return this.toCustomerDto(updated);
+    await this.bustHostCache(siteId);
+    return this.toCustomerDto(updated, {
+      platformRootDomain: this.normalizeConfiguredString(
+        this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+      ),
+    });
   }
 
   async retryForSite(siteId: string, domainId: string) {
@@ -129,7 +317,11 @@ export class DomainsService {
       where: { id: domainId },
     });
 
-    return this.toCustomerDto(refreshed);
+    return this.toCustomerDto(refreshed, {
+      platformRootDomain: this.normalizeConfiguredString(
+        this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+      ),
+    });
   }
 
   async remove(siteId: string, domainId: string) {
@@ -143,6 +335,10 @@ export class DomainsService {
       });
     }
     await this.prisma.domain.delete({ where: { id: domainId } });
+    await this.bustHostCacheForHosts([
+      domain.host,
+      deriveCompanionHost(domain.host),
+    ]);
   }
 
   // ─── Admin ────────────────────────────────────────────────────────────────────
@@ -242,17 +438,32 @@ export class DomainsService {
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
-  private toCustomerDto(domain: {
-    id: string;
-    host: string;
-    status: DomainStatus;
-    isPrimary: boolean;
-    lastCheckedAt?: Date | null;
-    lastError?: string | null;
-    verificationDetails?: Prisma.JsonValue | null;
-    createdAt: Date;
-  }) {
+  private toCustomerDto(
+    domain: {
+      id: string;
+      host: string;
+      status: DomainStatus;
+      isPrimary: boolean;
+      lastCheckedAt?: Date | null;
+      lastError?: string | null;
+      verificationDetails?: Prisma.JsonValue | null;
+      createdAt: Date;
+    },
+    context: {
+      platformRootDomain?: string | null;
+      hostIndex?: Map<string, string>;
+    } = {},
+  ) {
     const details = this.parseVerificationDetails(domain.verificationDetails);
+    const classification = classifyHostname(
+      domain.host,
+      context.platformRootDomain ?? null,
+    );
+    const companionHost = classification.companionHost;
+    const companionDomainId =
+      companionHost && context.hostIndex
+        ? (context.hostIndex.get(companionHost) ?? null)
+        : null;
 
     return {
       id: domain.id,
@@ -260,6 +471,10 @@ export class DomainsService {
       status: domain.status,
       verificationStatus: this.mapCustomerStatus(domain.status),
       isPrimary: domain.isPrimary,
+      kind: classification.kind,
+      apexHost: classification.apexHost,
+      companionHost,
+      companionDomainId,
       dnsTarget: details.recommendedRecords[0]?.value ?? details.expectedTarget,
       dnsConfigured: details.dnsConfigured,
       dnsMatchesExpected: details.dnsMatchesExpected,
@@ -497,5 +712,60 @@ export class DomainsService {
     }
 
     return "Complete provider attachment and DNS setup, then recheck verification.";
+  }
+
+  private normalizeConfiguredString(value: string | null | undefined) {
+    const normalized = String(value ?? "").trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private async bustHostCacheForHosts(hosts: string[]): Promise<void> {
+    const unique = Array.from(
+      new Set(hosts.map((h) => normalizeHostname(h)).filter(Boolean)),
+    );
+    if (unique.length === 0) {
+      return;
+    }
+    try {
+      await this.cacheService.deleteKeys(
+        unique.map((h) => `runtime:host:${h}`),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to bust runtime host cache for ${unique.join(", ")}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  private async bustHostCache(siteId: string): Promise<void> {
+    const platformRootDomain = this.normalizeConfiguredString(
+      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    );
+
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId },
+      select: {
+        publicSubdomain: true,
+        domains: { select: { host: true } },
+      },
+    });
+
+    if (!site) {
+      return;
+    }
+
+    const hosts: string[] = [];
+    if (site.publicSubdomain && platformRootDomain) {
+      hosts.push(`${site.publicSubdomain}.${platformRootDomain}`);
+    }
+    for (const d of site.domains) {
+      hosts.push(d.host);
+      const companion = deriveCompanionHost(d.host);
+      if (companion) {
+        hosts.push(companion);
+      }
+    }
+
+    await this.bustHostCacheForHosts(hosts);
   }
 }

@@ -1,13 +1,15 @@
 /// <reference types="jest" />
 
 import { ConfigService } from "@nestjs/config";
-import { DeploymentStatus } from "@prisma/client";
+import { DeploymentStatus, HostVariant } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { DeploymentProvider } from "./deployment-provider.port";
 import { DeploymentEnvironmentService } from "./deployment-environment.service";
 import { DeploymentsService } from "./deployments.service";
+import { SitePublishedRevisionsService } from "../site-published-revisions/site-published-revisions.service";
 
 describe("DeploymentsService", () => {
+  const originalFetch = global.fetch;
   let service: DeploymentsService;
   let prisma: {
     deployment: {
@@ -31,6 +33,12 @@ describe("DeploymentsService", () => {
   };
   let configService: {
     get: jest.Mock;
+  };
+  let sitePublishedRevisionsService: {
+    captureSnapshot: jest.Mock;
+    restoreToRevision: jest.Mock;
+    getSnapshotByRevision: jest.Mock;
+    getSnapshotByDeploymentId: jest.Mock;
   };
 
   beforeEach(() => {
@@ -85,12 +93,24 @@ describe("DeploymentsService", () => {
       }),
     };
 
+    sitePublishedRevisionsService = {
+      captureSnapshot: jest.fn(),
+      restoreToRevision: jest.fn(),
+      getSnapshotByRevision: jest.fn(),
+      getSnapshotByDeploymentId: jest.fn(),
+    };
+
     service = new DeploymentsService(
       prisma as unknown as PrismaService,
       configService as unknown as ConfigService,
       deploymentEnvironmentService as unknown as DeploymentEnvironmentService,
       provider,
+      sitePublishedRevisionsService as unknown as SitePublishedRevisionsService,
     );
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   it("returns an existing in-flight deployment without calling the provider", async () => {
@@ -106,6 +126,94 @@ describe("DeploymentsService", () => {
 
     expect(prisma.site.findUnique).not.toHaveBeenCalled();
     expect(provider.ensureProject).not.toHaveBeenCalled();
+  });
+
+  it("publishes through the shared website runtime instead of creating a per-site deployment when the shared project is configured", async () => {
+    configService.get.mockImplementation((key: string) => {
+      const values: Record<string, string> = {
+        WEBSITE_VERCEL_PROJECT_ID: "website-project-id",
+        WEBSITE_VERCEL_PROJECT_NAME: "staylayer-web",
+        WEBSITE_APP_ORIGIN: "https://website.example.com",
+        WEBSITE_RUNTIME_SECRET: "runtime-secret",
+        PLATFORM_ROOT_DOMAIN: "staylayer.com",
+      };
+
+      return values[key];
+    });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+    }) as typeof fetch;
+    prisma.deployment.findFirst.mockResolvedValue(null);
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      publicSubdomain: "sunset-villa",
+      preferredHostVariant: HostVariant.APEX,
+      domains: [],
+    });
+    prisma.deployment.create.mockResolvedValue({
+      id: "dep-1",
+      siteId: "site-1",
+      status: DeploymentStatus.PENDING,
+      provider: "vercel",
+      providerProjectId: "website-project-id",
+      providerDeployId: null,
+      url: null,
+      errorMessage: null,
+      metadata: null,
+      createdAt: new Date("2026-05-13T20:00:00.000Z"),
+      updatedAt: new Date("2026-05-13T20:00:00.000Z"),
+    });
+    prisma.deployment.update.mockResolvedValue({
+      id: "dep-1",
+      siteId: "site-1",
+      status: DeploymentStatus.LIVE,
+      provider: "vercel",
+      providerProjectId: "website-project-id",
+      providerDeployId: null,
+      url: "https://sunset-villa.staylayer.com",
+      errorMessage: null,
+      metadata: {
+        sharedRuntime: true,
+        providerUrl: "https://staylayer-web.vercel.app",
+        publishedRevision: 7,
+      },
+      createdAt: new Date("2026-05-13T20:00:00.000Z"),
+      updatedAt: new Date("2026-05-13T20:00:01.000Z"),
+    });
+    sitePublishedRevisionsService.captureSnapshot.mockResolvedValue({
+      id: "rev-7",
+      revision: 7,
+      createdAt: new Date("2026-05-13T20:00:01.000Z"),
+    });
+
+    const result = await service.provisionSite("site-1");
+
+    expect(provider.ensureProject).not.toHaveBeenCalled();
+    expect(sitePublishedRevisionsService.captureSnapshot).toHaveBeenCalledWith(
+      "site-1",
+      { deploymentId: "dep-1" },
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://website.example.com/api/revalidate",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-website-runtime-secret": "runtime-secret",
+        },
+        body: JSON.stringify({
+          siteId: "site-1",
+          hosts: ["sunset-villa.staylayer.com"],
+          paths: [],
+        }),
+      }),
+    );
+    expect(result).toMatchObject({
+      status: DeploymentStatus.LIVE,
+      url: "https://sunset-villa.staylayer.com",
+    });
   });
 
   it("creates a deployment, syncs env, and stores provider metadata", async () => {

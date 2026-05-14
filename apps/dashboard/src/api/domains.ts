@@ -19,6 +19,10 @@ export type DomainVerificationStatus =
   | "active"
   | "failed";
 
+export type HostnameKind = "platform-subdomain" | "apex" | "www" | "subdomain";
+
+export type HostVariant = "APEX" | "WWW";
+
 export interface SiteDomainRecommendedRecord {
   type: string;
   name: string;
@@ -55,6 +59,24 @@ export interface SiteDomain {
   lastCheckedAt: string | null;
   lastError: string | null;
   createdAt: string;
+  kind: HostnameKind;
+  apexHost: string;
+  companionHost: string | null;
+  companionDomainId: string | null;
+}
+
+export interface SiteRuntimeProfile {
+  siteId: string;
+  publicSubdomain: string | null;
+  platformRootDomain: string | null;
+  defaultHostname: string | null;
+  websiteProjectId: string | null;
+  websiteProjectTarget: string | null;
+  sharedRuntimeReady: boolean;
+  preferredHostVariant: HostVariant;
+  publishedRevision: number;
+  lastPublishedAt: string | null;
+  lastPublishedDeploymentId: string | null;
 }
 
 // ─── Customer endpoints ───────────────────────────────────────────────────────
@@ -64,6 +86,19 @@ export async function getDomains(siteId: string): Promise<SiteDomain[]> {
   const { data } = await client.get<SiteDomain[]>("/domains", {
     params: { siteId },
   });
+  return data;
+}
+
+export async function getSiteRuntimeProfile(
+  siteId: string,
+): Promise<SiteRuntimeProfile> {
+  const { data } = await client.get<SiteRuntimeProfile>(
+    "/domains/runtime-profile",
+    {
+      params: { siteId },
+    },
+  );
+
   return data;
 }
 
@@ -107,6 +142,32 @@ export async function retryDomainVerification(
 ): Promise<SiteDomain> {
   const { data } = await client.post<SiteDomain>(
     `/domains/${domainId}/retry`,
+    {},
+    { params: { siteId } },
+  );
+  return data;
+}
+
+// PATCH /domains/preferred-host-variant?siteId=...  { variant }
+export async function setPreferredHostVariant(
+  siteId: string,
+  variant: HostVariant,
+): Promise<SiteRuntimeProfile> {
+  const { data } = await client.patch<SiteRuntimeProfile>(
+    "/domains/preferred-host-variant",
+    { variant },
+    { params: { siteId } },
+  );
+  return data;
+}
+
+// POST /domains/:id/companion?siteId=...
+export async function addDomainCompanion(
+  siteId: string,
+  domainId: string,
+): Promise<SiteDomain> {
+  const { data } = await client.post<SiteDomain>(
+    `/domains/${domainId}/companion`,
     {},
     { params: { siteId } },
   );

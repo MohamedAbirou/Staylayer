@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   ArrowLeft,
@@ -10,13 +10,17 @@ import {
   Check,
   TriangleAlert as AlertTriangle,
   ExternalLink,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "../auth/useAuth";
 import {
   addDomain,
+  addDomainCompanion,
+  getSiteRuntimeProfile,
   retryDomainVerification,
   type SiteDomain,
 } from "../api/domains";
+import { classifyHostname, type ClassifiedHostname } from "../lib/hostname";
 
 type WizardStep = "enter" | "dns" | "verify" | "done";
 
@@ -64,12 +68,29 @@ export function DomainSetupWizard({
   );
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [companionAdded, setCompanionAdded] = useState(false);
+  const [companionError, setCompanionError] = useState<string | null>(null);
+
+  const { data: runtimeProfile } = useQuery({
+    queryKey: ["domains", "runtime-profile", siteId],
+    queryFn: () => getSiteRuntimeProfile(siteId!),
+    enabled: !!siteId,
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  const classification = useMemo<ClassifiedHostname | null>(
+    () => classifyHostname(hostname, runtimeProfile?.platformRootDomain),
+    [hostname, runtimeProfile?.platformRootDomain],
+  );
 
   const addMutation = useMutation({
     mutationFn: (h: string) => addDomain(siteId!, h),
     onSuccess: (d) => {
       setDomain(d);
       setError(null);
+      setCompanionAdded(false);
+      setCompanionError(null);
       setStep("dns");
       void queryClient.invalidateQueries({ queryKey: ["domains", siteId] });
     },
@@ -97,9 +118,30 @@ export function DomainSetupWizard({
     },
   });
 
+  const companionMutation = useMutation({
+    mutationFn: () => addDomainCompanion(siteId!, domain!.id),
+    onSuccess: () => {
+      setCompanionAdded(true);
+      setCompanionError(null);
+      void queryClient.invalidateQueries({ queryKey: ["domains", siteId] });
+    },
+    onError: (err: unknown) => {
+      setCompanionError(
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Could not add the companion hostname.",
+      );
+    },
+  });
+
   function handleAdd() {
     const trimmed = hostname.trim().toLowerCase();
     if (!trimmed) return;
+    if (classification?.kind === "platform-subdomain") {
+      setError(
+        "This is a platform subdomain. You can manage it under your site's public subdomain — no custom-domain setup is needed.",
+      );
+      return;
+    }
     addMutation.mutate(trimmed);
   }
 
@@ -180,6 +222,9 @@ export function DomainSetupWizard({
                   className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
                 />
               </div>
+              {classification && (
+                <HostnameKindPreview classification={classification} />
+              )}
               {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             </div>
             <div className="mt-6 flex items-center justify-between">
@@ -283,8 +328,9 @@ export function DomainSetupWizard({
               </div>
             ) : (
               <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                DNS target is not yet available. Provision a deployment first,
-                then retry domain setup.
+                DNS target is not yet available. The shared website runtime has
+                not been fully configured yet, so custom-domain verification
+                cannot start.
               </div>
             )}
 
@@ -293,6 +339,33 @@ export function DomainSetupWizard({
               complete within minutes. Click &quot;Verify&quot; once you have
               saved the record.
             </p>
+
+            {domain?.companionHost &&
+              !domain.companionDomainId &&
+              !companionAdded && (
+                <CompanionOffer
+                  hostname={domain.hostname}
+                  companionHost={domain.companionHost}
+                  kind={domain.kind}
+                  isPending={companionMutation.isPending}
+                  error={companionError}
+                  onAdd={() => companionMutation.mutate()}
+                />
+              )}
+            {(companionAdded || domain?.companionDomainId) &&
+              domain?.companionHost && (
+                <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Companion hostname{" "}
+                    <span className="font-mono font-semibold">
+                      {domain.companionHost}
+                    </span>{" "}
+                    is being set up too. It does not consume an extra billing
+                    slot.
+                  </span>
+                </div>
+              )}
 
             <div className="mt-6 flex items-center justify-between">
               {isExistingDomainFlow ? (
@@ -444,6 +517,109 @@ function StatusRow({ label, ok }: { label: string; ok: boolean }) {
           Not yet
         </span>
       )}
+    </div>
+  );
+}
+
+function HostnameKindPreview({
+  classification,
+}: {
+  classification: ClassifiedHostname;
+}) {
+  if (classification.kind === "platform-subdomain") {
+    return (
+      <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span>
+          <span className="font-semibold">Platform subdomain.</span> This
+          hostname is served by the platform automatically — manage it from the
+          site&apos;s public subdomain settings instead of as a custom domain.
+        </span>
+      </div>
+    );
+  }
+
+  const guidance: { headline: string; detail: string } =
+    classification.kind === "apex"
+      ? {
+          headline: "Root domain (apex)",
+          detail:
+            "Most registrars require an A or ALIAS/ANAME record for the root. Some registrars cannot point an apex with a CNAME — use the records shown on the next step.",
+        }
+      : classification.kind === "www"
+        ? {
+            headline: "www subdomain",
+            detail:
+              "Point a CNAME record for `www` to the DNS target shown on the next step. We will also offer to set up the apex so visitors typing the root domain reach your site.",
+          }
+        : {
+            headline: "Subdomain",
+            detail: `Point a CNAME for ${classification.hostname} to the DNS target shown on the next step.`,
+          };
+
+  return (
+    <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
+      <p className="font-semibold">{guidance.headline}</p>
+      <p className="mt-1 text-blue-700">{guidance.detail}</p>
+      {classification.companionHost && (
+        <p className="mt-1 text-blue-700">
+          Companion hostname:{" "}
+          <span className="font-mono font-semibold">
+            {classification.companionHost}
+          </span>
+          . Adding it after verification is free.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CompanionOffer({
+  hostname,
+  companionHost,
+  kind,
+  isPending,
+  error,
+  onAdd,
+}: {
+  hostname: string;
+  companionHost: string;
+  kind: "apex" | "www" | "subdomain" | "platform-subdomain";
+  isPending: boolean;
+  error: string | null;
+  onAdd: () => void;
+}) {
+  const reason =
+    kind === "apex"
+      ? "Add the www companion so visitors typing www. also reach your site."
+      : "Add the root domain so visitors typing the bare hostname also reach your site.";
+
+  return (
+    <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900">
+      <p className="text-sm font-semibold text-blue-900">
+        Also connect {companionHost}?
+      </p>
+      <p className="mt-1 text-blue-800">{reason}</p>
+      <p className="mt-1 text-blue-700">
+        Adding the companion of <span className="font-mono">{hostname}</span> is
+        free — it doesn&apos;t consume an extra billing slot.
+      </p>
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={isPending}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+        >
+          {isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Plus className="h-3.5 w-3.5" />
+          )}
+          Connect {companionHost}
+        </button>
+        {error ? <span className="text-red-700">{error}</span> : null}
+      </div>
     </div>
   );
 }

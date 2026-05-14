@@ -8,6 +8,7 @@ function buildPrismaMock() {
     $transaction: jest.fn(),
     site: {
       create: jest.fn(),
+      findUnique: jest.fn(),
     },
     siteSettings: {
       create: jest.fn(),
@@ -50,6 +51,7 @@ describe("TenantWorkspaceService", () => {
 
   beforeEach(() => {
     prisma = buildPrismaMock();
+    prisma.site.findUnique.mockResolvedValue(null);
     billingService = {
       assertCanProvisionSite: jest.fn().mockResolvedValue(undefined),
       assertCanAddSeat: jest.fn().mockResolvedValue(undefined),
@@ -81,6 +83,7 @@ describe("TenantWorkspaceService", () => {
       tenantId: "tenant-1",
       name: "Azure Bay Villas",
       slug: "azure-bay-villas",
+      publicSubdomain: "azure-bay-villas",
       status: SiteStatus.ACTIVE,
       primaryLocale: "en",
       enabledLocales: ["en", "es"],
@@ -102,6 +105,7 @@ describe("TenantWorkspaceService", () => {
         data: expect.objectContaining({
           tenantId: "tenant-1",
           slug: "azure-bay-villas",
+          publicSubdomain: "azure-bay-villas",
           enabledLocales: ["en", "es"],
           siteType: SiteType.VACATION_RENTAL,
         }),
@@ -116,6 +120,68 @@ describe("TenantWorkspaceService", () => {
       },
     });
     expect(created.slug).toBe("azure-bay-villas");
+    expect(created.publicSubdomain).toBe("azure-bay-villas");
+  });
+
+  it("normalizes and auto-suffixes generated public subdomains when occupied", async () => {
+    prisma.site.findUnique
+      .mockResolvedValueOnce({ id: "site-existing" })
+      .mockResolvedValueOnce(null);
+    prisma.site.create.mockResolvedValue({
+      id: "site-2",
+      tenantId: "tenant-1",
+      name: "Azure Bay Villas",
+      slug: "azure-bay-villas",
+      publicSubdomain: "azure-bay-villas-2",
+      status: SiteStatus.ACTIVE,
+      primaryLocale: "en",
+      enabledLocales: ["en"],
+      siteType: SiteType.VACATION_RENTAL,
+      createdAt: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    const created = await service.createSite("tenant-1", {
+      name: "Azure Bay Villas",
+    });
+
+    expect(prisma.site.findUnique).toHaveBeenNthCalledWith(1, {
+      where: { publicSubdomain: "azure-bay-villas" },
+      select: { id: true },
+    });
+    expect(prisma.site.findUnique).toHaveBeenNthCalledWith(2, {
+      where: { publicSubdomain: "azure-bay-villas-2" },
+      select: { id: true },
+    });
+    expect(prisma.site.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          publicSubdomain: "azure-bay-villas-2",
+        }),
+      }),
+    );
+    expect(created.publicSubdomain).toBe("azure-bay-villas-2");
+  });
+
+  it("normalizes explicit public subdomains and rejects collisions", async () => {
+    prisma.site.findUnique.mockResolvedValue({ id: "site-existing" });
+
+    await expect(
+      service.createSite("tenant-1", {
+        name: "Azure Bay Villas",
+        publicSubdomain: " Azure Bay Villas ",
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: "CONFLICT",
+        message: "This public subdomain is already taken.",
+      },
+    });
+
+    expect(prisma.site.findUnique).toHaveBeenCalledWith({
+      where: { publicSubdomain: "azure-bay-villas" },
+      select: { id: true },
+    });
+    expect(prisma.site.create).not.toHaveBeenCalled();
   });
 
   it("sends a workspace invitation instead of attaching a member immediately", async () => {

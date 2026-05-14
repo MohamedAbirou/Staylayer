@@ -17,14 +17,21 @@ import {
   Wand as Wand2,
 } from "lucide-react";
 
-import { getLatestDeployment } from "../api/deployments";
 import {
   getDomains,
+  getSiteRuntimeProfile,
   setDomainPrimary,
   removeDomain,
   retryDomainVerification,
+  setPreferredHostVariant,
+  addDomainCompanion,
 } from "../api/domains";
-import type { SiteDomain, DomainStatus } from "../api/domains";
+import type {
+  SiteDomain,
+  DomainStatus,
+  HostnameKind,
+  HostVariant,
+} from "../api/domains";
 import { DomainSetupWizard } from "../components/DomainSetupWizard";
 
 // ─── INFRASTRUCTURE ASSUMPTION (now fulfilled) ────────────────────────────────
@@ -97,9 +104,9 @@ export default function DomainsPage() {
     retry: false,
   });
 
-  const { data: latestDeployment } = useQuery({
-    queryKey: ["domains", "latest-deployment", siteId],
-    queryFn: () => getLatestDeployment(siteId!),
+  const { data: runtimeProfile } = useQuery({
+    queryKey: ["domains", "runtime-profile", siteId],
+    queryFn: () => getSiteRuntimeProfile(siteId!),
     enabled: !!siteId,
     retry: false,
   });
@@ -123,6 +130,23 @@ export default function DomainsPage() {
       void queryClient.invalidateQueries({ queryKey: ["domains", siteId] }),
   });
 
+  const preferredVariantMutation = useMutation({
+    mutationFn: (variant: HostVariant) =>
+      setPreferredHostVariant(siteId!, variant),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["domains", "runtime-profile", siteId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["domains", siteId] });
+    },
+  });
+
+  const companionMutation = useMutation({
+    mutationFn: (domainId: string) => addDomainCompanion(siteId!, domainId),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["domains", siteId] }),
+  });
+
   if (!hasActiveSite(session)) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
@@ -137,8 +161,12 @@ export default function DomainsPage() {
   const activePrimaryDomain = domains.find(
     (domain) => domain.isPrimary && domain.status === "ACTIVE",
   );
-  const providerTarget =
-    latestDeployment?.providerUrl ?? latestDeployment?.url ?? null;
+  const fallbackDomain = domains.find((domain) => domain.isPrimary) ?? null;
+  const dnsTarget =
+    runtimeProfile?.websiteProjectTarget ??
+    activePrimaryDomain?.dnsTarget ??
+    fallbackDomain?.dnsTarget ??
+    null;
 
   return (
     <div className="space-y-6">
@@ -175,17 +203,17 @@ export default function DomainsPage() {
             </h2>
             <p className="mt-1 text-sm text-gray-500">
               When you connect a domain, the platform attaches it at the hosting
-              provider, checks DNS against the live deployment target, and waits
-              for HTTPS to become active. It can inspect and explain DNS issues,
-              but it cannot repair registrar records automatically without a DNS
-              or registrar integration.
+              provider, checks DNS against the shared website runtime target,
+              and waits for HTTPS to become active. It can inspect and explain
+              DNS issues, but it cannot repair registrar records automatically
+              without a DNS or registrar integration.
             </p>
           </div>
           <Link
             to="/deployments"
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Open deployments
+            Open publishing
           </Link>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -199,25 +227,21 @@ export default function DomainsPage() {
             }
           />
           <DomainSignalTile
-            label="Provider target"
-            value={providerTarget ?? "Provision a deployment first"}
+            label="Default hostname"
+            value={runtimeProfile?.defaultHostname ?? "Not assigned yet"}
             detail={
-              providerTarget
-                ? "Use this target when your DNS provider asks where to point the domain."
-                : "No deployment target exists yet, so DNS cannot be verified."
+              runtimeProfile?.defaultHostname
+                ? "This site already has a shared public hostname you can use before a custom domain is ready."
+                : "Assign a public subdomain to give the site a default shared-runtime hostname."
             }
           />
           <DomainSignalTile
-            label="Automation"
-            value={
-              latestDeployment?.status === "LIVE"
-                ? "Checks active"
-                : "Waiting on deployment"
-            }
+            label="DNS target"
+            value={dnsTarget ?? "Runtime target unavailable"}
             detail={
-              latestDeployment?.status === "LIVE"
-                ? "DNS, provider attachment, and SSL checks will continue automatically."
-                : "Provision the site before expecting domain verification to complete."
+              runtimeProfile?.sharedRuntimeReady
+                ? "Use this target when your DNS provider asks where the hostname should point."
+                : "The shared website runtime still needs its project or root-domain configuration."
             }
           />
         </div>
@@ -228,6 +252,17 @@ export default function DomainsPage() {
           You can view domain verification state here, but only site admins can
           connect, remove, or change the primary domain.
         </div>
+      )}
+
+      {runtimeProfile && canManageDomains && (
+        <CanonicalHostnameCard
+          domains={domains}
+          preferredHostVariant={runtimeProfile.preferredHostVariant}
+          isPending={preferredVariantMutation.isPending}
+          onChange={(variant) => preferredVariantMutation.mutate(variant)}
+          onAddCompanion={(domainId) => companionMutation.mutate(domainId)}
+          isCompanionPending={companionMutation.isPending}
+        />
       )}
 
       {/* Error state */}
@@ -368,6 +403,14 @@ function DomainRow({
             {isPrimary && (
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                 Primary
+              </span>
+            )}
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+              {hostnameKindLabel(domain.kind)}
+            </span>
+            {domain.companionDomainId && domain.companionHost && (
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                Pairs with {domain.companionHost}
               </span>
             )}
           </div>
@@ -730,4 +773,166 @@ function getDomainStatusDetail(domain: SiteDomain) {
     default:
       return domain.nextAction;
   }
+}
+
+function hostnameKindLabel(kind: HostnameKind): string {
+  switch (kind) {
+    case "apex":
+      return "Apex";
+    case "www":
+      return "WWW";
+    case "subdomain":
+      return "Subdomain";
+    case "platform-subdomain":
+      return "Platform";
+  }
+}
+
+function CanonicalHostnameCard({
+  domains,
+  preferredHostVariant,
+  isPending,
+  onChange,
+  onAddCompanion,
+  isCompanionPending,
+}: {
+  domains: SiteDomain[];
+  preferredHostVariant: HostVariant;
+  isPending: boolean;
+  onChange: (variant: HostVariant) => void;
+  onAddCompanion: (domainId: string) => void;
+  isCompanionPending: boolean;
+}) {
+  // Find apex/www pairs. We only need to show this card when the site has at
+  // least one apex or www domain. Pairs are identified by `apexHost`.
+  const pairs = new Map<string, { apex?: SiteDomain; www?: SiteDomain }>();
+  for (const d of domains) {
+    if (d.kind !== "apex" && d.kind !== "www") continue;
+    const bucket = pairs.get(d.apexHost) ?? {};
+    if (d.kind === "apex") bucket.apex = d;
+    else bucket.www = d;
+    pairs.set(d.apexHost, bucket);
+  }
+
+  if (pairs.size === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+            Canonical hostname
+          </p>
+          <h2 className="mt-2 text-lg font-semibold text-gray-900">
+            Pick which hostname guests see in the address bar
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            When both the root domain and its www companion are connected, the
+            platform serves one as canonical and 308-redirects the other to it.
+            Search engines and shared links will all converge on the canonical
+            hostname.
+          </p>
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-3">
+          <CanonicalRadio
+            value="APEX"
+            current={preferredHostVariant}
+            label="Use the root domain"
+            sublabel="example.com is canonical; www.example.com redirects to it."
+            disabled={isPending}
+            onSelect={onChange}
+          />
+          <CanonicalRadio
+            value="WWW"
+            current={preferredHostVariant}
+            label="Use the www subdomain"
+            sublabel="www.example.com is canonical; example.com redirects to it."
+            disabled={isPending}
+            onSelect={onChange}
+          />
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {Array.from(pairs.entries()).map(([apexHost, pair]) => {
+            const haveBoth = pair.apex && pair.www;
+            const missing = !pair.apex ? "apex" : !pair.www ? "www" : null;
+            const sourceDomain = pair.apex ?? pair.www;
+            const companionLabel =
+              missing === "apex" ? apexHost : `www.${apexHost}`;
+
+            return (
+              <div
+                key={apexHost}
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600"
+              >
+                <span className="font-mono text-gray-700">{apexHost}</span>
+                {haveBoth ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">
+                    Apex + www connected
+                  </span>
+                ) : (
+                  <>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
+                      Missing {companionLabel}
+                    </span>
+                    {sourceDomain && (
+                      <button
+                        type="button"
+                        onClick={() => onAddCompanion(sourceDomain.id)}
+                        disabled={isCompanionPending}
+                        className="rounded-md border border-blue-200 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                      >
+                        Add {companionLabel}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CanonicalRadio({
+  value,
+  current,
+  label,
+  sublabel,
+  disabled,
+  onSelect,
+}: {
+  value: HostVariant;
+  current: HostVariant;
+  label: string;
+  sublabel: string;
+  disabled: boolean;
+  onSelect: (variant: HostVariant) => void;
+}) {
+  const selected = current === value;
+  return (
+    <button
+      type="button"
+      onClick={() => !selected && onSelect(value)}
+      disabled={disabled || selected}
+      className={`flex-1 min-w-55 rounded-lg border px-4 py-3 text-left transition ${
+        selected
+          ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+          : "border-gray-200 bg-white hover:border-gray-300"
+      } disabled:cursor-default`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-gray-900">{label}</span>
+        {selected && (
+          <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+            Canonical
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-gray-500">{sublabel}</p>
+    </button>
+  );
 }

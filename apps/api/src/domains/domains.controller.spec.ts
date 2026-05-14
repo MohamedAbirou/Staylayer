@@ -19,6 +19,7 @@ function buildRequest(overrides: Partial<Request> = {}): Request {
 describe("DomainsController", () => {
   let controller: DomainsController;
   let domainsService: {
+    getRuntimeProfile: jest.Mock;
     listForSite: jest.Mock;
     add: jest.Mock;
     setPrimary: jest.Mock;
@@ -34,6 +35,7 @@ describe("DomainsController", () => {
 
   beforeEach(() => {
     domainsService = {
+      getRuntimeProfile: jest.fn(),
       listForSite: jest.fn(),
       add: jest.fn(),
       setPrimary: jest.fn(),
@@ -61,6 +63,21 @@ describe("DomainsController", () => {
     await controller.list({ siteId: "tenant-b-site" } as never, buildRequest());
 
     expect(domainsService.listForSite).toHaveBeenCalledWith("site-1");
+  });
+
+  it("uses the resolved site scope when loading the runtime profile", async () => {
+    workspaceAccessService.ensureSiteAccess.mockResolvedValue("site-1");
+    domainsService.getRuntimeProfile.mockResolvedValue({
+      siteId: "site-1",
+      defaultHostname: "sunset-villa.staylayer.com",
+    });
+
+    await controller.runtimeProfile(
+      { siteId: "tenant-b-site" } as never,
+      buildRequest(),
+    );
+
+    expect(domainsService.getRuntimeProfile).toHaveBeenCalledWith("site-1");
   });
 
   it("fails closed before adding a domain when site access is denied", async () => {

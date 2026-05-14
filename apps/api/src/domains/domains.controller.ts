@@ -24,6 +24,7 @@ import { WorkspaceAccessService } from "../auth/workspace-access.service";
 import { DomainsService } from "./domains.service";
 import { AddDomainDto } from "./dto/add-domain.dto";
 import { SiteDomainQueryDto } from "./dto/domain-query.dto";
+import { PreferredHostVariantDto } from "./dto/preferred-host-variant.dto";
 
 @Controller("domains")
 @UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
@@ -42,6 +43,21 @@ export class DomainsController {
         headers: Record<string, string | string[] | undefined>;
       },
     );
+  }
+
+  @Get("runtime-profile")
+  @MembershipRoles(
+    TenantMembershipRole.OWNER,
+    TenantMembershipRole.ADMIN,
+    TenantMembershipRole.EDITOR,
+    TenantMembershipRole.BILLING,
+  )
+  async runtimeProfile(
+    @Query() _query: SiteDomainQueryDto,
+    @Req() req: Request,
+  ) {
+    const siteId = await this.ensureAuthenticatedSiteAccess(req);
+    return this.domainsService.getRuntimeProfile(siteId);
   }
 
   @Get()
@@ -116,5 +132,59 @@ export class DomainsController {
   ) {
     const siteId = await this.ensureAuthenticatedSiteAccess(req);
     await this.domainsService.remove(siteId, id);
+  }
+
+  @Patch("preferred-host-variant")
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
+  async setPreferredHostVariant(
+    @Query() _query: SiteDomainQueryDto,
+    @Body() dto: PreferredHostVariantDto,
+    @Req() req: Request,
+  ) {
+    const siteId = await this.ensureAuthenticatedSiteAccess(req);
+    const profile = await this.domainsService.setPreferredHostVariant(
+      siteId,
+      dto.variant,
+    );
+    const user = req.user as AuthenticatedRequestUser | undefined;
+
+    await this.adminService.createAuditLogForSite({
+      siteId,
+      actorUserId: user?.sub ?? null,
+      action: "domain.canonical_preference_updated",
+      targetType: "site",
+      targetId: siteId,
+      metadata: { variant: dto.variant },
+    });
+
+    return profile;
+  }
+
+  @Post(":id/companion")
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  async addCompanion(
+    @Param("id") id: string,
+    @Query() _query: SiteDomainQueryDto,
+    @Req() req: Request,
+  ) {
+    const siteId = await this.ensureAuthenticatedSiteAccess(req);
+    const created = await this.domainsService.addCompanionForDomain(siteId, id);
+    const user = req.user as AuthenticatedRequestUser | undefined;
+
+    await this.adminService.createAuditLogForSite({
+      siteId,
+      actorUserId: user?.sub ?? null,
+      action: "domain.companion_added",
+      targetType: "domain",
+      targetId: created.id,
+      metadata: {
+        hostname: created.hostname,
+        kind: created.kind,
+        apexHost: created.apexHost,
+      },
+    });
+
+    return created;
   }
 }

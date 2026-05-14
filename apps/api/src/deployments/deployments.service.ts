@@ -9,9 +9,15 @@ import {
   Deployment,
   DeploymentStatus,
   DomainStatus,
+  HostVariant,
   Prisma,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  normalizeHostname,
+  stripWww,
+} from "../public-runtime/public-runtime.util";
+import { SitePublishedRevisionsService } from "../site-published-revisions/site-published-revisions.service";
 import {
   DEPLOYMENT_PROVIDER,
   DeploymentLogEntry,
@@ -61,6 +67,16 @@ type ProvisioningSeed = {
   previousDeploymentId?: string | null;
 };
 
+type SharedRuntimeSiteRecord = {
+  id: string;
+  publicSubdomain: string | null;
+  preferredHostVariant: HostVariant;
+  domains: Array<{
+    host: string;
+    isPrimary: boolean;
+  }>;
+};
+
 export type CustomerSiteDeployment = {
   id: string;
   siteId: string;
@@ -73,6 +89,9 @@ export type CustomerSiteDeployment = {
   recentLogs: DeploymentLogEntry[];
   createdAt: Date;
   updatedAt: Date;
+  sharedRuntime: boolean;
+  publishedRevision: number | null;
+  publishedAt: string | null;
 };
 
 @Injectable()
@@ -83,9 +102,14 @@ export class DeploymentsService {
     private readonly deploymentEnvironmentService: DeploymentEnvironmentService,
     @Inject(DEPLOYMENT_PROVIDER)
     private readonly deploymentProvider: DeploymentProvider,
+    private readonly sitePublishedRevisionsService: SitePublishedRevisionsService,
   ) {}
 
   async provisionSite(siteId: string): Promise<Deployment> {
+    if (this.isSharedRuntimeModeEnabled()) {
+      return this.runSharedRuntimePublish(siteId);
+    }
+
     const activeDeployment = await this.prisma.deployment.findFirst({
       where: {
         siteId,
@@ -131,6 +155,24 @@ export class DeploymentsService {
       });
     }
 
+    const currentActive = await this.prisma.deployment.findFirst({
+      where: {
+        siteId,
+        status: { in: ACTIVE_PROVISIONING_STATUSES },
+      },
+    });
+
+    if (currentActive) {
+      throw new ConflictException({
+        code: "DEPLOYMENT_IN_PROGRESS",
+        message: "A deployment is already in progress for this site",
+      });
+    }
+
+    if (this.isSharedRuntimeDeployment(target)) {
+      return this.runSharedRuntimeRollback(siteId, target);
+    }
+
     if (target.status !== DeploymentStatus.LIVE) {
       throw new ConflictException({
         code: "DEPLOYMENT_NOT_ROLLBACK_TARGET",
@@ -152,20 +194,6 @@ export class DeploymentsService {
         code: "DEPLOYMENT_NO_PROVIDER_PROJECT",
         message:
           "Target deployment has no provider project reference for rollback",
-      });
-    }
-
-    const currentActive = await this.prisma.deployment.findFirst({
-      where: {
-        siteId,
-        status: { in: ACTIVE_PROVISIONING_STATUSES },
-      },
-    });
-
-    if (currentActive) {
-      throw new ConflictException({
-        code: "DEPLOYMENT_IN_PROGRESS",
-        message: "A deployment is already in progress for this site",
       });
     }
 
@@ -229,6 +257,13 @@ export class DeploymentsService {
       throw new ConflictException({
         code: "DEPLOYMENT_NOT_RETRYABLE",
         message: "Only failed deployments can be retried",
+      });
+    }
+
+    if (this.isSharedRuntimeDeployment(failedDeployment)) {
+      return this.runSharedRuntimePublish(failedDeployment.siteId, {
+        initialStatus: DeploymentStatus.RETRYING,
+        retryOfDeploymentId: failedDeployment.id,
       });
     }
 
@@ -525,6 +560,238 @@ export class DeploymentsService {
     }
   }
 
+  private async runSharedRuntimePublish(
+    siteId: string,
+    input: {
+      initialStatus?: DeploymentStatus;
+      retryOfDeploymentId?: string;
+    } = {},
+  ): Promise<Deployment> {
+    const activeDeployment = await this.prisma.deployment.findFirst({
+      where: {
+        siteId,
+        status: { in: ACTIVE_PROVISIONING_STATUSES },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (activeDeployment) {
+      return activeDeployment;
+    }
+
+    const site = await this.getSharedRuntimeSiteRecord(siteId);
+    const providerProjectId = this.getSharedRuntimeProjectId();
+    const providerUrl = this.getSharedRuntimeProviderUrl();
+    const revalidationUrl = this.getSharedRuntimeRevalidationUrl();
+    const runtimeSecret = this.getSharedRuntimeSecret();
+
+    const deployment = await this.prisma.deployment.create({
+      data: {
+        siteId,
+        status: input.initialStatus ?? DeploymentStatus.PENDING,
+        provider: this.deploymentProvider.name,
+        providerProjectId,
+        metadata: this.mergeMetadata(null, {
+          sharedRuntime: true,
+          providerUrl,
+          retryOfDeploymentId: input.retryOfDeploymentId ?? null,
+        }),
+      },
+    });
+
+    try {
+      const hosts = this.listSharedRuntimeHosts(site);
+
+      if (hosts.length === 0) {
+        throw new ConflictException({
+          code: "RUNTIME_HOST_UNAVAILABLE",
+          message:
+            "No shared-runtime host is available for this site yet. Assign a public subdomain or verify a custom domain first.",
+        });
+      }
+
+      if (!revalidationUrl || !runtimeSecret) {
+        throw new ConflictException({
+          code: "RUNTIME_REVALIDATION_NOT_CONFIGURED",
+          message:
+            "Shared website runtime revalidation is not configured. Set WEBSITE_APP_ORIGIN or REVALIDATION_URL and WEBSITE_RUNTIME_SECRET.",
+        });
+      }
+
+      const response = await fetch(revalidationUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-website-runtime-secret": runtimeSecret,
+        },
+        body: JSON.stringify({
+          siteId,
+          hosts,
+          paths: [],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Shared runtime publish failed: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const snapshot = await this.sitePublishedRevisionsService.captureSnapshot(
+        siteId,
+        { deploymentId: deployment.id },
+      );
+
+      const publishedAt = snapshot.createdAt.toISOString();
+
+      return this.updateDeployment(deployment.id, {
+        status: DeploymentStatus.LIVE,
+        providerProjectId,
+        url: `https://${hosts[0]}`,
+        errorMessage: null,
+        metadata: this.mergeMetadata(deployment.metadata, {
+          sharedRuntime: true,
+          providerUrl,
+          sharedRuntimeHosts: hosts,
+          publishedAt,
+          publishedRevision: snapshot.revision,
+          publishedRevisionId: snapshot.id,
+        }),
+      });
+    } catch (error) {
+      return this.failDeployment(deployment.id, deployment.metadata, error);
+    }
+  }
+
+  private async runSharedRuntimeRollback(
+    siteId: string,
+    target: Deployment,
+  ): Promise<Deployment> {
+    const targetMetadata = asDeploymentMetadata(target.metadata);
+    const targetRevision =
+      typeof targetMetadata.publishedRevision === "number"
+        ? targetMetadata.publishedRevision
+        : null;
+
+    if (targetRevision === null) {
+      // Backfill: a snapshot may exist linked by deployment id even if the
+      // metadata predates the publishedRevision field.
+      const linked =
+        await this.sitePublishedRevisionsService.getSnapshotByDeploymentId(
+          siteId,
+          target.id,
+        );
+      if (!linked) {
+        throw new ConflictException({
+          code: "ROLLBACK_TARGET_HAS_NO_SNAPSHOT",
+          message:
+            "This publish event predates content snapshots and cannot be used as a rollback target. Republish to create a new restore point.",
+        });
+      }
+      return this.executeSharedRuntimeRollback(siteId, target, linked.revision);
+    }
+
+    return this.executeSharedRuntimeRollback(siteId, target, targetRevision);
+  }
+
+  private async executeSharedRuntimeRollback(
+    siteId: string,
+    target: Deployment,
+    targetRevision: number,
+  ): Promise<Deployment> {
+    const site = await this.getSharedRuntimeSiteRecord(siteId);
+    const providerProjectId = this.getSharedRuntimeProjectId();
+    const providerUrl = this.getSharedRuntimeProviderUrl();
+    const revalidationUrl = this.getSharedRuntimeRevalidationUrl();
+    const runtimeSecret = this.getSharedRuntimeSecret();
+
+    const deployment = await this.prisma.deployment.create({
+      data: {
+        siteId,
+        status: DeploymentStatus.DEPLOYING,
+        provider: this.deploymentProvider.name,
+        providerProjectId,
+        metadata: this.mergeMetadata(null, {
+          sharedRuntime: true,
+          providerUrl,
+          rollbackOfDeploymentId: target.id,
+          rollbackOfRevision: targetRevision,
+          rollbackRequestedAt: new Date().toISOString(),
+        }),
+      },
+    });
+
+    try {
+      const hosts = this.listSharedRuntimeHosts(site);
+
+      if (hosts.length === 0) {
+        throw new ConflictException({
+          code: "RUNTIME_HOST_UNAVAILABLE",
+          message:
+            "No shared-runtime host is available for this site. Assign a public subdomain or verify a custom domain before rolling back.",
+        });
+      }
+
+      if (!revalidationUrl || !runtimeSecret) {
+        throw new ConflictException({
+          code: "RUNTIME_REVALIDATION_NOT_CONFIGURED",
+          message:
+            "Shared website runtime revalidation is not configured. Set WEBSITE_APP_ORIGIN or REVALIDATION_URL and WEBSITE_RUNTIME_SECRET.",
+        });
+      }
+
+      // Restore content first so the cache invalidation that follows serves
+      // the restored revision rather than the prior live state.
+      const snapshot =
+        await this.sitePublishedRevisionsService.restoreToRevision(
+          siteId,
+          targetRevision,
+          { deploymentId: deployment.id },
+        );
+
+      const response = await fetch(revalidationUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-website-runtime-secret": runtimeSecret,
+        },
+        body: JSON.stringify({
+          siteId,
+          hosts,
+          paths: [],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Shared runtime rollback revalidation failed: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const publishedAt = snapshot.createdAt.toISOString();
+
+      return this.updateDeployment(deployment.id, {
+        status: DeploymentStatus.LIVE,
+        providerProjectId,
+        url: `https://${hosts[0]}`,
+        errorMessage: null,
+        metadata: this.mergeMetadata(deployment.metadata, {
+          sharedRuntime: true,
+          providerUrl,
+          sharedRuntimeHosts: hosts,
+          publishedAt,
+          publishedRevision: snapshot.revision,
+          publishedRevisionId: snapshot.id,
+          rollbackOfDeploymentId: target.id,
+          rollbackOfRevision: targetRevision,
+          rollbackCompletedAt: publishedAt,
+        }),
+      });
+    } catch (error) {
+      return this.failDeployment(deployment.id, deployment.metadata, error);
+    }
+  }
+
   private async syncDeploymentIfTrackable(
     deployment: Deployment,
   ): Promise<Deployment> {
@@ -711,6 +978,37 @@ export class DeploymentsService {
     return primaryDomain?.host ?? null;
   }
 
+  private async getSharedRuntimeSiteRecord(
+    siteId: string,
+  ): Promise<SharedRuntimeSiteRecord> {
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId },
+      select: {
+        id: true,
+        publicSubdomain: true,
+        preferredHostVariant: true,
+        domains: {
+          where: {
+            status: DomainStatus.ACTIVE,
+          },
+          select: {
+            host: true,
+            isPrimary: true,
+          },
+        },
+      },
+    });
+
+    if (!site) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Site not found",
+      });
+    }
+
+    return site;
+  }
+
   private buildCustomerSiteDeployment(
     deployment: Deployment,
     primaryDomain: string | null,
@@ -731,6 +1029,14 @@ export class DeploymentsService {
         ? `https://${primaryDomain}`
         : deploymentUrl;
 
+    const sharedRuntime = metadata.sharedRuntime === true;
+    const publishedRevision =
+      typeof metadata.publishedRevision === "number"
+        ? metadata.publishedRevision
+        : null;
+    const publishedAt =
+      typeof metadata.publishedAt === "string" ? metadata.publishedAt : null;
+
     return {
       id: deployment.id,
       siteId: deployment.siteId,
@@ -746,7 +1052,47 @@ export class DeploymentsService {
       recentLogs,
       createdAt: deployment.createdAt,
       updatedAt: deployment.updatedAt,
+      sharedRuntime,
+      publishedRevision,
+      publishedAt,
     };
+  }
+
+  private listSharedRuntimeHosts(site: SharedRuntimeSiteRecord): string[] {
+    const hosts = new Set<string>();
+    const primaryDomain =
+      site.domains.find((domain) => domain.isPrimary) ?? site.domains[0];
+
+    if (primaryDomain) {
+      const baseDomain = stripWww(primaryDomain.host);
+      const apexDomain = site.domains.find(
+        (domain) =>
+          stripWww(domain.host) === baseDomain &&
+          !domain.host.startsWith("www."),
+      );
+      const wwwDomain = site.domains.find(
+        (domain) =>
+          stripWww(domain.host) === baseDomain &&
+          domain.host.startsWith("www."),
+      );
+      const canonicalDomain =
+        site.preferredHostVariant === HostVariant.WWW
+          ? (wwwDomain?.host ?? primaryDomain.host)
+          : (apexDomain?.host ?? primaryDomain.host);
+
+      hosts.add(canonicalDomain);
+      site.domains.forEach((domain) => hosts.add(domain.host));
+    }
+
+    const platformRootDomain = normalizeHostname(
+      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    );
+
+    if (site.publicSubdomain && platformRootDomain) {
+      hosts.add(`${site.publicSubdomain}.${platformRootDomain}`);
+    }
+
+    return Array.from(hosts);
   }
 
   private buildCustomerDeploymentTimeline(
@@ -954,6 +1300,57 @@ export class DeploymentsService {
     return trimmedValue.length > 0 ? trimmedValue : undefined;
   }
 
+  private isSharedRuntimeModeEnabled(): boolean {
+    return Boolean(
+      this.getSharedRuntimeProjectId() || this.getSharedRuntimeProviderUrl(),
+    );
+  }
+
+  private getSharedRuntimeProjectId(): string | null {
+    return this.getOptionalConfig("WEBSITE_VERCEL_PROJECT_ID") ?? null;
+  }
+
+  private getSharedRuntimeProviderUrl(): string | null {
+    const configuredProjectName =
+      this.getOptionalConfig("WEBSITE_VERCEL_PROJECT_NAME") ?? null;
+
+    if (!configuredProjectName) {
+      return null;
+    }
+
+    if (configuredProjectName.includes(".")) {
+      return this.normalizeUrl(
+        configuredProjectName.startsWith("http")
+          ? configuredProjectName
+          : `https://${configuredProjectName}`,
+      );
+    }
+
+    return this.normalizeUrl(`https://${configuredProjectName}.vercel.app`);
+  }
+
+  private getSharedRuntimeRevalidationUrl(): string | null {
+    const websiteOrigin = this.getOptionalConfig("WEBSITE_APP_ORIGIN");
+
+    if (websiteOrigin) {
+      try {
+        return new URL("/api/revalidate", websiteOrigin).toString();
+      } catch {
+        return null;
+      }
+    }
+
+    return this.getOptionalConfig("REVALIDATION_URL") ?? null;
+  }
+
+  private getSharedRuntimeSecret(): string | null {
+    return (
+      this.getOptionalConfig("WEBSITE_RUNTIME_SECRET") ??
+      this.getOptionalConfig("REVALIDATE_SECRET") ??
+      null
+    );
+  }
+
   private normalizeBuildCommand(
     buildCommand: string,
     defaultBuildCommand: string,
@@ -1104,6 +1501,11 @@ export class DeploymentsService {
     }
 
     return nextMetadata as Prisma.InputJsonObject;
+  }
+
+  private isSharedRuntimeDeployment(deployment: Deployment): boolean {
+    const metadata = asDeploymentMetadata(deployment.metadata);
+    return metadata.sharedRuntime === true;
   }
 
   private getRequiredRuntimeConfig(key: string): string {

@@ -16,6 +16,7 @@ export interface WorkspaceSiteRecord {
   tenantId: string;
   name: string;
   slug: string;
+  publicSubdomain: string | null;
   status: WorkspaceSiteStatus;
   primaryLocale: string;
   enabledLocales: string[];
@@ -47,6 +48,7 @@ export interface WorkspaceInvitationRecord {
 export interface CreateWorkspaceSitePayload {
   name: string;
   slug?: string;
+  publicSubdomain?: string;
   templateKey?: string;
   primaryLocale?: string;
   enabledLocales?: string[];

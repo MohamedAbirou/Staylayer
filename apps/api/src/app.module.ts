@@ -18,6 +18,7 @@ import { TenantWorkspaceModule } from "./tenant-workspace/tenant-workspace.modul
 import { OnboardingModule } from "./onboarding/onboarding.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PublicModule } from "./public/public.module";
+import { PublicRuntimeModule } from "./public-runtime/public-runtime.module";
 import { TranslationModule } from "./translation/translation.module";
 import { SeoModule } from "./seo/seo.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
@@ -63,6 +64,7 @@ import { MailModule } from "./mail/mail.module";
     OnboardingModule,
     NotificationsModule,
     PublicModule,
+    PublicRuntimeModule,
     TranslationModule,
     SeoModule,
   ],

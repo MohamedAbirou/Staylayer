@@ -7,7 +7,6 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
-  DeploymentStatus,
   DomainStatus,
   OperationalAlertSeverity,
   OperationalAlertStatus,
@@ -36,12 +35,6 @@ type VerifiableDomain = {
   createdAt: Date;
   verificationRequestedAt: Date | null;
   verifiedAt: Date | null;
-  site: {
-    deployments: Array<{
-      providerProjectId: string | null;
-      url: string | null;
-    }>;
-  };
 };
 
 interface DomainVerificationDetails {
@@ -133,20 +126,14 @@ export class DomainVerificationService
   ): Promise<void> {
     const domain = await this.prisma.domain.findUnique({
       where: { id: domainId },
-      include: {
-        site: {
-          select: {
-            deployments: {
-              where: {
-                status: DeploymentStatus.LIVE,
-                url: { not: null },
-              },
-              orderBy: { updatedAt: "desc" },
-              take: 1,
-              select: { providerProjectId: true, url: true },
-            },
-          },
-        },
+      select: {
+        id: true,
+        siteId: true,
+        host: true,
+        status: true,
+        createdAt: true,
+        verificationRequestedAt: true,
+        verifiedAt: true,
       },
     });
 
@@ -155,9 +142,8 @@ export class DomainVerificationService
     }
 
     const now = new Date();
-    const latestDeployment = domain.site.deployments[0] ?? null;
-    const providerProjectId = latestDeployment?.providerProjectId ?? null;
-    const expectedTarget = this.extractHostname(latestDeployment?.url ?? null);
+    const providerProjectId = this.getWebsiteProjectId();
+    const expectedTarget = this.getWebsiteExpectedTarget();
 
     const details: DomainVerificationDetails = {
       checkedAt: now.toISOString(),
@@ -187,8 +173,9 @@ export class DomainVerificationService
     let lastError: string | null = null;
     let verifiedAt = domain.verifiedAt;
 
-    if (!expectedTarget || !providerProjectId) {
-      lastError = "No live deployment project is available for this site";
+    if (!providerProjectId) {
+      lastError =
+        "WEBSITE_VERCEL_PROJECT_ID is not configured for public runtime domains";
     } else {
       const providerDomain =
         await this.deploymentProvider.ensureDomainAttachment({
@@ -232,9 +219,11 @@ export class DomainVerificationService
           ? details.recommendedRecords.every(
               (record) => record.isMatch === true,
             )
-          : dnsState.cname
+          : expectedTarget && dnsState.cname
             ? this.normalizeHost(dnsState.cname) === expectedTarget
-            : null;
+            : expectedTarget
+              ? false
+              : null;
 
       if (providerDomain.isAssigned && providerDomain.isVerified) {
         const sslState = await this.probeHttps(domain.host);
@@ -278,6 +267,7 @@ export class DomainVerificationService
           `DNS records do not match the provider recommendation for ${domain.host}`;
       } else if (
         dnsState.cname &&
+        expectedTarget &&
         this.normalizeHost(dnsState.cname) !== expectedTarget
       ) {
         nextStatus = DomainStatus.DNS_REQUIRED;
@@ -567,6 +557,14 @@ export class DomainVerificationService
     });
   }
 
+  getConfiguredWebsiteProjectId(): string | null {
+    return this.getWebsiteProjectId();
+  }
+
+  getConfiguredWebsiteExpectedTarget(): string | null {
+    return this.getWebsiteExpectedTarget();
+  }
+
   private isWithinGraceWindow(domain: VerifiableDomain, now: Date): boolean {
     const reference = domain.verificationRequestedAt ?? domain.createdAt;
     return now.getTime() - reference.getTime() <= this.getSslGraceMs();
@@ -582,6 +580,33 @@ export class DomainVerificationService
     } catch {
       return this.normalizeHost(url);
     }
+  }
+
+  private getWebsiteProjectId(): string | null {
+    return this.normalizeConfiguredString(
+      this.configService.get<string>("WEBSITE_VERCEL_PROJECT_ID"),
+    );
+  }
+
+  private getWebsiteExpectedTarget(): string | null {
+    const configuredProjectName = this.normalizeConfiguredString(
+      this.configService.get<string>("WEBSITE_VERCEL_PROJECT_NAME"),
+    );
+
+    if (!configuredProjectName) {
+      return null;
+    }
+
+    if (configuredProjectName.includes(".")) {
+      return this.extractHostname(configuredProjectName);
+    }
+
+    return this.extractHostname(`https://${configuredProjectName}.vercel.app`);
+  }
+
+  private normalizeConfiguredString(value: string | undefined): string | null {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
   }
 
   private normalizeHost(value: string): string {

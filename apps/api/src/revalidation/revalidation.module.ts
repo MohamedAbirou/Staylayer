@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { DeploymentsModule } from "../deployments/deployments.module";
+import { PublicRuntimeModule } from "../public-runtime/public-runtime.module";
 import { RevalidationService } from "./revalidation.service";
 
 @Module({
-  imports: [ConfigModule, DeploymentsModule],
+  imports: [ConfigModule, PublicRuntimeModule],
   providers: [RevalidationService],
   exports: [RevalidationService],
 })

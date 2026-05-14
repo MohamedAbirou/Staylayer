@@ -12,6 +12,9 @@ import { DomainVerificationService } from "./domain-verification.service";
 
 describe("DomainVerificationService", () => {
   let service: DomainVerificationService;
+  let configService: {
+    get: jest.Mock;
+  };
   let prisma: {
     domain: {
       findUnique: jest.Mock;
@@ -26,6 +29,19 @@ describe("DomainVerificationService", () => {
   let deploymentProvider: jest.Mocked<DeploymentProvider>;
 
   beforeEach(() => {
+    configService = {
+      get: jest.fn((key: string) => {
+        switch (key) {
+          case "WEBSITE_VERCEL_PROJECT_ID":
+            return "website-project-id";
+          case "WEBSITE_VERCEL_PROJECT_NAME":
+            return "staylayer-website";
+          default:
+            return undefined;
+        }
+      }),
+    };
+
     prisma = {
       domain: {
         findUnique: jest.fn(),
@@ -44,6 +60,7 @@ describe("DomainVerificationService", () => {
       syncEnvironmentVariables: jest.fn(),
       triggerDeployment: jest.fn(),
       getDeploymentStatus: jest.fn(),
+      rollbackDeployment: jest.fn(),
       ensureDomainAttachment: jest.fn(),
       getDomainAttachmentStatus: jest.fn(),
     };
@@ -63,9 +80,7 @@ describe("DomainVerificationService", () => {
 
     service = new DomainVerificationService(
       prisma as unknown as PrismaService,
-      {
-        get: jest.fn(),
-      } as unknown as ConfigService,
+      configService as unknown as ConfigService,
       deploymentProvider,
     );
   });
@@ -79,14 +94,6 @@ describe("DomainVerificationService", () => {
       createdAt: new Date("2026-05-05T10:00:00.000Z"),
       verificationRequestedAt: new Date("2026-05-05T10:00:00.000Z"),
       verifiedAt: null,
-      site: {
-        deployments: [
-          {
-            providerProjectId: "prj-1",
-            url: "https://stay-demo.vercel.app",
-          },
-        ],
-      },
     });
     jest
       .spyOn(service as never, "resolveDnsState")
@@ -112,6 +119,10 @@ describe("DomainVerificationService", () => {
         }),
       }),
     );
+    expect(deploymentProvider.ensureDomainAttachment).toHaveBeenCalledWith({
+      projectId: "website-project-id",
+      domain: "stay.example.com",
+    });
   });
 
   it("marks the domain active when DNS resolves and HTTPS is reachable", async () => {
@@ -123,17 +134,9 @@ describe("DomainVerificationService", () => {
       createdAt: new Date("2026-05-05T10:00:00.000Z"),
       verificationRequestedAt: new Date("2026-05-05T10:00:00.000Z"),
       verifiedAt: null,
-      site: {
-        deployments: [
-          {
-            providerProjectId: "prj-1",
-            url: "https://stay-demo.vercel.app",
-          },
-        ],
-      },
     });
     jest.spyOn(service as never, "resolveDnsState").mockResolvedValue({
-      cname: "stay-demo.vercel.app",
+      cname: "staylayer-website.vercel.app",
       addresses: [],
     } as never);
     jest.spyOn(service as never, "probeHttps").mockResolvedValue({
@@ -175,17 +178,9 @@ describe("DomainVerificationService", () => {
       createdAt: new Date("2026-05-05T10:00:00.000Z"),
       verificationRequestedAt: new Date("2026-05-05T10:00:00.000Z"),
       verifiedAt: null,
-      site: {
-        deployments: [
-          {
-            providerProjectId: "prj-1",
-            url: "https://stay-demo.vercel.app",
-          },
-        ],
-      },
     });
     jest.spyOn(service as never, "resolveDnsState").mockResolvedValue({
-      cname: "stay-demo.vercel.app",
+      cname: "staylayer-website.vercel.app",
       addresses: [],
     } as never);
 
@@ -237,14 +232,6 @@ describe("DomainVerificationService", () => {
       createdAt: new Date("2026-05-05T10:00:00.000Z"),
       verificationRequestedAt: new Date("2026-05-05T10:00:00.000Z"),
       verifiedAt: null,
-      site: {
-        deployments: [
-          {
-            providerProjectId: "prj-1",
-            url: "https://stay-demo.vercel.app",
-          },
-        ],
-      },
     });
     jest.spyOn(service as never, "resolveDnsState").mockResolvedValue({
       cname: null,

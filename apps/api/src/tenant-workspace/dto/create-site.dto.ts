@@ -19,6 +19,11 @@ export class CreateSiteDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(1)
+  publicSubdomain?: string;
+
+  @IsOptional()
+  @IsString()
   templateKey?: string;
 
   @IsOptional()

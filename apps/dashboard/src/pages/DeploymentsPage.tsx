@@ -21,7 +21,7 @@ import {
 } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
 import { getBillingPlan } from "../api/billing";
-import { getDomains } from "../api/domains";
+import { getDomains, getSiteRuntimeProfile } from "../api/domains";
 import {
   deleteDeploymentEnvironmentVariable,
   getDeployments,
@@ -100,6 +100,13 @@ export default function DeploymentsPage() {
   const { data: domains = [] } = useQuery({
     queryKey: ["deployments-page", "domains", siteId],
     queryFn: () => getDomains(siteId!),
+    enabled: !!siteId,
+    retry: false,
+  });
+
+  const { data: runtimeProfile } = useQuery({
+    queryKey: ["deployments-page", "runtime-profile", siteId],
+    queryFn: () => getSiteRuntimeProfile(siteId!),
     enabled: !!siteId,
     retry: false,
   });
@@ -296,6 +303,7 @@ export default function DeploymentsPage() {
   const providerTarget = latest?.providerUrl ?? latest?.url ?? null;
   const billingBlocked = billingPlan?.actions.publishingBlocked ?? false;
   const deploymentBusy = Boolean(latest && isDeploymentInFlight(latest.status));
+  const sharedRuntimeActive = runtimeProfile?.sharedRuntimeReady === true;
   const readinessTone =
     latest?.status === "FAILED"
       ? "danger"
@@ -334,7 +342,7 @@ export default function DeploymentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Deployments</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Provision, retry, and inspect dedicated site deployments without
+            Publish, retry, and inspect shared website runtime updates without
             leaving the customer workspace.
           </p>
         </div>
@@ -349,7 +357,7 @@ export default function DeploymentsPage() {
             ) : (
               <Rocket className="h-4 w-4" />
             )}
-            Provision production deployment
+            Publish live changes
           </button>
         ) : null}
       </div>
@@ -532,6 +540,19 @@ export default function DeploymentsPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
                           <DeploymentStatusBadge status={deployment.status} />
+                          {deployment.sharedRuntime &&
+                          deployment.publishedRevision !== null ? (
+                            <span
+                              className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-700"
+                              title={
+                                deployment.publishedAt
+                                  ? `Published ${formatDate(deployment.publishedAt)}`
+                                  : "Shared runtime publish event"
+                              }
+                            >
+                              Rev {deployment.publishedRevision}
+                            </span>
+                          ) : null}
                           <span
                             className="text-xs text-gray-400"
                             title={formatDate(deployment.createdAt)}
@@ -601,20 +622,29 @@ export default function DeploymentsPage() {
                         ) : null}
                         {canManageDeployments &&
                         deployment.status === "LIVE" &&
-                        deployment.id !== deployments[0]?.id ? (
+                        deployment.id !== deployments[0]?.id &&
+                        (!deployment.sharedRuntime ||
+                          deployment.publishedRevision !== null) ? (
                           <button
                             onClick={() => setRollbackTarget(deployment.id)}
                             disabled={
                               rollbackMutation.isPending || deploymentBusy
                             }
                             className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                            title={
+                              deployment.sharedRuntime
+                                ? "Restore the published content to the snapshot captured by this publish event."
+                                : "Re-activate this previous provider deployment as the live target."
+                            }
                           >
                             {rollbackMutation.isPending ? (
                               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Clock4 className="h-3.5 w-3.5" />
                             )}
-                            Rollback to this
+                            {deployment.sharedRuntime
+                              ? `Restore rev ${deployment.publishedRevision}`
+                              : "Rollback to this"}
                           </button>
                         ) : null}
                       </div>
@@ -648,221 +678,257 @@ export default function DeploymentsPage() {
         )}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
+      {sharedRuntimeActive ? (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-blue-900 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700/80">
+            Shared Runtime Environment
+          </p>
+          <h2 className="mt-2 text-lg font-semibold text-blue-950">
+            Public publishing no longer uses per-site deployment variables
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-blue-900/80">
+            This site now publishes through the shared Website runtime. Live
+            changes come from content, settings, forms, SEO, domains, and
+            targeted cache invalidation rather than syncing a dedicated
+            deployment environment for each site.
+          </p>
+          <p className="mt-3 text-xs text-blue-800/80">
+            Operator-managed shared-runtime keys stay on the Website project and
+            are not edited from this customer workspace.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                  Customer Environment
+                </p>
+                <h2 className="mt-2 text-lg font-semibold text-gray-900">
+                  Customer-editable variables
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Store site-specific runtime variables here. These values are
+                  encrypted at rest and synced during deployment, so customers
+                  do not need direct provider access.
+                </p>
+              </div>
+              {canManageDeployments ? (
+                <button
+                  onClick={startEnvironmentCreate}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add variable
+                </button>
+              ) : null}
+            </div>
+
+            {!canManageDeployments ? (
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+                Only site admins can add, replace, or remove customer-managed
+                deployment variables.
+              </div>
+            ) : null}
+
+            {environmentFormOpen ? (
+              <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                      Key
+                    </span>
+                    <input
+                      type="text"
+                      value={environmentDraft.key}
+                      onChange={(event) =>
+                        setEnvironmentDraft((current) => ({
+                          ...current,
+                          key: event.target.value.toUpperCase(),
+                        }))
+                      }
+                      placeholder="NEXT_PUBLIC_BOOKING_WIDGET_ID"
+                      className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                      Type
+                    </span>
+                    <select
+                      value={environmentDraft.type}
+                      onChange={(event) =>
+                        setEnvironmentDraft((current) => ({
+                          ...current,
+                          type: event.target.value as "plain" | "encrypted",
+                        }))
+                      }
+                      className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="encrypted">Secret</option>
+                      <option value="plain">Plain text</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1 md:col-span-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                      Value
+                    </span>
+                    <textarea
+                      value={environmentDraft.value}
+                      onChange={(event) =>
+                        setEnvironmentDraft((current) => ({
+                          ...current,
+                          value: event.target.value,
+                        }))
+                      }
+                      rows={
+                        editingEnvironmentVariable?.type === "encrypted" ? 4 : 3
+                      }
+                      placeholder={
+                        editingEnvironmentVariable?.type === "encrypted"
+                          ? "Enter a new value to replace the current secret"
+                          : "Enter the value to sync during deployment"
+                      }
+                      className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-1 md:col-span-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                      Description
+                    </span>
+                    <input
+                      type="text"
+                      value={environmentDraft.description}
+                      onChange={(event) =>
+                        setEnvironmentDraft((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                      placeholder="What this variable is used for"
+                      className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                    />
+                  </label>
+                </div>
+                {environmentError ? (
+                  <p className="mt-3 text-xs text-red-600">
+                    {environmentError}
+                  </p>
+                ) : null}
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={submitEnvironmentVariable}
+                    disabled={upsertEnvironmentMutation.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {upsertEnvironmentMutation.isPending ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : null}
+                    {editingEnvironmentVariable
+                      ? "Save changes"
+                      : "Save variable"}
+                  </button>
+                  <button
+                    onClick={resetEnvironmentForm}
+                    className="rounded-lg border border-blue-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <p className="text-xs text-gray-500">
+                    Shared-runtime keys such as WEBSITE_RUNTIME_SECRET,
+                    PLATFORM_ROOT_DOMAIN, and REVALIDATE_SECRET cannot be
+                    overridden here.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {isEnvironmentError ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                Could not load the deployment environment catalog.
+              </div>
+            ) : null}
+
+            <div className="mt-4 space-y-3">
+              {isEnvironmentLoading ? (
+                <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Loading customer-managed variables…
+                </div>
+              ) : customerEnvironment.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center">
+                  <KeyRound className="mx-auto h-5 w-5 text-gray-300" />
+                  <p className="mt-2 text-sm font-semibold text-gray-800">
+                    No customer-managed variables yet
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Add site-specific keys here instead of editing provider envs
+                    directly.
+                  </p>
+                </div>
+              ) : (
+                customerEnvironment.map((variable) => (
+                  <EnvironmentVariableRow
+                    key={variable.id}
+                    variable={variable}
+                    canManage={canManageDeployments}
+                    onEdit={() => startEnvironmentEdit(variable)}
+                    onDelete={() =>
+                      deleteEnvironmentMutation.mutate(variable.id)
+                    }
+                    isDeleting={deleteEnvironmentMutation.isPending}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Customer Environment
+                Operator Environment
               </p>
               <h2 className="mt-2 text-lg font-semibold text-gray-900">
-                Customer-editable variables
+                Platform-managed variables
               </h2>
               <p className="mt-1 text-sm text-gray-500">
-                Store site-specific runtime variables here. These values are
-                encrypted at rest and synced during deployment, so customers do
-                not need direct provider access.
+                These keys are generated and synced by the platform on every
+                deployment. Customers can inspect them here, but they should not
+                be changed at the provider.
               </p>
             </div>
-            {canManageDeployments ? (
-              <button
-                onClick={startEnvironmentCreate}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add variable
-              </button>
-            ) : null}
-          </div>
-
-          {!canManageDeployments ? (
-            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
-              Only site admins can add, replace, or remove customer-managed
-              deployment variables.
-            </div>
-          ) : null}
-
-          {environmentFormOpen ? (
-            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-                    Key
-                  </span>
-                  <input
-                    type="text"
-                    value={environmentDraft.key}
-                    onChange={(event) =>
-                      setEnvironmentDraft((current) => ({
-                        ...current,
-                        key: event.target.value.toUpperCase(),
-                      }))
-                    }
-                    placeholder="NEXT_PUBLIC_BOOKING_WIDGET_ID"
-                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-                    Type
-                  </span>
-                  <select
-                    value={environmentDraft.type}
-                    onChange={(event) =>
-                      setEnvironmentDraft((current) => ({
-                        ...current,
-                        type: event.target.value as "plain" | "encrypted",
-                      }))
-                    }
-                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="encrypted">Secret</option>
-                    <option value="plain">Plain text</option>
-                  </select>
-                </label>
-                <label className="space-y-1 md:col-span-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-                    Value
-                  </span>
-                  <textarea
-                    value={environmentDraft.value}
-                    onChange={(event) =>
-                      setEnvironmentDraft((current) => ({
-                        ...current,
-                        value: event.target.value,
-                      }))
-                    }
-                    rows={
-                      editingEnvironmentVariable?.type === "encrypted" ? 4 : 3
-                    }
-                    placeholder={
-                      editingEnvironmentVariable?.type === "encrypted"
-                        ? "Enter a new value to replace the current secret"
-                        : "Enter the value to sync during deployment"
-                    }
-                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                  />
-                </label>
-                <label className="space-y-1 md:col-span-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-                    Description
-                  </span>
-                  <input
-                    type="text"
-                    value={environmentDraft.description}
-                    onChange={(event) =>
-                      setEnvironmentDraft((current) => ({
-                        ...current,
-                        description: event.target.value,
-                      }))
-                    }
-                    placeholder="What this variable is used for"
-                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
-                  />
-                </label>
-              </div>
-              {environmentError ? (
-                <p className="mt-3 text-xs text-red-600">{environmentError}</p>
-              ) : null}
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={submitEnvironmentVariable}
-                  disabled={upsertEnvironmentMutation.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {upsertEnvironmentMutation.isPending ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : null}
-                  {editingEnvironmentVariable
-                    ? "Save changes"
-                    : "Save variable"}
-                </button>
-                <button
-                  onClick={resetEnvironmentForm}
-                  className="rounded-lg border border-blue-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-white"
-                >
-                  Cancel
-                </button>
-                <p className="text-xs text-gray-500">
-                  Reserved platform keys such as SITE_ID or REVALIDATE_SECRET
-                  cannot be overridden here.
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {isEnvironmentError ? (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
-              Could not load the deployment environment catalog.
-            </div>
-          ) : null}
-
-          <div className="mt-4 space-y-3">
-            {isEnvironmentLoading ? (
-              <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-4 py-4 text-sm text-gray-500">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Loading customer-managed variables…
-              </div>
-            ) : customerEnvironment.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center">
-                <KeyRound className="mx-auto h-5 w-5 text-gray-300" />
-                <p className="mt-2 text-sm font-semibold text-gray-800">
-                  No customer-managed variables yet
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Add site-specific keys here instead of editing provider envs
-                  directly.
-                </p>
-              </div>
-            ) : (
-              customerEnvironment.map((variable) => (
+            <div className="mt-4 space-y-3 overflow-auto max-h-100">
+              {operatorManagedEnvironment.map((variable) => (
                 <EnvironmentVariableRow
                   key={variable.id}
                   variable={variable}
-                  canManage={canManageDeployments}
-                  onEdit={() => startEnvironmentEdit(variable)}
-                  onDelete={() => deleteEnvironmentMutation.mutate(variable.id)}
-                  isDeleting={deleteEnvironmentMutation.isPending}
+                  canManage={false}
+                  onEdit={() => undefined}
+                  onDelete={() => undefined}
+                  isDeleting={false}
                 />
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-              Operator Environment
-            </p>
-            <h2 className="mt-2 text-lg font-semibold text-gray-900">
-              Platform-managed variables
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              These keys are generated and synced by the platform on every
-              deployment. Customers can inspect them here, but they should not
-              be changed at the provider.
-            </p>
-          </div>
-          <div className="mt-4 space-y-3 overflow-auto max-h-100">
-            {operatorManagedEnvironment.map((variable) => (
-              <EnvironmentVariableRow
-                key={variable.id}
-                variable={variable}
-                canManage={false}
-                onEdit={() => undefined}
-                onDelete={() => undefined}
-                isDeleting={false}
-              />
-            ))}
-          </div>
-        </section>
-      </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
 
       <ConfirmDialog
         open={provisionConfirmOpen}
-        title="Provision production deployment?"
-        message="This starts a live hosting build for the selected site, syncs deployment environment variables, and may update the public routing target used for launch."
-        confirmLabel="Start provisioning"
+        title={
+          sharedRuntimeActive
+            ? "Publish live changes?"
+            : "Provision production deployment?"
+        }
+        message={
+          sharedRuntimeActive
+            ? "This refreshes the shared Website runtime for the selected site and invalidates the live runtime caches for its active hosts."
+            : "This starts a live hosting build for the selected site, syncs deployment environment variables, and may update the public routing target used for launch."
+        }
+        confirmLabel={
+          sharedRuntimeActive ? "Publish now" : "Start provisioning"
+        }
         isPending={provisionMutation.isPending}
         onConfirm={() => provisionMutation.mutate()}
         onCancel={() => setProvisionConfirmOpen(false)}
@@ -870,9 +936,19 @@ export default function DeploymentsPage() {
 
       <ConfirmDialog
         open={retryTarget !== null}
-        title="Retry failed deployment?"
-        message="This queues another live deployment attempt for the site. Retry only after checking the current failure reason and domain or environment setup."
-        confirmLabel="Retry deployment"
+        title={
+          sharedRuntimeActive
+            ? "Retry failed publish?"
+            : "Retry failed deployment?"
+        }
+        message={
+          sharedRuntimeActive
+            ? "This retries the shared Website runtime publish for the site. Retry only after checking the current failure reason and host or runtime configuration."
+            : "This queues another live deployment attempt for the site. Retry only after checking the current failure reason and domain or environment setup."
+        }
+        confirmLabel={
+          sharedRuntimeActive ? "Retry publish" : "Retry deployment"
+        }
         isPending={retryMutation.isPending}
         onConfirm={() => retryTarget && retryMutation.mutate(retryTarget)}
         onCancel={() => setRetryTarget(null)}
@@ -880,9 +956,17 @@ export default function DeploymentsPage() {
 
       <ConfirmDialog
         open={rollbackTarget !== null}
-        title="Rollback to this deployment?"
-        message="This will revert the live site to the state of the selected previous deployment. The rollback verifies the target is still available at the provider before activating it."
-        confirmLabel="Confirm rollback"
+        title={
+          sharedRuntimeActive
+            ? "Restore content to this revision?"
+            : "Rollback to this deployment?"
+        }
+        message={
+          sharedRuntimeActive
+            ? "This restores all published pages and site settings to the snapshot captured by this publish event, then invalidates the shared runtime cache. A new publish revision is recorded so this rollback is itself reversible."
+            : "This will revert the live site to the state of the selected previous deployment. The rollback verifies the target is still available at the provider before activating it."
+        }
+        confirmLabel={sharedRuntimeActive ? "Restore now" : "Confirm rollback"}
         isPending={rollbackMutation.isPending}
         onConfirm={() =>
           rollbackTarget && rollbackMutation.mutate(rollbackTarget)

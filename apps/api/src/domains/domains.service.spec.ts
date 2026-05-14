@@ -1,9 +1,12 @@
 /// <reference types="jest" />
 
 import { ConflictException } from "@nestjs/common";
-import { DomainStatus } from "@prisma/client";
+import { ConfigService } from "@nestjs/config";
+import { DomainStatus, HostVariant } from "@prisma/client";
 import { BillingService } from "../billing/billing.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { PublicRuntimeCacheService } from "../public-runtime/public-runtime.cache.service";
+import { RevalidationService } from "../revalidation/revalidation.service";
 import { DomainVerificationService } from "./domain-verification.service";
 import { DomainsService } from "./domains.service";
 
@@ -12,6 +15,7 @@ describe("DomainsService", () => {
   let prisma: {
     domain: {
       findMany: jest.Mock;
+      findFirst: jest.Mock;
       findUnique: jest.Mock;
       count: jest.Mock;
       create: jest.Mock;
@@ -19,19 +23,34 @@ describe("DomainsService", () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
+    site: {
+      findUnique: jest.Mock;
+      update: jest.Mock;
+    };
+    deployment: {
+      findFirst: jest.Mock;
+    };
     $transaction: jest.Mock;
+  };
+  let configService: {
+    get: jest.Mock;
   };
   let billingService: {
     assertCanAddDomain: jest.Mock;
   };
   let domainVerificationService: {
     requestVerification: jest.Mock;
+    getConfiguredWebsiteProjectId: jest.Mock;
+    getConfiguredWebsiteExpectedTarget: jest.Mock;
   };
+  let cacheService: { deleteKeys: jest.Mock };
+  let revalidationService: { revalidateSite: jest.Mock };
 
   beforeEach(() => {
     prisma = {
       domain: {
         findMany: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
         findUnique: jest.fn(),
         count: jest.fn(),
         create: jest.fn(),
@@ -39,20 +58,74 @@ describe("DomainsService", () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      site: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      deployment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       $transaction: jest.fn(),
+    };
+    configService = {
+      get: jest.fn(),
     };
     billingService = {
       assertCanAddDomain: jest.fn().mockResolvedValue(undefined),
     };
     domainVerificationService = {
       requestVerification: jest.fn(),
+      getConfiguredWebsiteProjectId: jest.fn(),
+      getConfiguredWebsiteExpectedTarget: jest.fn(),
+    };
+    cacheService = { deleteKeys: jest.fn().mockResolvedValue(undefined) };
+    revalidationService = {
+      revalidateSite: jest.fn().mockResolvedValue(undefined),
     };
 
     service = new DomainsService(
       prisma as unknown as PrismaService,
+      configService as unknown as ConfigService,
       billingService as unknown as BillingService,
       domainVerificationService as unknown as DomainVerificationService,
+      cacheService as unknown as PublicRuntimeCacheService,
+      revalidationService as unknown as RevalidationService,
     );
+  });
+
+  it("returns the shared runtime profile for a site", async () => {
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      publicSubdomain: "sunset-villa",
+      preferredHostVariant: HostVariant.APEX,
+      publishedRevision: 4,
+    });
+    prisma.deployment.findFirst.mockResolvedValue({
+      id: "dep-9",
+      updatedAt: new Date("2026-05-13T20:00:01.000Z"),
+      metadata: { publishedAt: "2026-05-13T20:00:01.000Z" },
+    });
+    configService.get.mockReturnValue("staylayer.com");
+    domainVerificationService.getConfiguredWebsiteProjectId.mockReturnValue(
+      "website-project-id",
+    );
+    domainVerificationService.getConfiguredWebsiteExpectedTarget.mockReturnValue(
+      "staylayer-web.vercel.app",
+    );
+
+    await expect(service.getRuntimeProfile("site-1")).resolves.toEqual({
+      siteId: "site-1",
+      publicSubdomain: "sunset-villa",
+      preferredHostVariant: HostVariant.APEX,
+      platformRootDomain: "staylayer.com",
+      defaultHostname: "sunset-villa.staylayer.com",
+      websiteProjectId: "website-project-id",
+      websiteProjectTarget: "staylayer-web.vercel.app",
+      sharedRuntimeReady: true,
+      publishedRevision: 4,
+      lastPublishedAt: "2026-05-13T20:00:01.000Z",
+      lastPublishedDeploymentId: "dep-9",
+    });
   });
 
   it("checks plan domain capacity before creating a new custom domain", async () => {

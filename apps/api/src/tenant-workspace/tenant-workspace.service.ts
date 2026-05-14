@@ -12,6 +12,11 @@ import {
 } from "@prisma/client";
 import { CustomerAccessService } from "../auth/customer-access.service";
 import { BillingService } from "../billing/billing.service";
+import {
+  buildPublicSubdomainCandidate,
+  normalizePublicSubdomainLabel,
+  RESERVED_PUBLIC_SUBDOMAINS,
+} from "../common/public-subdomain.util";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
@@ -24,6 +29,7 @@ type TenantSiteSummary = {
   tenantId: string;
   name: string;
   slug: string;
+  publicSubdomain: string | null;
   status: SiteStatus;
   primaryLocale: string;
   enabledLocales: string[];
@@ -80,6 +86,7 @@ export class TenantWorkspaceService {
         tenantId: true,
         name: true,
         slug: true,
+        publicSubdomain: true,
         status: true,
         primaryLocale: true,
         enabledLocales: true,
@@ -125,6 +132,10 @@ export class TenantWorkspaceService {
   ): Promise<TenantSiteSummary> {
     const name = this.normalizeRequiredValue(dto.name, "name");
     const slug = this.normalizeSlug(dto.slug ?? name);
+    const publicSubdomain = await this.resolvePublicSubdomain(
+      dto.publicSubdomain,
+      slug,
+    );
     const primaryLocale = this.normalizeRequiredValue(
       dto.primaryLocale ?? "en",
       "primaryLocale",
@@ -143,6 +154,7 @@ export class TenantWorkspaceService {
             tenantId,
             name,
             slug,
+            publicSubdomain,
             status: SiteStatus.ACTIVE,
             templateKey: this.normalizeOptionalValue(dto.templateKey),
             primaryLocale,
@@ -154,6 +166,7 @@ export class TenantWorkspaceService {
             tenantId: true,
             name: true,
             slug: true,
+            publicSubdomain: true,
             status: true,
             primaryLocale: true,
             enabledLocales: true,
@@ -302,6 +315,7 @@ export class TenantWorkspaceService {
     tenantId: string;
     name: string;
     slug: string;
+    publicSubdomain: string | null;
     status: SiteStatus;
     primaryLocale: string;
     enabledLocales: string[];
@@ -313,6 +327,7 @@ export class TenantWorkspaceService {
       tenantId: site.tenantId,
       name: site.name,
       slug: site.slug,
+      publicSubdomain: site.publicSubdomain,
       status: site.status,
       primaryLocale: site.primaryLocale,
       enabledLocales: site.enabledLocales,
@@ -357,6 +372,80 @@ export class TenantWorkspaceService {
       throw new BadRequestException({
         code: "VALIDATION_ERROR",
         message: "Site slug must contain at least one letter or number",
+      });
+    }
+
+    return normalized;
+  }
+
+  private async resolvePublicSubdomain(
+    requestedValue: string | undefined,
+    fallbackSlug: string,
+  ): Promise<string> {
+    const explicitValue = this.normalizeOptionalValue(requestedValue);
+    const baseValue = explicitValue ?? fallbackSlug;
+    let normalized = this.normalizePublicSubdomain(baseValue);
+
+    if (RESERVED_PUBLIC_SUBDOMAINS.has(normalized)) {
+      if (explicitValue) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "This public subdomain is reserved",
+        });
+      }
+
+      normalized = this.normalizePublicSubdomain(`${normalized}-site`);
+    }
+
+    if (explicitValue) {
+      const existing = await this.prisma.site.findUnique({
+        where: { publicSubdomain: normalized },
+        select: { id: true },
+      });
+
+      if (existing) {
+        throw new ConflictException({
+          code: "CONFLICT",
+          message: "This public subdomain is already taken.",
+        });
+      }
+
+      return normalized;
+    }
+
+    return this.reserveGeneratedPublicSubdomain(normalized);
+  }
+
+  private async reserveGeneratedPublicSubdomain(
+    baseValue: string,
+  ): Promise<string> {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const candidate = buildPublicSubdomainCandidate(baseValue, attempt);
+      const existing = await this.prisma.site.findUnique({
+        where: { publicSubdomain: candidate },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    throw new ConflictException({
+      code: "CONFLICT",
+      message: "Unable to reserve a public subdomain for this site.",
+    });
+  }
+
+  private normalizePublicSubdomain(value: string): string {
+    const normalized = normalizePublicSubdomainLabel(
+      this.normalizeRequiredValue(value, "publicSubdomain"),
+    );
+
+    if (!normalized) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "Public subdomain must contain at least one letter or number",
       });
     }
 
@@ -443,10 +532,18 @@ export class TenantWorkspaceService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      const rawTarget = error.meta?.target;
+      const targets = Array.isArray(rawTarget)
+        ? rawTarget.map((value) => String(value))
+        : [String(rawTarget ?? "")];
+
       throw new ConflictException({
         code: "CONFLICT",
-        message:
-          "A site with this slug already exists in the active workspace.",
+        message: targets.some((target) =>
+          ["public_subdomain", "publicSubdomain"].includes(target),
+        )
+          ? "This public subdomain is already taken."
+          : "A site with this slug already exists in the active workspace.",
       });
     }
   }

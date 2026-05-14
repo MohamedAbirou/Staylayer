@@ -11,6 +11,11 @@ import {
   TenantMembershipRole,
 } from "@prisma/client";
 import { BILLING_DEFAULT_PLAN_KEY } from "../billing/billing-plans";
+import {
+  buildPublicSubdomainCandidate,
+  normalizePublicSubdomainLabel,
+  RESERVED_PUBLIC_SUBDOMAINS,
+} from "../common/public-subdomain.util";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
 import { RegisterCustomerDto } from "./dto/register-customer.dto";
@@ -75,6 +80,8 @@ export class PublicRegistrationService {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const tenantSlug = await this.generateUniqueTenantSlug(companyName);
       const siteSlug = this.normalizeSlug(propertyName, "propertyName");
+      const publicSubdomain =
+        await this.reserveGeneratedPublicSubdomain(siteSlug);
       const templateKey = this.resolveTemplateKey(dto.hospitalityType);
 
       try {
@@ -115,6 +122,7 @@ export class PublicRegistrationService {
               tenantId: tenant.id,
               name: propertyName,
               slug: siteSlug,
+              publicSubdomain,
               status: SiteStatus.ACTIVE,
               templateKey,
               primaryLocale,
@@ -207,6 +215,10 @@ export class PublicRegistrationService {
           continue;
         }
 
+        if (this.isPublicSubdomainConflict(error)) {
+          continue;
+        }
+
         if (this.isUserEmailConflict(error)) {
           throw new ConflictException({
             code: "CONFLICT",
@@ -292,6 +304,36 @@ export class PublicRegistrationService {
     });
   }
 
+  private async reserveGeneratedPublicSubdomain(
+    siteSlug: string,
+  ): Promise<string> {
+    let baseValue = this.normalizePublicSubdomain(siteSlug, "propertyName");
+
+    if (RESERVED_PUBLIC_SUBDOMAINS.has(baseValue)) {
+      baseValue = this.normalizePublicSubdomain(
+        `${baseValue}-site`,
+        "propertyName",
+      );
+    }
+
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const candidate = buildPublicSubdomainCandidate(baseValue, attempt);
+      const existing = await this.prisma.site.findUnique({
+        where: { publicSubdomain: candidate },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    throw new ConflictException({
+      code: "CONFLICT",
+      message: "Could not reserve a public subdomain for this property",
+    });
+  }
+
   private normalizeEmail(value: string): string {
     return this.normalizeRequiredValue(value, "workEmail").toLowerCase();
   }
@@ -318,6 +360,21 @@ export class PublicRegistrationService {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .replace(/-{2,}/g, "-");
+
+    if (!normalized) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `${fieldName} must contain at least one letter or number`,
+      });
+    }
+
+    return normalized;
+  }
+
+  private normalizePublicSubdomain(value: string, fieldName: string): string {
+    const normalized = normalizePublicSubdomainLabel(
+      this.normalizeRequiredValue(value, fieldName),
+    );
 
     if (!normalized) {
       throw new BadRequestException({
@@ -376,6 +433,17 @@ export class PublicRegistrationService {
       error.code === "P2002" &&
       Array.isArray(error.meta?.target) &&
       error.meta?.target.includes("email")
+    );
+  }
+
+  private isPublicSubdomainConflict(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      Array.isArray(error.meta?.target) &&
+      error.meta?.target.some((target) =>
+        ["public_subdomain", "publicSubdomain"].includes(String(target)),
+      )
     );
   }
 }

@@ -13,7 +13,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateSettingsDto } from "./dto/update-settings.dto";
 import { BillingService } from "../billing/billing.service";
-import { DeploymentsService } from "../deployments/deployments.service";
+import { RevalidationService } from "../revalidation/revalidation.service";
 
 type ReadinessSeverity = "ready" | "warning" | "blocking";
 
@@ -33,7 +33,7 @@ export class SettingsService {
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly configService: ConfigService,
-    private readonly deploymentsService: DeploymentsService,
+    private readonly revalidationService: RevalidationService,
   ) {}
 
   async get(siteId: string) {
@@ -159,7 +159,7 @@ export class SettingsService {
       })
       .then(async (settings) => {
         if (localeConfigurationChanged) {
-          await this.triggerLocaleDeployment(siteId);
+          await this.triggerLocaleRevalidation(siteId);
         }
 
         return this.toDto(settings);
@@ -524,21 +524,12 @@ export class SettingsService {
     return current.every((locale) => next.includes(locale));
   }
 
-  private async triggerLocaleDeployment(siteId: string): Promise<void> {
-    const existingDeployment = await this.prisma.deployment.findFirst({
-      where: { siteId },
-      select: { id: true },
-    });
-
-    if (!existingDeployment) {
-      return;
-    }
-
+  private async triggerLocaleRevalidation(siteId: string): Promise<void> {
     try {
-      await this.deploymentsService.provisionSite(siteId);
+      await this.revalidationService.revalidateSite(siteId);
     } catch (error) {
       this.logger.warn(
-        `Failed to trigger deployment after locale update for site ${siteId}: ${(error as Error).message}`,
+        `Failed to trigger runtime revalidation after locale update for site ${siteId}: ${(error as Error).message}`,
       );
     }
   }

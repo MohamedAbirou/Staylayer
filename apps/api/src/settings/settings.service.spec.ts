@@ -41,9 +41,6 @@ function buildPrismaMock() {
     siteSettings: {
       upsert: jest.fn(),
     },
-    deployment: {
-      findFirst: jest.fn(),
-    },
   };
 
   prisma.$transaction.mockImplementation(
@@ -54,7 +51,7 @@ function buildPrismaMock() {
 }
 
 describe("SettingsService", () => {
-  it("triggers a new deployment when locale configuration changes", async () => {
+  it("triggers shared runtime revalidation when locale configuration changes", async () => {
     const prisma = buildPrismaMock();
     const billingService = {
       assertCanUpdateSiteLocales: jest.fn().mockResolvedValue(undefined),
@@ -62,8 +59,8 @@ describe("SettingsService", () => {
     const configService = {
       get: jest.fn(),
     };
-    const deploymentsService = {
-      provisionSite: jest.fn().mockResolvedValue({ id: "dep-2" }),
+    const revalidationService = {
+      revalidateSite: jest.fn().mockResolvedValue(undefined),
     };
 
     prisma.site.findUnique.mockResolvedValue({
@@ -72,13 +69,12 @@ describe("SettingsService", () => {
       enabledLocales: ["en"],
     });
     prisma.siteSettings.upsert.mockResolvedValue(buildSettingsRecord());
-    prisma.deployment.findFirst.mockResolvedValue({ id: "dep-1" });
 
     const service = new SettingsService(
       prisma as never,
       billingService as never,
       configService as never,
-      deploymentsService as never,
+      revalidationService as never,
     );
 
     const result = await service.update(
@@ -98,7 +94,7 @@ describe("SettingsService", () => {
         primaryLocale: undefined,
       },
     });
-    expect(deploymentsService.provisionSite).toHaveBeenCalledWith("site-1");
+    expect(revalidationService.revalidateSite).toHaveBeenCalledWith("site-1");
     expect(result.activeLocales).toEqual(["en", "es"]);
   });
 });

@@ -81,6 +81,9 @@ type SiteDeploymentResponse = {
   recentLogs: SiteDeploymentLogResponse[];
   createdAt: string;
   updatedAt: string;
+  sharedRuntime: boolean;
+  publishedRevision: number | null;
+  publishedAt: string | null;
 };
 
 function serializeSiteDeployment(
@@ -111,6 +114,9 @@ function serializeSiteDeployment(
     })),
     createdAt: deployment.createdAt.toISOString(),
     updatedAt: deployment.updatedAt.toISOString(),
+    sharedRuntime: deployment.sharedRuntime,
+    publishedRevision: deployment.publishedRevision,
+    publishedAt: deployment.publishedAt,
   };
 }
 

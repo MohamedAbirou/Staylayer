@@ -430,8 +430,9 @@ export default function AdminDeploymentsPage() {
                         : "Add customer-managed variable"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      Use this for per-site runtime overrides. Platform keys
-                      such as SITE_ID and REVALIDATE_SECRET stay read-only.
+                      Use this for per-site runtime overrides. Shared-runtime
+                      keys such as WEBSITE_RUNTIME_SECRET, PLATFORM_ROOT_DOMAIN,
+                      and REVALIDATE_SECRET stay read-only.
                     </p>
                   </div>
                   {editingEnvironmentVariable ? (

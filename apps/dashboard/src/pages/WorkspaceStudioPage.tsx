@@ -168,12 +168,15 @@ export default function WorkspaceStudioPage() {
   const [siteForm, setSiteForm] = useState<CreateWorkspaceSitePayload>({
     name: "",
     slug: "",
+    publicSubdomain: "",
     templateKey: "",
     primaryLocale: "en",
     enabledLocales: ["en"],
     siteType: "VACATION_RENTAL",
   });
   const [siteSlugTouched, setSiteSlugTouched] = useState(false);
+  const [sitePublicSubdomainTouched, setSitePublicSubdomainTouched] =
+    useState(false);
   const [inviteForm, setInviteForm] = useState<InviteWorkspaceMemberPayload>({
     email: "",
     role: "ADMIN",
@@ -254,6 +257,7 @@ export default function WorkspaceStudioPage() {
       return createWorkspaceSite(tenantId, {
         ...siteForm,
         slug: siteForm.slug?.trim() || undefined,
+        publicSubdomain: siteForm.publicSubdomain?.trim() || undefined,
         templateKey: siteForm.templateKey?.trim() || undefined,
       });
     },
@@ -273,12 +277,14 @@ export default function WorkspaceStudioPage() {
       setSiteForm({
         name: "",
         slug: "",
+        publicSubdomain: "",
         templateKey: "",
         primaryLocale: "en",
         enabledLocales: ["en"],
         siteType: "VACATION_RENTAL",
       });
       setSiteSlugTouched(false);
+      setSitePublicSubdomainTouched(false);
       toast.success(`Created ${site.name}. Workspace is switching now.`);
       await switchWorkspace({ tenantId: site.tenantId, siteId: site.id });
     },
@@ -718,6 +724,13 @@ export default function WorkspaceStudioPage() {
                           <p className="mt-1 text-sm text-slate-500">
                             /{site.slug}
                           </p>
+                          <p className="mt-2 text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
+                            Public subdomain
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {site.publicSubdomain ||
+                              "Assigned automatically at creation"}
+                          </p>
                         </div>
                       </div>
                       <span
@@ -802,6 +815,7 @@ export default function WorkspaceStudioPage() {
                   setSiteForm,
                   siteSlugTouched,
                   setSiteSlugTouched,
+                  sitePublicSubdomainTouched,
                 )}
                 placeholder="Azure Bay Villas"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white"
@@ -829,6 +843,33 @@ export default function WorkspaceStudioPage() {
                 placeholder="azure-bay-villas"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white"
               />
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Public subdomain
+                </label>
+                <span className="text-xs text-slate-400">
+                  Used for the shared default website hostname
+                </span>
+              </div>
+              <input
+                value={siteForm.publicSubdomain ?? ""}
+                onChange={(event) => {
+                  setSitePublicSubdomainTouched(true);
+                  setSiteForm((current) => ({
+                    ...current,
+                    publicSubdomain: slugifySiteName(event.target.value),
+                  }));
+                }}
+                placeholder="azure-bay-villas"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white"
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                This becomes the shared-runtime hostname label before any custom
+                domain is connected.
+              </p>
             </div>
 
             <div>
@@ -1275,6 +1316,7 @@ function handleSiteNameChange(
   setSiteForm: React.Dispatch<React.SetStateAction<CreateWorkspaceSitePayload>>,
   siteSlugTouched: boolean,
   setSiteSlugTouched: React.Dispatch<React.SetStateAction<boolean>>,
+  sitePublicSubdomainTouched: boolean,
 ) {
   return (event: ChangeEvent<HTMLInputElement>) => {
     const nextName = event.target.value;
@@ -1282,6 +1324,9 @@ function handleSiteNameChange(
       ...current,
       name: nextName,
       slug: siteSlugTouched ? current.slug : slugifySiteName(nextName),
+      publicSubdomain: sitePublicSubdomainTouched
+        ? current.publicSubdomain
+        : slugifySiteName(nextName),
     }));
 
     if (!siteSlugTouched && nextName.trim().length === 0) {
