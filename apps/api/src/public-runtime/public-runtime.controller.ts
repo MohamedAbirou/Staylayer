@@ -12,7 +12,6 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { Request } from "express";
-import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import { TenantMembershipRole } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
@@ -33,8 +32,6 @@ export class PublicRuntimeController {
   ) {}
 
   @Get("public/runtime/resolve-host")
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 600 } })
   async resolveHost(
     @Headers("x-website-runtime-secret") secret: string,
     @Query() query: ResolveHostDto,
@@ -44,8 +41,6 @@ export class PublicRuntimeController {
   }
 
   @Get("public/runtime/page")
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 600 } })
   async getPage(
     @Headers("x-website-runtime-secret") secret: string,
     @Query() query: RuntimePageQueryDto,
@@ -55,8 +50,6 @@ export class PublicRuntimeController {
   }
 
   @Get("public/runtime/routes")
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { ttl: 60_000, limit: 600 } })
   async getRoutes(
     @Headers("x-website-runtime-secret") secret: string,
     @Query() query: RuntimeRoutesQueryDto,
