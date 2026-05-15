@@ -72,6 +72,7 @@ import { navbarConfig } from "./components/navigation/Navbar";
 import { footerConfig } from "./components/navigation/Footer";
 import { bannerConfig } from "./components/navigation/Banner";
 import { breadcrumbConfig } from "./components/navigation/Breadcrumb";
+import { languageSwitcherConfig } from "./components/navigation/LanguageSwitcher";
 
 // ─── Custom Fields for Root ─────────────────────────────────────────────────
 import { colorFieldRender } from "./lib/fields";
@@ -160,7 +161,13 @@ export const puckConfig: Config = {
   categories: {
     navigation: {
       title: "Navigation",
-      components: ["Navbar", "Footer", "Banner", "Breadcrumb"],
+      components: [
+        "Navbar",
+        "LanguageSwitcher",
+        "Footer",
+        "Banner",
+        "Breadcrumb",
+      ],
       defaultExpanded: true,
     },
     layout: {
@@ -318,6 +325,7 @@ export const puckConfig: Config = {
 
     // Navigation
     Navbar: navbarConfig,
+    LanguageSwitcher: languageSwitcherConfig,
     Footer: footerConfig,
     Banner: bannerConfig,
     Breadcrumb: breadcrumbConfig,

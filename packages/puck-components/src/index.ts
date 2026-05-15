@@ -120,6 +120,16 @@ export { Countdown, countdownConfig } from "./components/interactive/Countdown";
 // ─── Navigation Components ─────────────────────────────────────────────────
 export { Navbar, navbarConfig } from "./components/navigation/Navbar";
 export type { NavbarProps } from "./components/navigation/Navbar";
+export {
+  LanguageSwitcher,
+  languageSwitcherConfig,
+} from "./components/navigation/LanguageSwitcher";
+export type { LanguageSwitcherProps } from "./components/navigation/LanguageSwitcher";
+export {
+  LanguageSwitcherRuntimeProvider,
+  useLanguageSwitcherRuntime,
+} from "./i18n/language-switcher-runtime";
+export type { LanguageSwitcherRuntimeValue } from "./i18n/language-switcher-runtime";
 export { Footer, footerConfig } from "./components/navigation/Footer";
 export type { FooterProps } from "./components/navigation/Footer";
 export { Banner, bannerConfig } from "./components/navigation/Banner";

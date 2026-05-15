@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Render, type Data } from "@puckeditor/core";
 import {
   ContactSectionRuntimeProvider,
+  LanguageSwitcherRuntimeProvider,
   puckConfig,
   type ContactRuntimeResolvedForm,
   type ContactRuntimeSubmitPayload,
-} from "@myallocator/puck-components";
+} from "@staylayer/puck-components";
 import client from "../api/client";
 import { getFormStudio } from "../api/forms";
 import { getPagePreview } from "../api/pages";
@@ -144,6 +145,14 @@ export default function PreviewPage() {
       toast.error(message);
     },
   };
+  const languageSwitcherRuntime = {
+    pageSlug: slug ?? null,
+    currentLocale: locale,
+    defaultLocale: settings?.defaultLocale || "en",
+    availableLocales: previewLocales,
+    buildHref: (nextLocale: string) =>
+      slug ? `/preview/${slug}?locale=${nextLocale}` : "#",
+  };
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -207,14 +216,16 @@ export default function PreviewPage() {
         </div>
       </div>
       <div>
-        <ContactSectionRuntimeProvider value={contactSectionRuntime}>
-          <Render
-            config={puckConfig}
-            data={
-              (page.puckData as Data) || { content: [], root: { props: {} } }
-            }
-          />
-        </ContactSectionRuntimeProvider>
+        <LanguageSwitcherRuntimeProvider value={languageSwitcherRuntime}>
+          <ContactSectionRuntimeProvider value={contactSectionRuntime}>
+            <Render
+              config={puckConfig}
+              data={
+                (page.puckData as Data) || { content: [], root: { props: {} } }
+              }
+            />
+          </ContactSectionRuntimeProvider>
+        </LanguageSwitcherRuntimeProvider>
       </div>
     </div>
   );

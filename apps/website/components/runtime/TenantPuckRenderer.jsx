@@ -2,13 +2,15 @@
 
 import {
   ContactSectionRuntimeProvider,
+  LanguageSwitcherRuntimeProvider,
   puckConfig,
-} from "@myallocator/puck-components";
+} from "@staylayer/puck-components";
 import { Render } from "@puckeditor/core";
 import { useRouter } from "next/navigation";
 
 const DEFAULT_BRAND_LOGO_URL = "/images/logo.png";
 const BRAND_COMPONENT_TYPES = new Set(["Navbar", "Footer"]);
+const SUPPORTED_RUNTIME_LOCALES = new Set(["en", "es", "fr", "de"]);
 
 function isExternalHref(href) {
   return (
@@ -29,6 +31,25 @@ function buildAvailableForms(formsByKey) {
       assignment: form.assignment || null,
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function localizeInternalHref(href, locale, defaultLocale) {
+  const url = new URL(href, window.location.origin);
+  const segments = url.pathname.split("/").filter(Boolean);
+  const firstSegment = segments[0]?.toLowerCase();
+  const unprefixedSegments = SUPPORTED_RUNTIME_LOCALES.has(firstSegment)
+    ? segments.slice(1)
+    : segments;
+  const basePathname =
+    unprefixedSegments.length > 0 ? `/${unprefixedSegments.join("/")}` : "/";
+  const localizedPathname =
+    locale && locale !== defaultLocale
+      ? basePathname === "/"
+        ? `/${locale}`
+        : `/${locale}${basePathname}`
+      : basePathname;
+
+  return `${localizedPathname}${url.search}${url.hash}`;
 }
 
 function applyRuntimeTheme(puckData, site) {
@@ -101,6 +122,13 @@ export function TenantPuckRenderer({ runtime }) {
   const themedPuckData = applyRuntimeTheme(runtime.page.puckData, runtime.site);
 
   const availableForms = buildAvailableForms(runtime.forms?.byKey);
+  const pageLocales = runtime.page.availableLocales || [];
+  const enabledLocales = runtime.site.enabledLocales || [];
+  const availableLocales = Array.from(
+    new Set(
+      (pageLocales.length > 0 ? pageLocales : enabledLocales).filter(Boolean),
+    ),
+  );
   const runtimeValue = {
     pageSlug: runtime.page.slug || "home",
     locale: runtime.page.locale || runtime.site.defaultLocale,
@@ -147,6 +175,12 @@ export function TenantPuckRenderer({ runtime }) {
       return parseJsonResponse(response, "Failed to submit the inquiry.");
     },
   };
+  const languageSwitcherRuntime = {
+    pageSlug: runtime.page.slug || "home",
+    currentLocale: runtime.page.locale || runtime.site.defaultLocale,
+    defaultLocale: runtime.site.defaultLocale || "en",
+    availableLocales,
+  };
 
   function handleClick(event) {
     const link = event.target.closest("a[href]");
@@ -160,14 +194,28 @@ export function TenantPuckRenderer({ runtime }) {
     }
 
     event.preventDefault();
-    router.push(href);
+
+    if (link.closest("[data-runtime-locale-link]")) {
+      router.push(href);
+      return;
+    }
+
+    router.push(
+      localizeInternalHref(
+        href,
+        runtime.page.locale,
+        runtime.site.defaultLocale,
+      ),
+    );
   }
 
   return (
-    <ContactSectionRuntimeProvider value={runtimeValue}>
-      <div className="puck-root" onClick={handleClick}>
-        <Render config={puckConfig} data={themedPuckData} />
-      </div>
-    </ContactSectionRuntimeProvider>
+    <LanguageSwitcherRuntimeProvider value={languageSwitcherRuntime}>
+      <ContactSectionRuntimeProvider value={runtimeValue}>
+        <div className="puck-root" onClick={handleClick}>
+          <Render config={puckConfig} data={themedPuckData} />
+        </div>
+      </ContactSectionRuntimeProvider>
+    </LanguageSwitcherRuntimeProvider>
   );
 }

@@ -8,10 +8,11 @@ import {
 import { Puck, type Config, type Data } from "@puckeditor/core";
 import {
   ContactSectionRuntimeProvider,
+  LanguageSwitcherRuntimeProvider,
   puckConfig,
   type ContactRuntimeResolvedForm,
   type ContactRuntimeSubmitPayload,
-} from "@myallocator/puck-components";
+} from "@staylayer/puck-components";
 import { usePage } from "../hooks/usePage";
 import { useSavePage } from "../hooks/useSavePage";
 import { usePublishPage } from "../hooks/usePublishPage";
@@ -269,6 +270,16 @@ export default function EditorPage() {
 
       toast.error(message);
     },
+  };
+  const languageSwitcherRuntime = {
+    pageSlug: slug ?? null,
+    currentLocale: locale,
+    defaultLocale: settings?.defaultLocale || "en",
+    availableLocales: Array.from(
+      new Set([...(settings?.activeLocales ?? []), locale].filter(Boolean)),
+    ),
+    buildHref: (nextLocale: string) =>
+      slug ? `/preview/${slug}?locale=${nextLocale}` : "#",
   };
 
   // Check for local draft on mount
@@ -587,46 +598,48 @@ export default function EditorPage() {
         <div className="flex flex-1 overflow-hidden">
           {/* Puck Editor */}
           <div className="flex-1 overflow-hidden">
-            <ContactSectionRuntimeProvider value={contactSectionRuntime}>
-              <Puck
-                key={puckKey}
-                config={editorPuckConfig}
-                iframe={{ enabled: true }}
-                data={
-                  (page.puckData as Data) || {
-                    content: [],
-                    root: { props: {} },
+            <LanguageSwitcherRuntimeProvider value={languageSwitcherRuntime}>
+              <ContactSectionRuntimeProvider value={contactSectionRuntime}>
+                <Puck
+                  key={puckKey}
+                  config={editorPuckConfig}
+                  iframe={{ enabled: true }}
+                  data={
+                    (page.puckData as Data) || {
+                      content: [],
+                      root: { props: {} },
+                    }
                   }
-                }
-                headerTitle={page.title}
-                headerPath={`/pages/${slug}?locale=${locale}`}
-                onPublish={handleSave}
-                onChange={(data: Data) => {
-                  latestDataRef.current = data;
-                  setIsDirty(true);
-                }}
-                overrides={{
-                  headerActions: () => (
-                    <button
-                      onClick={() => {
-                        if (latestDataRef.current) {
-                          handleSave(latestDataRef.current);
-                        }
-                      }}
-                      disabled={saveMutation.isPending || !isDirty}
-                      className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {saveMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4" />
-                      )}
-                      Save
-                    </button>
-                  ),
-                }}
-              />
-            </ContactSectionRuntimeProvider>
+                  headerTitle={page.title}
+                  headerPath={`/pages/${slug}?locale=${locale}`}
+                  onPublish={handleSave}
+                  onChange={(data: Data) => {
+                    latestDataRef.current = data;
+                    setIsDirty(true);
+                  }}
+                  overrides={{
+                    headerActions: () => (
+                      <button
+                        onClick={() => {
+                          if (latestDataRef.current) {
+                            handleSave(latestDataRef.current);
+                          }
+                        }}
+                        disabled={saveMutation.isPending || !isDirty}
+                        className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {saveMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        Save
+                      </button>
+                    ),
+                  }}
+                />
+              </ContactSectionRuntimeProvider>
+            </LanguageSwitcherRuntimeProvider>
           </div>
 
           {/* Version History Sidebar */}

@@ -7,6 +7,7 @@ import { UpstreamError } from "@/components/runtime/UpstreamError";
 import { normalizeHostname, slugSegmentsToPathname } from "@/lib/runtime/host";
 import { fetchPublicRuntimePage } from "@/lib/runtime/public-site-api";
 import { getRequestIdFromHeaders } from "@/lib/runtime/request-id";
+import { DEFAULT_FAVICON_URL } from "@/lib/runtime/tenant-metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,45 @@ const OG_LOCALE_MAP = {
   fr: "fr_FR",
   de: "de_DE",
 };
+const SUPPORTED_RUNTIME_LOCALES = new Set(Object.keys(OG_LOCALE_MAP));
 
-async function getRuntimePayload(pathname) {
+function splitLocalePathname(pathname) {
+  const normalizedPathname = pathname || "/";
+  const segments = normalizedPathname.split("/").filter(Boolean);
+  const maybeLocale = segments[0]?.toLowerCase();
+
+  if (!maybeLocale || !SUPPORTED_RUNTIME_LOCALES.has(maybeLocale)) {
+    return { pathname: normalizedPathname, locale: undefined };
+  }
+
+  const remainingPathname =
+    segments.length > 1 ? `/${segments.slice(1).join("/")}` : "/";
+
+  return {
+    pathname: remainingPathname,
+    locale: maybeLocale,
+  };
+}
+
+function buildLocalizedPathname(slug, locale, defaultLocale) {
+  const basePathname = slug ? `/${slug}` : "/";
+
+  if (!locale || locale === defaultLocale) {
+    return basePathname;
+  }
+
+  return basePathname === "/" ? `/${locale}` : `/${locale}${basePathname}`;
+}
+
+function buildLocalizedUrl(hostname, slug, locale, defaultLocale) {
+  return `https://${hostname}${buildLocalizedPathname(
+    slug,
+    locale,
+    defaultLocale,
+  )}`;
+}
+
+async function getRuntimePayload(route) {
   const headerList = await headers();
 
   const hostState = headerList.get("x-staylayer-host-state");
@@ -50,7 +88,8 @@ async function getRuntimePayload(pathname) {
   try {
     const payload = await fetchPublicRuntimePage({
       hostname: runtimeHost,
-      pathname,
+      pathname: route.pathname,
+      locale: route.locale,
       draft: currentDraftMode.isEnabled,
       requestId,
     });
@@ -60,7 +99,7 @@ async function getRuntimePayload(pathname) {
       return { kind: "not_found" };
     }
     console.error(
-      `[website] upstream runtime error host=${runtimeHost} path=${pathname} requestId=${requestId ?? "-"} status=${
+      `[website] upstream runtime error host=${runtimeHost} path=${route.pathname} locale=${route.locale ?? "-"} requestId=${requestId ?? "-"} status=${
         error?.status ?? "?"
       } message=${error?.message ?? "unknown"}`,
     );
@@ -69,8 +108,10 @@ async function getRuntimePayload(pathname) {
 }
 
 export async function generateMetadata({ params }) {
-  const pathname = slugSegmentsToPathname((await params)?.slug);
-  const result = await getRuntimePayload(pathname);
+  const route = splitLocalePathname(
+    slugSegmentsToPathname((await params)?.slug),
+  );
+  const result = await getRuntimePayload(route);
 
   if (result.kind !== "ok" || !result.payload?.page) {
     return {};
@@ -81,7 +122,14 @@ export async function generateMetadata({ params }) {
   const page = payload.page;
   const seo = page.seo || {};
   const canonicalHost = site.canonicalHost;
-  const canonicalUrl = seo.canonicalUrl;
+  const canonicalUrl = canonicalHost
+    ? buildLocalizedUrl(
+        canonicalHost,
+        page.slug,
+        page.locale,
+        site.defaultLocale,
+      )
+    : seo.canonicalUrl;
 
   let metadataBase;
   try {
@@ -93,20 +141,25 @@ export async function generateMetadata({ params }) {
   }
 
   const ogLocale = OG_LOCALE_MAP[page.locale] || OG_LOCALE_MAP.en;
-  const alternateLocales = (site.enabledLocales || [])
+  const availablePageLocales =
+    page.availableLocales?.length > 0
+      ? page.availableLocales
+      : site.enabledLocales || [];
+  const alternateLocales = availablePageLocales
     .filter((locale) => locale && locale !== page.locale)
     .map((locale) => OG_LOCALE_MAP[locale] || locale);
 
   // hreflang map for alternate language URLs (path-based: /<locale>/<slug>).
   const languages = {};
   if (canonicalHost) {
-    const baseSlug = page.slug ? `/${page.slug}` : "";
-    for (const locale of site.enabledLocales || []) {
+    for (const locale of availablePageLocales) {
       if (!locale) continue;
-      languages[locale] =
-        locale === site.defaultLocale
-          ? `https://${canonicalHost}${baseSlug || "/"}`
-          : `https://${canonicalHost}/${locale}${baseSlug}`;
+      languages[locale] = buildLocalizedUrl(
+        canonicalHost,
+        page.slug,
+        locale,
+        site.defaultLocale,
+      );
     }
     if (site.defaultLocale) {
       languages["x-default"] = `https://${canonicalHost}${
@@ -134,7 +187,13 @@ export async function generateMetadata({ params }) {
     title: seo.title,
     description: seo.description,
     applicationName: site.name || undefined,
+    manifest: "/manifest.webmanifest",
     metadataBase,
+    icons: {
+      icon: DEFAULT_FAVICON_URL,
+      shortcut: DEFAULT_FAVICON_URL,
+      apple: DEFAULT_FAVICON_URL,
+    },
     alternates: {
       canonical: canonicalUrl,
       ...(Object.keys(languages).length > 0 ? { languages } : {}),
@@ -192,8 +251,10 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function TenantPage({ params }) {
-  const pathname = slugSegmentsToPathname((await params)?.slug);
-  const result = await getRuntimePayload(pathname);
+  const route = splitLocalePathname(
+    slugSegmentsToPathname((await params)?.slug),
+  );
+  const result = await getRuntimePayload(route);
 
   if (result.kind === "upstream_error") {
     return <UpstreamError requestId={result.requestId} />;

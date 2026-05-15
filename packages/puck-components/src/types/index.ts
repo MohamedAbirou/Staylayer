@@ -30,6 +30,8 @@ export type { AccordionProps } from "../components/interactive/Accordion";
 export type { ListProps } from "../components/interactive/List";
 
 export type { NavbarProps } from "../components/navigation/Navbar";
+export type { LanguageSwitcherProps } from "../components/navigation/LanguageSwitcher";
+export type { LanguageSwitcherRuntimeValue } from "../i18n/language-switcher-runtime";
 export type { FooterProps } from "../components/navigation/Footer";
 
 export interface RootData {

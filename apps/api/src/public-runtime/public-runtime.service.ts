@@ -233,6 +233,12 @@ export class PublicRuntimeService {
       });
     }
 
+    const pageAvailableLocales = await this.listRuntimePageLocales({
+      siteId: site.id,
+      pathname,
+      draft,
+    });
+
     const formsByKey = await this.loadFormsByKey({
       siteId: site.id,
       pathname,
@@ -294,6 +300,7 @@ export class PublicRuntimeService {
         id: page.id,
         slug: isHomepagePathname(pathname) ? "" : pathnameToSlug(pathname),
         locale: page.locale,
+        availableLocales: pageAvailableLocales,
         title: page.title,
         puckData: page.puckData,
         seo: {
@@ -539,6 +546,33 @@ export class PublicRuntimeService {
     }
 
     return null;
+  }
+
+  private async listRuntimePageLocales(input: {
+    siteId: string;
+    pathname: string;
+    draft: boolean;
+  }): Promise<string[]> {
+    const slugCandidates = isHomepagePathname(input.pathname)
+      ? ["home", "index"]
+      : [pathnameToSlug(input.pathname)];
+
+    const pages = await this.prisma.page.findMany({
+      where: {
+        siteId: input.siteId,
+        slug: { in: slugCandidates },
+        deletedAt: null,
+        ...(input.draft ? {} : { published: true }),
+      },
+      select: {
+        locale: true,
+      },
+      orderBy: [{ locale: "asc" }],
+    });
+
+    return Array.from(
+      new Set(pages.map((page) => page.locale).filter(Boolean)),
+    );
   }
 
   private async loadFormsByKey(input: {

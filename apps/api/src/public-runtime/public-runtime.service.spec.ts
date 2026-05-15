@@ -171,10 +171,12 @@ describe("PublicRuntimeService", () => {
       seoNoindex: false,
       updatedAt: new Date("2026-05-13T12:00:00.000Z"),
     });
-    prisma.page.findMany.mockResolvedValue([
-      { slug: "home", title: "Welcome" },
-      { slug: "rooms", title: "Rooms" },
-    ]);
+    prisma.page.findMany
+      .mockResolvedValueOnce([{ locale: "en" }, { locale: "de" }])
+      .mockResolvedValueOnce([
+        { slug: "home", title: "Welcome" },
+        { slug: "rooms", title: "Rooms" },
+      ]);
 
     const payload = await service.getPagePayload({
       hostname: "sunset-villa.staylayer.com",
@@ -196,6 +198,7 @@ describe("PublicRuntimeService", () => {
         id: "page-1",
         slug: "",
         locale: "en",
+        availableLocales: ["en", "de"],
         seo: {
           title: "Welcome | Sunset Villa",
           description: "Stay in a private coastal villa.",
