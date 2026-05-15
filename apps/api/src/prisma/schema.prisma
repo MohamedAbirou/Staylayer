@@ -1,1099 +1,1110 @@
 // apps/api/src/prisma/schema.prisma
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── Enums ─────────────────────────────────────────────────
 
 enum PlatformRole {
-    PLATFORM_OWNER
-    SUPPORT_ADMIN
-    FINANCE_ADMIN
+  PLATFORM_OWNER
+  SUPPORT_ADMIN
+  FINANCE_ADMIN
 }
 
 enum TenantStatus {
-    ACTIVE
-    SUSPENDED
-    ARCHIVED
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
 }
 
 enum TenantMembershipRole {
-    OWNER
-    ADMIN
-    EDITOR
-    BILLING
+  OWNER
+  ADMIN
+  EDITOR
+  BILLING
 }
 
 enum SiteStatus {
-    DRAFT
-    ACTIVE
-    SUSPENDED
-    ARCHIVED
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
 }
 
 enum SiteType {
-    VACATION_RENTAL
-    BOUTIQUE_HOTEL
-    BNB
-    GLAMPING
-    GUEST_HOUSE
+  VACATION_RENTAL
+  BOUTIQUE_HOTEL
+  BNB
+  GLAMPING
+  GUEST_HOUSE
 }
 
 enum HostVariant {
-    APEX
-    WWW
+  APEX
+  WWW
 }
 
 enum SubscriptionStatus {
-    TRIALING
-    ACTIVE
-    PAST_DUE
-    CANCELED
-    INACTIVE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INACTIVE
 }
 
 enum DeploymentStatus {
-    PENDING
-    CREATING_PROJECT
-    SYNCING_ENV
-    DEPLOYING
-    LIVE
-    FAILED
-    RETRYING
+  PENDING
+  CREATING_PROJECT
+  SYNCING_ENV
+  DEPLOYING
+  LIVE
+  FAILED
+  RETRYING
 }
 
 enum DeploymentEnvironmentVariableType {
-    PLAIN
-    ENCRYPTED
+  PLAIN
+  ENCRYPTED
 }
 
 enum DomainStatus {
-    PENDING
-    DNS_REQUIRED
-    VERIFYING
-    PROVIDER_ATTACH_PENDING
-    SSL_PROVISIONING
-    ACTIVE
-    FAILED
+  PENDING
+  DNS_REQUIRED
+  VERIFYING
+  PROVIDER_ATTACH_PENDING
+  SSL_PROVISIONING
+  ACTIVE
+  FAILED
 }
 
 enum FormType {
-    CONTACT
-    INQUIRY
-    AVAILABILITY_REQUEST
-    GROUP_STAY
+  CONTACT
+  INQUIRY
+  AVAILABILITY_REQUEST
+  GROUP_STAY
 }
 
 enum FormDefinitionStatus {
-    DRAFT
-    ACTIVE
-    ARCHIVED
+  DRAFT
+  ACTIVE
+  ARCHIVED
 }
 
 enum FormFieldType {
-    SINGLE_LINE_TEXT
-    MULTI_LINE_TEXT
-    EMAIL
-    PHONE
-    SELECT
-    RADIO
-    CHECKBOX
-    DATE
-    NUMBER
-    HIDDEN
+  SINGLE_LINE_TEXT
+  MULTI_LINE_TEXT
+  EMAIL
+  PHONE
+  SELECT
+  RADIO
+  CHECKBOX
+  DATE
+  NUMBER
+  HIDDEN
 }
 
 enum FormEmailTemplateType {
-    INTERNAL_NOTIFICATION
-    GUEST_CONFIRMATION
+  INTERNAL_NOTIFICATION
+  GUEST_CONFIRMATION
 }
 
 enum FormSubmissionStatus {
-    RECEIVED
-    REVIEWED
-    SPAM
-    ARCHIVED
+  RECEIVED
+  REVIEWED
+  SPAM
+  ARCHIVED
 }
 
 enum FormDeliveryChannel {
-    EMAIL
-    WEBHOOK
+  EMAIL
+  WEBHOOK
 }
 
 enum FormDeliveryStatus {
-    PENDING
-    PROCESSING
-    DELIVERED
-    FAILED
+  PENDING
+  PROCESSING
+  DELIVERED
+  FAILED
 }
 
 enum FormDeliveryPurpose {
-    INTERNAL_NOTIFICATION
-    GUEST_CONFIRMATION
-    WEBHOOK_FORWARD
+  INTERNAL_NOTIFICATION
+  GUEST_CONFIRMATION
+  WEBHOOK_FORWARD
 }
 
 enum OperationalAlertType {
-    DOMAIN_FAILURE
-    FORM_DELIVERY_FAILURE
-    SUBMISSION_SPIKE
+  DOMAIN_FAILURE
+  FORM_DELIVERY_FAILURE
+  SUBMISSION_SPIKE
 }
 
 enum OperationalAlertSeverity {
-    WARNING
-    CRITICAL
+  WARNING
+  CRITICAL
 }
 
 enum OperationalAlertStatus {
-    OPEN
-    RESOLVED
+  OPEN
+  RESOLVED
 }
 
 // ─── User ──────────────────────────────────────────────────
 
 model User {
-    id              String        @id @default(cuid())
-    email           String        @unique
-    passwordHash    String        @map("password_hash")
-    emailVerifiedAt DateTime?     @map("email_verified_at")
-    /// Platform operator role. Null means the account is customer-only.
-    platformRole    PlatformRole? @map("platform_role")
+  id              String        @id @default(cuid())
+  email           String        @unique
+  passwordHash    String        @map("password_hash")
+  emailVerifiedAt DateTime?     @map("email_verified_at")
+  /// Platform operator role. Null means the account is customer-only.
+  platformRole    PlatformRole? @map("platform_role")
 
-    // Brute-force protection
-    failedAttempts Int       @default(0) @map("failed_attempts")
-    lockedUntil    DateTime? @map("locked_until")
+  // Brute-force protection
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until")
 
-    memberships              TenantMembership[]
-    emailVerificationTokens  EmailVerificationToken[]
-    passwordResetTokens      PasswordResetToken[]
-    sentWorkspaceInvitations WorkspaceInvitation[]    @relation("WorkspaceInvitationSender")
+  memberships              TenantMembership[]
+  emailVerificationTokens  EmailVerificationToken[]
+  passwordResetTokens      PasswordResetToken[]
+  sentWorkspaceInvitations WorkspaceInvitation[]    @relation("WorkspaceInvitationSender")
 
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-    @@index([platformRole])
-    @@map("users")
+  @@index([platformRole])
+  @@map("users")
 }
 
 model EmailVerificationToken {
-    id         String    @id @default(cuid())
-    userId     String    @map("user_id")
-    email      String
-    tokenHash  String    @unique @map("token_hash")
-    expiresAt  DateTime  @map("expires_at")
-    consumedAt DateTime? @map("consumed_at")
-    createdAt  DateTime  @default(now()) @map("created_at")
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  email      String
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@index([userId, createdAt])
-    @@index([expiresAt])
-    @@map("email_verification_tokens")
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 
 model PasswordResetToken {
-    id         String    @id @default(cuid())
-    userId     String    @map("user_id")
-    email      String
-    tokenHash  String    @unique @map("token_hash")
-    expiresAt  DateTime  @map("expires_at")
-    consumedAt DateTime? @map("consumed_at")
-    createdAt  DateTime  @default(now()) @map("created_at")
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  email      String
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@index([userId, createdAt])
-    @@index([expiresAt])
-    @@map("password_reset_tokens")
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // ─── Tenant ────────────────────────────────────────────────
 
 model Tenant {
-    id     String       @id @default(cuid())
-    slug   String       @unique
-    name   String
-    status TenantStatus @default(ACTIVE)
+  id     String       @id @default(cuid())
+  slug   String       @unique
+  name   String
+  status TenantStatus @default(ACTIVE)
 
-    memberships          TenantMembership[]
-    sites                Site[]
-    subscriptions        Subscription[]
-    auditLogs            AuditLog[]
-    webhookEvents        BillingWebhookEvent[]
-    translationJobs      TranslationJob[]
-    glossaries           TranslationGlossary[]
-    providerGlossaries   TranslationProviderGlossary[]
-    workspaceInvitations WorkspaceInvitation[]
+  memberships          TenantMembership[]
+  sites                Site[]
+  subscriptions        Subscription[]
+  auditLogs            AuditLog[]
+  webhookEvents        BillingWebhookEvent[]
+  translationJobs      TranslationJob[]
+  glossaries           TranslationGlossary[]
+  providerGlossaries   TranslationProviderGlossary[]
+  workspaceInvitations WorkspaceInvitation[]
 
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-    @@index([status])
-    @@map("tenants")
+  @@index([status])
+  @@map("tenants")
 }
 
 model WorkspaceInvitation {
-    id              String               @id @default(cuid())
-    tenantId        String               @map("tenant_id")
-    email           String
-    role            TenantMembershipRole
-    tokenHash       String               @unique @map("token_hash")
-    invitedByUserId String?              @map("invited_by_user_id")
-    expiresAt       DateTime             @map("expires_at")
-    acceptedAt      DateTime?            @map("accepted_at")
-    revokedAt       DateTime?            @map("revoked_at")
-    createdAt       DateTime             @default(now()) @map("created_at")
-    updatedAt       DateTime             @updatedAt @map("updated_at")
+  id              String               @id @default(cuid())
+  tenantId        String               @map("tenant_id")
+  email           String
+  role            TenantMembershipRole
+  tokenHash       String               @unique @map("token_hash")
+  invitedByUserId String?              @map("invited_by_user_id")
+  expiresAt       DateTime             @map("expires_at")
+  acceptedAt      DateTime?            @map("accepted_at")
+  revokedAt       DateTime?            @map("revoked_at")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
 
-    tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    invitedByUser User?  @relation("WorkspaceInvitationSender", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedByUser User?  @relation("WorkspaceInvitationSender", fields: [invitedByUserId], references: [id], onDelete: SetNull)
 
-    @@index([tenantId, email])
-    @@index([email, acceptedAt, revokedAt])
-    @@index([expiresAt])
-    @@map("workspace_invitations")
+  @@index([tenantId, email])
+  @@index([email, acceptedAt, revokedAt])
+  @@index([expiresAt])
+  @@map("workspace_invitations")
 }
 
 // ─── Tenant Membership ─────────────────────────────────────
 
 model TenantMembership {
-    id        String               @id @default(cuid())
-    tenantId  String               @map("tenant_id")
-    userId    String               @map("user_id")
-    role      TenantMembershipRole
-    isDefault Boolean              @default(false) @map("is_default")
-    createdAt DateTime             @default(now()) @map("created_at")
+  id        String               @id @default(cuid())
+  tenantId  String               @map("tenant_id")
+  userId    String               @map("user_id")
+  role      TenantMembershipRole
+  isDefault Boolean              @default(false) @map("is_default")
+  createdAt DateTime             @default(now()) @map("created_at")
 
-    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([tenantId, userId])
-    @@index([userId])
-    @@index([tenantId, role])
-    @@index([userId, isDefault])
-    @@map("tenant_memberships")
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@index([tenantId, role])
+  @@index([userId, isDefault])
+  @@map("tenant_memberships")
 }
 
 // ─── Site ──────────────────────────────────────────────────
 
 model Site {
-    id                   String      @id @default(cuid())
-    tenantId             String      @map("tenant_id")
-    name                 String
-    slug                 String
-    publicSubdomain      String?     @unique @map("public_subdomain")
-    preferredHostVariant HostVariant @default(APEX) @map("preferred_host_variant")
-    publishedRevision    Int         @default(1) @map("published_revision")
-    previewTokenVersion  Int         @default(1) @map("preview_token_version")
-    status               SiteStatus  @default(DRAFT)
-    templateKey          String?     @map("template_key")
-    primaryLocale        String      @default("en") @map("primary_locale")
-    enabledLocales       String[]    @default(["en"]) @map("enabled_locales")
-    siteType             SiteType    @default(VACATION_RENTAL) @map("site_type")
-    createdAt            DateTime    @default(now()) @map("created_at")
-    updatedAt            DateTime    @updatedAt @map("updated_at")
+  id                   String      @id @default(cuid())
+  tenantId             String      @map("tenant_id")
+  name                 String
+  slug                 String
+  publicSubdomain      String?     @unique @map("public_subdomain")
+  preferredHostVariant HostVariant @default(APEX) @map("preferred_host_variant")
+  publishedRevision    Int         @default(1) @map("published_revision")
+  previewTokenVersion  Int         @default(1) @map("preview_token_version")
+  status               SiteStatus  @default(DRAFT)
+  templateKey          String?     @map("template_key")
+  primaryLocale        String      @default("en") @map("primary_locale")
+  enabledLocales       String[]    @default(["en"]) @map("enabled_locales")
+  siteType             SiteType    @default(VACATION_RENTAL) @map("site_type")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
 
-    tenant                         Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    pages                          Page[]
-    settings                       SiteSettings?
-    deployments                    Deployment[]
-    deploymentEnvironmentVariables SiteDeploymentEnvironmentVariable[]
-    domains                        Domain[]
-    formDefinitions                FormDefinition[]
-    formRoutingRules               FormRoutingRule[]
-    formEmailTheme                 FormEmailTheme?
-    formEmailTemplates             FormEmailTemplate[]
-    formSubmissions                FormSubmission[]
-    formDeliveries                 FormDelivery[]
-    alerts                         OperationalAlert[]
-    auditLogs                      AuditLog[]
-    translationJobs                TranslationJob[]
-    glossaries                     TranslationGlossary[]
-    providerGlossaries             TranslationProviderGlossary[]
-    redirects                      Redirect[]
-    structuredData                 SiteStructuredData?
-    publishedRevisions             SitePublishedRevision[]
+  tenant                         Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pages                          Page[]
+  settings                       SiteSettings?
+  deployments                    Deployment[]
+  deploymentEnvironmentVariables SiteDeploymentEnvironmentVariable[]
+  domains                        Domain[]
+  formDefinitions                FormDefinition[]
+  formRoutingRules               FormRoutingRule[]
+  formEmailTheme                 FormEmailTheme?
+  formEmailTemplates             FormEmailTemplate[]
+  formSubmissions                FormSubmission[]
+  formDeliveries                 FormDelivery[]
+  alerts                         OperationalAlert[]
+  auditLogs                      AuditLog[]
+  translationJobs                TranslationJob[]
+  glossaries                     TranslationGlossary[]
+  providerGlossaries             TranslationProviderGlossary[]
+  redirects                      Redirect[]
+  structuredData                 SiteStructuredData?
+  publishedRevisions             SitePublishedRevision[]
 
-    @@unique([tenantId, slug])
-    @@index([tenantId])
-    @@index([status])
-    @@index([tenantId, status])
-    @@map("sites")
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([status])
+  @@index([tenantId, status])
+  @@map("sites")
 }
 
 // ─── Page ──────────────────────────────────────────────────
 
 model Page {
-    id        String  @id @default(cuid())
-    /// Every page belongs to exactly one customer site.
-    siteId    String  @map("site_id")
-    slug      String
-    locale    String  @default("en")
-    title     String
-    puckData  Json    @map("puck_data")
-    published Boolean @default(false)
+  id        String  @id @default(cuid())
+  /// Every page belongs to exactly one customer site.
+  siteId    String  @map("site_id")
+  slug      String
+  locale    String  @default("en")
+  title     String
+  puckData  Json    @map("puck_data")
+  published Boolean @default(false)
 
-    seoTitle       String? @map("seo_title")
-    seoDescription String? @map("seo_description")
-    seoKeywords    String? @map("seo_keywords")
-    seoOgImage     String? @map("seo_og_image")
-    seoCanonical   String? @map("seo_canonical")
-    seoNoindex     Boolean @default(false) @map("seo_noindex")
+  seoTitle       String? @map("seo_title")
+  seoDescription String? @map("seo_description")
+  seoKeywords    String? @map("seo_keywords")
+  seoOgImage     String? @map("seo_og_image")
+  seoCanonical   String? @map("seo_canonical")
+  seoNoindex     Boolean @default(false) @map("seo_noindex")
 
-    // Soft delete
-    deletedAt DateTime? @map("deleted_at")
+  // Soft delete
+  deletedAt DateTime? @map("deleted_at")
 
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-    site               Site                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    versions           PageVersion[]
-    translationMeta    PageTranslationMeta?
-    sourceTranslations PageTranslationMeta[] @relation("SourceTranslations")
+  site               Site                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  versions           PageVersion[]
+  translationMeta    PageTranslationMeta?
+  sourceTranslations PageTranslationMeta[] @relation("SourceTranslations")
 
-    @@unique([siteId, slug, locale])
-    @@index([siteId])
-    @@index([siteId, slug])
-    @@index([siteId, locale])
-    @@index([siteId, published])
-    @@index([siteId, published, locale])
-    @@index([siteId, deletedAt])
-    @@map("pages")
+  @@unique([siteId, slug, locale])
+  @@index([siteId])
+  @@index([siteId, slug])
+  @@index([siteId, locale])
+  @@index([siteId, published])
+  @@index([siteId, published, locale])
+  @@index([siteId, deletedAt])
+  @@map("pages")
 }
 
 // ─── Page Version ──────────────────────────────────────────
 
 model PageVersion {
-    id       String   @id @default(cuid())
-    pageId   String   @map("page_id")
-    puckData Json     @map("puck_data")
-    savedBy  String   @map("saved_by")
-    note     String?
-    savedAt  DateTime @default(now()) @map("saved_at")
+  id       String   @id @default(cuid())
+  pageId   String   @map("page_id")
+  puckData Json     @map("puck_data")
+  savedBy  String   @map("saved_by")
+  note     String?
+  savedAt  DateTime @default(now()) @map("saved_at")
 
-    page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
-    @@index([pageId])
-    @@index([pageId, savedAt])
-    @@map("page_versions")
+  @@index([pageId])
+  @@index([pageId, savedAt])
+  @@map("page_versions")
 }
 
 // ─── Site Settings ─────────────────────────────────────────
 
 model SiteSettings {
-    id     String @id @default(cuid())
-    siteId String @unique @map("site_id")
+  id     String @id @default(cuid())
+  siteId String @unique @map("site_id")
 
-    // General
-    siteName                   String @default("StayLayer CMS") @map("site_name")
-    siteSubtitle               String @default("") @map("site_subtitle")
-    supportEmail               String @default("") @map("support_email")
-    publicPhone                String @default("") @map("public_phone")
-    whatsAppUrl                String @default("") @map("whatsapp_url")
-    address                    String @default("") @map("address")
-    region                     String @default("") @map("region")
-    primaryCtaLabel            String @default("Send inquiry") @map("primary_cta_label")
-    defaultInquiryRoutingEmail String @default("") @map("default_inquiry_routing_email")
-    inquiryWebhookUrl          String @default("") @map("inquiry_webhook_url")
-    inquiryWebhookSecret       String @default("") @map("inquiry_webhook_secret")
-    logoUrl                    String @default("") @map("logo_url")
-    faviconUrl                 String @default("") @map("favicon_url")
+  // General
+  siteName                   String @default("StayLayer CMS") @map("site_name")
+  siteSubtitle               String @default("") @map("site_subtitle")
+  supportEmail               String @default("") @map("support_email")
+  publicPhone                String @default("") @map("public_phone")
+  whatsAppUrl                String @default("") @map("whatsapp_url")
+  address                    String @default("") @map("address")
+  region                     String @default("") @map("region")
+  primaryCtaLabel            String @default("Send inquiry") @map("primary_cta_label")
+  defaultInquiryRoutingEmail String @default("") @map("default_inquiry_routing_email")
+  inquiryWebhookUrl          String @default("") @map("inquiry_webhook_url")
+  inquiryWebhookSecret       String @default("") @map("inquiry_webhook_secret")
+  logoUrl                    String @default("") @map("logo_url")
+  faviconUrl                 String @default("") @map("favicon_url")
 
-    // SEO Defaults
-    seoTitleTemplate   String  @default("%s | StayLayer") @map("seo_title_template")
-    seoDefaultDesc     String  @default("") @map("seo_default_desc")
-    seoOgImage         String  @default("") @map("seo_og_image")
-    seoIndexingEnabled Boolean @default(true) @map("seo_indexing_enabled")
-    googleSiteVerify   String  @default("") @map("google_site_verify")
+  // SEO Defaults
+  seoTitleTemplate    String  @default("%s | StayLayer") @map("seo_title_template")
+  seoDefaultDesc      String  @default("") @map("seo_default_desc")
+  seoOgImage          String  @default("") @map("seo_og_image")
+  seoIndexingEnabled  Boolean @default(true) @map("seo_indexing_enabled")
+  seoLocaleDefaults   Json    @default("{}") @map("seo_locale_defaults")
+  googleSiteVerify    String  @default("") @map("google_site_verify")
+  bingSiteVerify      String  @default("") @map("bing_site_verify")
+  yandexSiteVerify    String  @default("") @map("yandex_site_verify")
+  pinterestSiteVerify String  @default("") @map("pinterest_site_verify")
 
-    // Analytics
-    gaTrackingId   String @default("") @map("ga_tracking_id")
-    gtmContainerId String @default("") @map("gtm_container_id")
-    clarityId      String @default("") @map("clarity_id")
+  // Analytics
+  gaTrackingId   String @default("") @map("ga_tracking_id")
+  gtmContainerId String @default("") @map("gtm_container_id")
+  clarityId      String @default("") @map("clarity_id")
 
-    // Social
-    twitterHandle String @default("") @map("twitter_handle")
-    linkedinUrl   String @default("") @map("linkedin_url")
-    facebookUrl   String @default("") @map("facebook_url")
+  // Social
+  twitterHandle String @default("") @map("twitter_handle")
+  linkedinUrl   String @default("") @map("linkedin_url")
+  facebookUrl   String @default("") @map("facebook_url")
+  instagramUrl  String @default("") @map("instagram_url")
+  youtubeUrl    String @default("") @map("youtube_url")
+  tiktokUrl     String @default("") @map("tiktok_url")
+  pinterestUrl  String @default("") @map("pinterest_url")
 
-    // Localization
-    defaultLocale String   @default("en") @map("default_locale")
-    activeLocales String[] @default(["en", "es", "fr", "de"]) @map("active_locales")
+  // Localization
+  defaultLocale String   @default("en") @map("default_locale")
+  activeLocales String[] @default(["en", "es", "fr", "de"]) @map("active_locales")
 
-    updatedAt DateTime @updatedAt @map("updated_at")
-    updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@map("site_settings")
+  @@map("site_settings")
 }
 
 // ─── Subscription ──────────────────────────────────────────
 
 model Subscription {
-    id                     String             @id @default(cuid())
-    tenantId               String             @map("tenant_id")
-    provider               String
-    providerCustomerId     String?            @map("provider_customer_id")
-    providerSubscriptionId String?            @unique @map("provider_subscription_id")
-    providerPriceId        String?            @map("provider_price_id")
-    planKey                String             @map("plan_key")
-    status                 SubscriptionStatus @default(INACTIVE)
-    currentPeriodStart     DateTime?          @map("current_period_start")
-    currentPeriodEnd       DateTime?          @map("current_period_end")
-    cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
-    limitsSnapshot         Json?              @map("limits_snapshot")
-    gracePeriodEndsAt      DateTime?          @map("grace_period_ends_at")
-    lastWebhookEventId     String?            @map("last_webhook_event_id")
-    lastWebhookAt          DateTime?          @map("last_webhook_at")
-    createdAt              DateTime           @default(now()) @map("created_at")
-    updatedAt              DateTime           @updatedAt @map("updated_at")
+  id                     String             @id @default(cuid())
+  tenantId               String             @map("tenant_id")
+  provider               String
+  providerCustomerId     String?            @map("provider_customer_id")
+  providerSubscriptionId String?            @unique @map("provider_subscription_id")
+  providerPriceId        String?            @map("provider_price_id")
+  planKey                String             @map("plan_key")
+  status                 SubscriptionStatus @default(INACTIVE)
+  currentPeriodStart     DateTime?          @map("current_period_start")
+  currentPeriodEnd       DateTime?          @map("current_period_end")
+  cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
+  limitsSnapshot         Json?              @map("limits_snapshot")
+  gracePeriodEndsAt      DateTime?          @map("grace_period_ends_at")
+  lastWebhookEventId     String?            @map("last_webhook_event_id")
+  lastWebhookAt          DateTime?          @map("last_webhook_at")
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
 
-    tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    webhookEvents BillingWebhookEvent[]
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  webhookEvents BillingWebhookEvent[]
 
-    @@index([tenantId])
-    @@index([status])
-    @@map("subscriptions")
+  @@index([tenantId])
+  @@index([status])
+  @@map("subscriptions")
 }
 
 model BillingWebhookEvent {
-    id              String    @id @default(cuid())
-    provider        String
-    providerEventId String    @unique @map("provider_event_id")
-    eventType       String    @map("event_type")
-    tenantId        String?   @map("tenant_id")
-    subscriptionId  String?   @map("subscription_id")
-    payload         Json
-    processedAt     DateTime? @map("processed_at")
-    errorMessage    String?   @map("error_message")
-    createdAt       DateTime  @default(now()) @map("created_at")
+  id              String    @id @default(cuid())
+  provider        String
+  providerEventId String    @unique @map("provider_event_id")
+  eventType       String    @map("event_type")
+  tenantId        String?   @map("tenant_id")
+  subscriptionId  String?   @map("subscription_id")
+  payload         Json
+  processedAt     DateTime? @map("processed_at")
+  errorMessage    String?   @map("error_message")
+  createdAt       DateTime  @default(now()) @map("created_at")
 
-    tenant       Tenant?       @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-    subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  tenant       Tenant?       @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
-    @@index([provider, createdAt])
-    @@index([tenantId, createdAt])
-    @@index([subscriptionId, createdAt])
-    @@map("billing_webhook_events")
+  @@index([provider, createdAt])
+  @@index([tenantId, createdAt])
+  @@index([subscriptionId, createdAt])
+  @@map("billing_webhook_events")
 }
 
 // ─── Deployment ────────────────────────────────────────────
 
 model Deployment {
-    id                String           @id @default(cuid())
-    siteId            String           @map("site_id")
-    status            DeploymentStatus @default(PENDING)
-    provider          String?
-    providerProjectId String?          @map("provider_project_id")
-    providerDeployId  String?          @map("provider_deploy_id")
-    url               String?
-    metadata          Json?
-    errorMessage      String?          @map("error_message")
-    createdAt         DateTime         @default(now()) @map("created_at")
-    updatedAt         DateTime         @updatedAt @map("updated_at")
-    site              Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  id                String           @id @default(cuid())
+  siteId            String           @map("site_id")
+  status            DeploymentStatus @default(PENDING)
+  provider          String?
+  providerProjectId String?          @map("provider_project_id")
+  providerDeployId  String?          @map("provider_deploy_id")
+  url               String?
+  metadata          Json?
+  errorMessage      String?          @map("error_message")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  site              Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@index([siteId])
-    @@index([siteId, status])
-    @@index([siteId, createdAt])
-    @@map("deployments")
+  @@index([siteId])
+  @@index([siteId, status])
+  @@index([siteId, createdAt])
+  @@map("deployments")
 }
 
 // ─── Site Published Revision (content snapshots for shared-runtime rollback) ──
 
 model SitePublishedRevision {
-    id               String   @id @default(cuid())
-    siteId           String   @map("site_id")
-    revision         Int
-    pagesSnapshot    Json     @map("pages_snapshot")
-    settingsSnapshot Json?    @map("settings_snapshot")
-    deploymentId     String?  @map("deployment_id")
-    rolledBackFrom   Int?     @map("rolled_back_from")
-    createdById      String?  @map("created_by_id")
-    createdAt        DateTime @default(now()) @map("created_at")
+  id               String   @id @default(cuid())
+  siteId           String   @map("site_id")
+  revision         Int
+  pagesSnapshot    Json     @map("pages_snapshot")
+  settingsSnapshot Json?    @map("settings_snapshot")
+  deploymentId     String?  @map("deployment_id")
+  rolledBackFrom   Int?     @map("rolled_back_from")
+  createdById      String?  @map("created_by_id")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@unique([siteId, revision])
-    @@index([siteId, createdAt])
-    @@index([deploymentId])
-    @@map("site_published_revisions")
+  @@unique([siteId, revision])
+  @@index([siteId, createdAt])
+  @@index([deploymentId])
+  @@map("site_published_revisions")
 }
 
 model SiteDeploymentEnvironmentVariable {
-    id                   String                            @id @default(cuid())
-    siteId               String                            @map("site_id")
-    key                  String
-    type                 DeploymentEnvironmentVariableType @default(PLAIN)
-    description          String                            @default("")
-    targets              String[]                          @default(["production"])
-    encryptedValue       String                            @map("encrypted_value")
-    initializationVector String                            @map("initialization_vector")
-    authTag              String                            @map("auth_tag")
-    createdAt            DateTime                          @default(now()) @map("created_at")
-    updatedAt            DateTime                          @updatedAt @map("updated_at")
-    updatedBy            String?                           @map("updated_by")
+  id                   String                            @id @default(cuid())
+  siteId               String                            @map("site_id")
+  key                  String
+  type                 DeploymentEnvironmentVariableType @default(PLAIN)
+  description          String                            @default("")
+  targets              String[]                          @default(["production"])
+  encryptedValue       String                            @map("encrypted_value")
+  initializationVector String                            @map("initialization_vector")
+  authTag              String                            @map("auth_tag")
+  createdAt            DateTime                          @default(now()) @map("created_at")
+  updatedAt            DateTime                          @updatedAt @map("updated_at")
+  updatedBy            String?                           @map("updated_by")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@unique([siteId, key])
-    @@index([siteId, updatedAt])
-    @@map("site_deployment_environment_variables")
+  @@unique([siteId, key])
+  @@index([siteId, updatedAt])
+  @@map("site_deployment_environment_variables")
 }
 
 // ─── Domain ────────────────────────────────────────────────
 
 model Domain {
-    id                      String       @id @default(cuid())
-    siteId                  String       @map("site_id")
-    host                    String       @unique
-    status                  DomainStatus @default(PENDING)
-    isPrimary               Boolean      @default(false) @map("is_primary")
-    verificationRequestedAt DateTime?    @map("verification_requested_at")
-    lastCheckedAt           DateTime?    @map("last_checked_at")
-    lastError               String?      @map("last_error")
-    verificationDetails     Json?        @map("verification_details")
-    verifiedAt              DateTime?    @map("verified_at")
-    createdAt               DateTime     @default(now()) @map("created_at")
-    updatedAt               DateTime     @updatedAt @map("updated_at")
+  id                      String       @id @default(cuid())
+  siteId                  String       @map("site_id")
+  host                    String       @unique
+  status                  DomainStatus @default(PENDING)
+  isPrimary               Boolean      @default(false) @map("is_primary")
+  verificationRequestedAt DateTime?    @map("verification_requested_at")
+  lastCheckedAt           DateTime?    @map("last_checked_at")
+  lastError               String?      @map("last_error")
+  verificationDetails     Json?        @map("verification_details")
+  verifiedAt              DateTime?    @map("verified_at")
+  createdAt               DateTime     @default(now()) @map("created_at")
+  updatedAt               DateTime     @updatedAt @map("updated_at")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@index([siteId])
-    @@index([siteId, status])
-    @@map("domains")
+  @@index([siteId])
+  @@index([siteId, status])
+  @@map("domains")
 }
 
 // ─── Form Submission ───────────────────────────────────────
 
 model FormDefinition {
-    id                    String               @id @default(cuid())
-    siteId                String               @map("site_id")
-    key                   String
-    name                  String
-    description           String               @default("")
-    formType              FormType             @map("form_type")
-    status                FormDefinitionStatus @default(DRAFT)
-    assignment            Json?
-    activeSchemaVersionId String?              @map("active_schema_version_id")
-    createdAt             DateTime             @default(now()) @map("created_at")
-    updatedAt             DateTime             @updatedAt @map("updated_at")
+  id                    String               @id @default(cuid())
+  siteId                String               @map("site_id")
+  key                   String
+  name                  String
+  description           String               @default("")
+  formType              FormType             @map("form_type")
+  status                FormDefinitionStatus @default(DRAFT)
+  assignment            Json?
+  activeSchemaVersionId String?              @map("active_schema_version_id")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
 
-    site                Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    activeSchemaVersion FormSchemaVersion?  @relation("ActiveFormSchemaVersion", fields: [activeSchemaVersionId], references: [id], onDelete: SetNull)
-    draftFields         FormField[]
-    schemaVersions      FormSchemaVersion[] @relation("FormDefinitionSchemaVersions")
-    routingRules        FormRoutingRule[]
-    emailTemplates      FormEmailTemplate[]
-    submissions         FormSubmission[]
+  site                Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  activeSchemaVersion FormSchemaVersion?  @relation("ActiveFormSchemaVersion", fields: [activeSchemaVersionId], references: [id], onDelete: SetNull)
+  draftFields         FormField[]
+  schemaVersions      FormSchemaVersion[] @relation("FormDefinitionSchemaVersions")
+  routingRules        FormRoutingRule[]
+  emailTemplates      FormEmailTemplate[]
+  submissions         FormSubmission[]
 
-    @@unique([siteId, key])
-    @@index([siteId, status])
-    @@index([siteId, formType])
-    @@map("form_definitions")
+  @@unique([siteId, key])
+  @@index([siteId, status])
+  @@index([siteId, formType])
+  @@map("form_definitions")
 }
 
 model FormField {
-    id                String        @id @default(cuid())
-    formDefinitionId  String        @map("form_definition_id")
-    key               String
-    label             String
-    placeholder       String        @default("")
-    helpText          String        @default("") @map("help_text")
-    type              FormFieldType
-    required          Boolean       @default(false)
-    sortOrder         Int           @default(0) @map("sort_order")
-    validation        Json?
-    options           Json?
-    defaultValue      String?       @map("default_value")
-    isPlatformManaged Boolean       @default(false) @map("is_platform_managed")
-    visibilityRules   Json?         @map("visibility_rules")
-    createdAt         DateTime      @default(now()) @map("created_at")
-    updatedAt         DateTime      @updatedAt @map("updated_at")
+  id                String        @id @default(cuid())
+  formDefinitionId  String        @map("form_definition_id")
+  key               String
+  label             String
+  placeholder       String        @default("")
+  helpText          String        @default("") @map("help_text")
+  type              FormFieldType
+  required          Boolean       @default(false)
+  sortOrder         Int           @default(0) @map("sort_order")
+  validation        Json?
+  options           Json?
+  defaultValue      String?       @map("default_value")
+  isPlatformManaged Boolean       @default(false) @map("is_platform_managed")
+  visibilityRules   Json?         @map("visibility_rules")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
 
-    formDefinition FormDefinition @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
+  formDefinition FormDefinition @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
 
-    @@unique([formDefinitionId, key])
-    @@index([formDefinitionId, sortOrder])
-    @@map("form_fields")
+  @@unique([formDefinitionId, key])
+  @@index([formDefinitionId, sortOrder])
+  @@map("form_fields")
 }
 
 model FormSchemaVersion {
-    id               String    @id @default(cuid())
-    formDefinitionId String    @map("form_definition_id")
-    versionNumber    Int       @map("version_number")
-    schemaSnapshot   Json      @map("schema_snapshot")
-    routingSnapshot  Json?     @map("routing_snapshot")
-    emailSnapshot    Json?     @map("email_snapshot")
-    createdAt        DateTime  @default(now()) @map("created_at")
-    createdBy        String?   @map("created_by")
-    publishedAt      DateTime? @map("published_at")
+  id               String    @id @default(cuid())
+  formDefinitionId String    @map("form_definition_id")
+  versionNumber    Int       @map("version_number")
+  schemaSnapshot   Json      @map("schema_snapshot")
+  routingSnapshot  Json?     @map("routing_snapshot")
+  emailSnapshot    Json?     @map("email_snapshot")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdBy        String?   @map("created_by")
+  publishedAt      DateTime? @map("published_at")
 
-    formDefinition       FormDefinition   @relation("FormDefinitionSchemaVersions", fields: [formDefinitionId], references: [id], onDelete: Cascade)
-    activeForDefinitions FormDefinition[] @relation("ActiveFormSchemaVersion")
-    submissions          FormSubmission[]
+  formDefinition       FormDefinition   @relation("FormDefinitionSchemaVersions", fields: [formDefinitionId], references: [id], onDelete: Cascade)
+  activeForDefinitions FormDefinition[] @relation("ActiveFormSchemaVersion")
+  submissions          FormSubmission[]
 
-    @@unique([formDefinitionId, versionNumber])
-    @@index([formDefinitionId, publishedAt])
-    @@map("form_schema_versions")
+  @@unique([formDefinitionId, versionNumber])
+  @@index([formDefinitionId, publishedAt])
+  @@map("form_schema_versions")
 }
 
 model FormRoutingRule {
-    id                          String   @id @default(cuid())
-    siteId                      String   @map("site_id")
-    formDefinitionId            String?  @map("form_definition_id")
-    name                        String   @default("Default route")
-    pageSlug                    String?  @map("page_slug")
-    locale                      String?
-    priority                    Int      @default(0)
-    isActive                    Boolean  @default(true) @map("is_active")
-    saveToInbox                 Boolean  @default(true) @map("save_to_inbox")
-    emailRecipients             String[] @default([]) @map("email_recipients")
-    webhookUrl                  String   @default("") @map("webhook_url")
-    webhookSecret               String   @default("") @map("webhook_secret")
-    sendConfirmationEmail       Boolean  @default(false) @map("send_confirmation_email")
-    confirmationReplyToFieldKey String   @default("email") @map("confirmation_reply_to_field_key")
-    createdAt                   DateTime @default(now()) @map("created_at")
-    updatedAt                   DateTime @updatedAt @map("updated_at")
+  id                          String   @id @default(cuid())
+  siteId                      String   @map("site_id")
+  formDefinitionId            String?  @map("form_definition_id")
+  name                        String   @default("Default route")
+  pageSlug                    String?  @map("page_slug")
+  locale                      String?
+  priority                    Int      @default(0)
+  isActive                    Boolean  @default(true) @map("is_active")
+  saveToInbox                 Boolean  @default(true) @map("save_to_inbox")
+  emailRecipients             String[] @default([]) @map("email_recipients")
+  webhookUrl                  String   @default("") @map("webhook_url")
+  webhookSecret               String   @default("") @map("webhook_secret")
+  sendConfirmationEmail       Boolean  @default(false) @map("send_confirmation_email")
+  confirmationReplyToFieldKey String   @default("email") @map("confirmation_reply_to_field_key")
+  createdAt                   DateTime @default(now()) @map("created_at")
+  updatedAt                   DateTime @updatedAt @map("updated_at")
 
-    site           Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    formDefinition FormDefinition?  @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
-    submissions    FormSubmission[]
+  site           Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  formDefinition FormDefinition?  @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
+  submissions    FormSubmission[]
 
-    @@index([siteId, isActive, priority])
-    @@index([formDefinitionId, isActive, priority])
-    @@map("form_routing_rules")
+  @@index([siteId, isActive, priority])
+  @@index([formDefinitionId, isActive, priority])
+  @@map("form_routing_rules")
 }
 
 model FormEmailTheme {
-    id               String   @id @default(cuid())
-    siteId           String   @unique @map("site_id")
-    brandName        String   @default("") @map("brand_name")
-    logoUrl          String   @default("") @map("logo_url")
-    primaryColor     String   @default("#2563eb") @map("primary_color")
-    accentColor      String   @default("#0f172a") @map("accent_color")
-    surfaceColor     String   @default("#ffffff") @map("surface_color")
-    textColor        String   @default("#0f172a") @map("text_color")
-    typographyFamily String   @default("Arial") @map("typography_family")
-    buttonStyle      Json?    @map("button_style")
-    cardStyle        Json?    @map("card_style")
-    headerContent    Json?    @map("header_content")
-    footerContent    Json?    @map("footer_content")
-    updatedAt        DateTime @updatedAt @map("updated_at")
-    updatedBy        String?  @map("updated_by")
+  id               String   @id @default(cuid())
+  siteId           String   @unique @map("site_id")
+  brandName        String   @default("") @map("brand_name")
+  logoUrl          String   @default("") @map("logo_url")
+  primaryColor     String   @default("#2563eb") @map("primary_color")
+  accentColor      String   @default("#0f172a") @map("accent_color")
+  surfaceColor     String   @default("#ffffff") @map("surface_color")
+  textColor        String   @default("#0f172a") @map("text_color")
+  typographyFamily String   @default("Arial") @map("typography_family")
+  buttonStyle      Json?    @map("button_style")
+  cardStyle        Json?    @map("card_style")
+  headerContent    Json?    @map("header_content")
+  footerContent    Json?    @map("footer_content")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  updatedBy        String?  @map("updated_by")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@map("form_email_themes")
+  @@map("form_email_themes")
 }
 
 model FormEmailTemplate {
-    id               String                @id @default(cuid())
-    siteId           String                @map("site_id")
-    formDefinitionId String?               @map("form_definition_id")
-    templateType     FormEmailTemplateType @map("template_type")
-    name             String
-    enabled          Boolean               @default(true)
-    subjectTemplate  String                @map("subject_template")
-    previewText      String                @default("") @map("preview_text")
-    blocks           Json
-    fieldOrder       String[]              @default([]) @map("field_order")
-    createdAt        DateTime              @default(now()) @map("created_at")
-    updatedAt        DateTime              @updatedAt @map("updated_at")
+  id               String                @id @default(cuid())
+  siteId           String                @map("site_id")
+  formDefinitionId String?               @map("form_definition_id")
+  templateType     FormEmailTemplateType @map("template_type")
+  name             String
+  enabled          Boolean               @default(true)
+  subjectTemplate  String                @map("subject_template")
+  previewText      String                @default("") @map("preview_text")
+  blocks           Json
+  fieldOrder       String[]              @default([]) @map("field_order")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
 
-    site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    formDefinition FormDefinition? @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
+  site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  formDefinition FormDefinition? @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
 
-    @@index([siteId, templateType])
-    @@index([formDefinitionId, templateType])
-    @@map("form_email_templates")
+  @@index([siteId, templateType])
+  @@index([formDefinitionId, templateType])
+  @@map("form_email_templates")
 }
 
 model FormSubmission {
-    id                  String               @id @default(cuid())
-    siteId              String               @map("site_id")
-    formDefinitionId    String?              @map("form_definition_id")
-    formSchemaVersionId String?              @map("form_schema_version_id")
-    routingRuleId       String?              @map("routing_rule_id")
-    formType            FormType             @map("form_type")
-    pageSlug            String?              @map("page_slug")
-    locale              String               @default("en")
-    payload             Json
-    spamScore           Float?               @map("spam_score")
-    status              FormSubmissionStatus @default(RECEIVED)
-    createdAt           DateTime             @default(now()) @map("created_at")
+  id                  String               @id @default(cuid())
+  siteId              String               @map("site_id")
+  formDefinitionId    String?              @map("form_definition_id")
+  formSchemaVersionId String?              @map("form_schema_version_id")
+  routingRuleId       String?              @map("routing_rule_id")
+  formType            FormType             @map("form_type")
+  pageSlug            String?              @map("page_slug")
+  locale              String               @default("en")
+  payload             Json
+  spamScore           Float?               @map("spam_score")
+  status              FormSubmissionStatus @default(RECEIVED)
+  createdAt           DateTime             @default(now()) @map("created_at")
 
-    site              Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    formDefinition    FormDefinition?    @relation(fields: [formDefinitionId], references: [id], onDelete: SetNull)
-    formSchemaVersion FormSchemaVersion? @relation(fields: [formSchemaVersionId], references: [id], onDelete: SetNull)
-    routingRule       FormRoutingRule?   @relation(fields: [routingRuleId], references: [id], onDelete: SetNull)
-    deliveries        FormDelivery[]
+  site              Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  formDefinition    FormDefinition?    @relation(fields: [formDefinitionId], references: [id], onDelete: SetNull)
+  formSchemaVersion FormSchemaVersion? @relation(fields: [formSchemaVersionId], references: [id], onDelete: SetNull)
+  routingRule       FormRoutingRule?   @relation(fields: [routingRuleId], references: [id], onDelete: SetNull)
+  deliveries        FormDelivery[]
 
-    @@index([siteId])
-    @@index([formDefinitionId])
-    @@index([formSchemaVersionId])
-    @@index([siteId, formType])
-    @@index([siteId, status])
-    @@index([siteId, createdAt])
-    @@map("form_submissions")
+  @@index([siteId])
+  @@index([formDefinitionId])
+  @@index([formSchemaVersionId])
+  @@index([siteId, formType])
+  @@index([siteId, status])
+  @@index([siteId, createdAt])
+  @@map("form_submissions")
 }
 
 model FormDelivery {
-    id            String              @id @default(cuid())
-    submissionId  String              @map("submission_id")
-    siteId        String              @map("site_id")
-    purpose       FormDeliveryPurpose @default(INTERNAL_NOTIFICATION)
-    channel       FormDeliveryChannel
-    destination   String
-    status        FormDeliveryStatus  @default(PENDING)
-    attempts      Int                 @default(0)
-    nextAttemptAt DateTime?           @map("next_attempt_at")
-    lastAttemptAt DateTime?           @map("last_attempt_at")
-    deliveredAt   DateTime?           @map("delivered_at")
-    responseCode  Int?                @map("response_code")
-    errorMessage  String?             @map("error_message")
-    metadata      Json?
-    createdAt     DateTime            @default(now()) @map("created_at")
-    updatedAt     DateTime            @updatedAt @map("updated_at")
+  id            String              @id @default(cuid())
+  submissionId  String              @map("submission_id")
+  siteId        String              @map("site_id")
+  purpose       FormDeliveryPurpose @default(INTERNAL_NOTIFICATION)
+  channel       FormDeliveryChannel
+  destination   String
+  status        FormDeliveryStatus  @default(PENDING)
+  attempts      Int                 @default(0)
+  nextAttemptAt DateTime?           @map("next_attempt_at")
+  lastAttemptAt DateTime?           @map("last_attempt_at")
+  deliveredAt   DateTime?           @map("delivered_at")
+  responseCode  Int?                @map("response_code")
+  errorMessage  String?             @map("error_message")
+  metadata      Json?
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
 
-    submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-    site       Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  site       Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@index([submissionId])
-    @@index([siteId, status])
-    @@index([status, nextAttemptAt])
-    @@map("form_deliveries")
+  @@index([submissionId])
+  @@index([siteId, status])
+  @@index([status, nextAttemptAt])
+  @@map("form_deliveries")
 }
 
 model OperationalAlert {
-    id               String                   @id @default(cuid())
-    siteId           String                   @map("site_id")
-    type             OperationalAlertType
-    severity         OperationalAlertSeverity @default(WARNING)
-    status           OperationalAlertStatus   @default(OPEN)
-    fingerprint      String
-    message          String
-    metadata         Json?
-    firstTriggeredAt DateTime                 @default(now()) @map("first_triggered_at")
-    lastTriggeredAt  DateTime                 @default(now()) @map("last_triggered_at")
-    resolvedAt       DateTime?                @map("resolved_at")
-    createdAt        DateTime                 @default(now()) @map("created_at")
-    updatedAt        DateTime                 @updatedAt @map("updated_at")
+  id               String                   @id @default(cuid())
+  siteId           String                   @map("site_id")
+  type             OperationalAlertType
+  severity         OperationalAlertSeverity @default(WARNING)
+  status           OperationalAlertStatus   @default(OPEN)
+  fingerprint      String
+  message          String
+  metadata         Json?
+  firstTriggeredAt DateTime                 @default(now()) @map("first_triggered_at")
+  lastTriggeredAt  DateTime                 @default(now()) @map("last_triggered_at")
+  resolvedAt       DateTime?                @map("resolved_at")
+  createdAt        DateTime                 @default(now()) @map("created_at")
+  updatedAt        DateTime                 @updatedAt @map("updated_at")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@unique([siteId, type, fingerprint])
-    @@index([status, type])
-    @@index([siteId, status])
-    @@map("operational_alerts")
+  @@unique([siteId, type, fingerprint])
+  @@index([status, type])
+  @@index([siteId, status])
+  @@map("operational_alerts")
 }
 
 // ─── Tenant Onboarding ─────────────────────────────────────
 
 enum OnboardingMilestoneKey {
-    SITE_CREATED
-    FIRST_PAGE_PUBLISHED
-    DEPLOYMENT_PROVISIONED
-    DOMAIN_CONNECTED
-    SEO_COMPLETED
-    FORM_CONFIGURED
-    TRANSLATION_CONFIGURED
+  SITE_CREATED
+  FIRST_PAGE_PUBLISHED
+  DEPLOYMENT_PROVISIONED
+  DOMAIN_CONNECTED
+  SEO_COMPLETED
+  FORM_CONFIGURED
+  TRANSLATION_CONFIGURED
 }
 
 model TenantOnboarding {
-    id          String                      @id @default(cuid())
-    tenantId    String                      @unique @map("tenant_id")
-    startedAt   DateTime                    @default(now()) @map("started_at")
-    completedAt DateTime?                   @map("completed_at")
-    milestones  TenantOnboardingMilestone[]
+  id          String                      @id @default(cuid())
+  tenantId    String                      @unique @map("tenant_id")
+  startedAt   DateTime                    @default(now()) @map("started_at")
+  completedAt DateTime?                   @map("completed_at")
+  milestones  TenantOnboardingMilestone[]
 
-    @@map("tenant_onboarding")
+  @@map("tenant_onboarding")
 }
 
 model TenantOnboardingMilestone {
-    id           String                 @id @default(cuid())
-    onboardingId String                 @map("onboarding_id")
-    milestone    OnboardingMilestoneKey
-    completedAt  DateTime               @default(now()) @map("completed_at")
-    metadata     Json?
+  id           String                 @id @default(cuid())
+  onboardingId String                 @map("onboarding_id")
+  milestone    OnboardingMilestoneKey
+  completedAt  DateTime               @default(now()) @map("completed_at")
+  metadata     Json?
 
-    onboarding TenantOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  onboarding TenantOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
 
-    @@unique([onboardingId, milestone])
-    @@index([onboardingId])
-    @@map("tenant_onboarding_milestones")
+  @@unique([onboardingId, milestone])
+  @@index([onboardingId])
+  @@map("tenant_onboarding_milestones")
 }
 
 // ─── Translation Usage ─────────────────────────────────────
 
 model TranslationUsage {
-    id          String   @id @default(cuid())
-    tenantId    String   @map("tenant_id")
-    siteId      String?  @map("site_id")
-    characters  Int
-    periodStart DateTime @map("period_start")
-    provider    String   @default("deepl")
-    metadata    Json?
-    createdAt   DateTime @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  siteId      String?  @map("site_id")
+  characters  Int
+  periodStart DateTime @map("period_start")
+  provider    String   @default("deepl")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
 
-    @@index([tenantId, periodStart])
-    @@index([siteId, periodStart])
-    @@map("translation_usage")
+  @@index([tenantId, periodStart])
+  @@index([siteId, periodStart])
+  @@map("translation_usage")
 }
 
 // ─── URL Redirects ────────────────────────────────────────
 
 model Redirect {
-    id         String   @id @default(cuid())
-    siteId     String   @map("site_id")
-    fromPath   String   @map("from_path")
-    toPath     String   @map("to_path")
-    statusCode Int      @default(301) @map("status_code")
-    locale     String?
-    reason     String?
-    permanent  Boolean  @default(true)
-    enabled    Boolean  @default(true)
-    createdAt  DateTime @default(now()) @map("created_at")
-    updatedAt  DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  siteId     String   @map("site_id")
+  fromPath   String   @map("from_path")
+  toPath     String   @map("to_path")
+  statusCode Int      @default(301) @map("status_code")
+  locale     String?
+  reason     String?
+  permanent  Boolean  @default(true)
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@unique([siteId, fromPath, locale])
-    @@index([siteId, enabled])
-    @@index([siteId, fromPath])
-    @@map("redirects")
+  @@unique([siteId, fromPath, locale])
+  @@index([siteId, enabled])
+  @@index([siteId, fromPath])
+  @@map("redirects")
 }
 
 // ─── SEO Structured Data ──────────────────────────────────
 
 model SiteStructuredData {
-    id            String   @id @default(cuid())
-    siteId        String   @unique @map("site_id")
-    businessType  String   @default("Hotel") @map("business_type")
-    businessName  String?  @map("business_name")
-    description   String?
-    streetAddress String?  @map("street_address")
-    city          String?
-    region        String?
-    postalCode    String?  @map("postal_code")
-    country       String?
-    telephone     String?
-    email         String?
-    starRating    Int?     @map("star_rating")
-    priceRange    String?  @map("price_range")
-    checkInTime   String?  @map("check_in_time")
-    checkOutTime  String?  @map("check_out_time")
-    amenities     Json?
-    roomCount     Int?     @map("room_count")
-    latitude      Float?
-    longitude     Float?
-    imageUrl      String?  @map("image_url")
-    createdAt     DateTime @default(now()) @map("created_at")
-    updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  siteId         String   @unique @map("site_id")
+  businessType   String   @default("Hotel") @map("business_type")
+  businessName   String?  @map("business_name")
+  description    String?
+  streetAddress  String?  @map("street_address")
+  city           String?
+  region         String?
+  postalCode     String?  @map("postal_code")
+  country        String?
+  telephone      String?
+  email          String?
+  starRating     Int?     @map("star_rating")
+  priceRange     String?  @map("price_range")
+  checkInTime    String?  @map("check_in_time")
+  checkOutTime   String?  @map("check_out_time")
+  amenities      Json?
+  roomCount      Int?     @map("room_count")
+  latitude       Float?
+  longitude      Float?
+  imageUrl       String?  @map("image_url")
+  enabledSchemas String[] @default(["HospitalityBusiness", "BreadcrumbList"]) @map("enabled_schemas")
+  roomTypes      Json?    @map("room_types")
+  offers         Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-    site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@map("site_structured_data")
+  @@map("site_structured_data")
 }
 
 // ─── Translation Jobs ─────────────────────────────────────
 
 enum TranslationJobStatus {
-    QUEUED
-    PROCESSING
-    COMPLETED
-    FAILED
-    REVIEW_REQUIRED
-    APPROVED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  REVIEW_REQUIRED
+  APPROVED
 }
 
 model TranslationJob {
-    id             String               @id @default(cuid())
-    tenantId       String               @map("tenant_id")
-    siteId         String               @map("site_id")
-    sourceLocale   String               @map("source_locale")
-    targetLocale   String               @map("target_locale")
-    status         TranslationJobStatus @default(QUEUED)
-    totalPages     Int                  @default(0) @map("total_pages")
-    completedPages Int                  @default(0) @map("completed_pages")
-    failedPages    Int                  @default(0) @map("failed_pages")
-    charactersUsed Int                  @default(0) @map("characters_used")
-    overwrite      Boolean              @default(false)
-    autoPublish    Boolean              @default(false) @map("auto_publish")
-    pageIds        Json?                @map("page_ids")
-    error          String?
-    startedAt      DateTime?            @map("started_at")
-    completedAt    DateTime?            @map("completed_at")
-    createdAt      DateTime             @default(now()) @map("created_at")
-    createdBy      String               @map("created_by")
+  id             String               @id @default(cuid())
+  tenantId       String               @map("tenant_id")
+  siteId         String               @map("site_id")
+  sourceLocale   String               @map("source_locale")
+  targetLocale   String               @map("target_locale")
+  status         TranslationJobStatus @default(QUEUED)
+  totalPages     Int                  @default(0) @map("total_pages")
+  completedPages Int                  @default(0) @map("completed_pages")
+  failedPages    Int                  @default(0) @map("failed_pages")
+  charactersUsed Int                  @default(0) @map("characters_used")
+  overwrite      Boolean              @default(false)
+  autoPublish    Boolean              @default(false) @map("auto_publish")
+  pageIds        Json?                @map("page_ids")
+  error          String?
+  startedAt      DateTime?            @map("started_at")
+  completedAt    DateTime?            @map("completed_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  createdBy      String               @map("created_by")
 
-    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@index([tenantId, createdAt])
-    @@index([siteId, createdAt])
-    @@index([status])
-    @@map("translation_jobs")
+  @@index([tenantId, createdAt])
+  @@index([siteId, createdAt])
+  @@index([status])
+  @@map("translation_jobs")
 }
 
 // ─── Translation Glossary ─────────────────────────────────
 
 model TranslationGlossary {
-    id        String   @id @default(cuid())
-    tenantId  String   @map("tenant_id")
-    siteId    String?  @map("site_id")
-    name      String
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  siteId    String?  @map("site_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-    tenant Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    site   Site?                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-    terms  TranslationGlossaryTerm[]
+  tenant Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site?                     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  terms  TranslationGlossaryTerm[]
 
-    @@unique([tenantId, siteId, name])
-    @@index([tenantId])
-    @@index([siteId])
-    @@map("translation_glossaries")
+  @@unique([tenantId, siteId, name])
+  @@index([tenantId])
+  @@index([siteId])
+  @@map("translation_glossaries")
 }
 
 model TranslationGlossaryTerm {
-    id            String   @id @default(cuid())
-    glossaryId    String   @map("glossary_id")
-    sourceTerm    String   @map("source_term")
-    targetTerm    String   @map("target_term")
-    sourceLocale  String   @map("source_locale")
-    targetLocale  String   @map("target_locale")
-    caseSensitive Boolean  @default(false) @map("case_sensitive")
-    createdAt     DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  glossaryId    String   @map("glossary_id")
+  sourceTerm    String   @map("source_term")
+  targetTerm    String   @map("target_term")
+  sourceLocale  String   @map("source_locale")
+  targetLocale  String   @map("target_locale")
+  caseSensitive Boolean  @default(false) @map("case_sensitive")
+  createdAt     DateTime @default(now()) @map("created_at")
 
-    glossary TranslationGlossary @relation(fields: [glossaryId], references: [id], onDelete: Cascade)
+  glossary TranslationGlossary @relation(fields: [glossaryId], references: [id], onDelete: Cascade)
 
-    @@unique([glossaryId, sourceTerm, sourceLocale, targetLocale])
-    @@index([glossaryId])
-    @@map("translation_glossary_terms")
+  @@unique([glossaryId, sourceTerm, sourceLocale, targetLocale])
+  @@index([glossaryId])
+  @@map("translation_glossary_terms")
 }
 
 model TranslationProviderGlossary {
-    id                 String    @id @default(cuid())
-    tenantId           String    @map("tenant_id")
-    siteId             String    @map("site_id")
-    provider           String
-    sourceLocale       String    @map("source_locale")
-    targetLocale       String    @map("target_locale")
-    providerGlossaryId String    @map("provider_glossary_id")
-    entriesHash        String    @map("entries_hash")
-    entryCount         Int       @default(0) @map("entry_count")
-    isStale            Boolean   @default(false) @map("is_stale")
-    lastSyncedAt       DateTime? @map("last_synced_at")
-    createdAt          DateTime  @default(now()) @map("created_at")
-    updatedAt          DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(cuid())
+  tenantId           String    @map("tenant_id")
+  siteId             String    @map("site_id")
+  provider           String
+  sourceLocale       String    @map("source_locale")
+  targetLocale       String    @map("target_locale")
+  providerGlossaryId String    @map("provider_glossary_id")
+  entriesHash        String    @map("entries_hash")
+  entryCount         Int       @default(0) @map("entry_count")
+  isStale            Boolean   @default(false) @map("is_stale")
+  lastSyncedAt       DateTime? @map("last_synced_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-    @@unique([siteId, provider, sourceLocale, targetLocale])
-    @@index([tenantId])
-    @@index([siteId])
-    @@map("translation_provider_glossaries")
+  @@unique([siteId, provider, sourceLocale, targetLocale])
+  @@index([tenantId])
+  @@index([siteId])
+  @@map("translation_provider_glossaries")
 }
 
 // ─── Page Translation Metadata ────────────────────────────
 
 model PageTranslationMeta {
-    id                String    @id @default(cuid())
-    pageId            String    @map("page_id")
-    sourcePageId      String    @map("source_page_id")
-    lastTranslatedAt  DateTime? @map("last_translated_at")
-    sourceContentHash String?   @map("source_content_hash")
-    isStale           Boolean   @default(false) @map("is_stale")
-    translationJobId  String?   @map("translation_job_id")
-    createdAt         DateTime  @default(now()) @map("created_at")
-    updatedAt         DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(cuid())
+  pageId            String    @map("page_id")
+  sourcePageId      String    @map("source_page_id")
+  lastTranslatedAt  DateTime? @map("last_translated_at")
+  sourceContentHash String?   @map("source_content_hash")
+  isStale           Boolean   @default(false) @map("is_stale")
+  translationJobId  String?   @map("translation_job_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-    page       Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-    sourcePage Page @relation("SourceTranslations", fields: [sourcePageId], references: [id], onDelete: Cascade)
+  page       Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  sourcePage Page @relation("SourceTranslations", fields: [sourcePageId], references: [id], onDelete: Cascade)
 
-    @@unique([pageId])
-    @@index([sourcePageId])
-    @@index([isStale])
-    @@map("page_translation_meta")
+  @@unique([pageId])
+  @@index([sourcePageId])
+  @@index([isStale])
+  @@map("page_translation_meta")
 }
 
 // ─── Audit Log ─────────────────────────────────────────────
 
 model AuditLog {
-    id          String   @id @default(cuid())
-    tenantId    String   @map("tenant_id")
-    siteId      String?  @map("site_id")
-    actorUserId String?  @map("actor_user_id")
-    action      String
-    targetType  String?  @map("target_type")
-    targetId    String?  @map("target_id")
-    metadata    Json?
-    createdAt   DateTime @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  siteId      String?  @map("site_id")
+  actorUserId String?  @map("actor_user_id")
+  action      String
+  targetType  String?  @map("target_type")
+  targetId    String?  @map("target_id")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
 
-    tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-    site   Site?  @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site?  @relation(fields: [siteId], references: [id], onDelete: SetNull)
 
-    @@index([tenantId])
-    @@index([tenantId, createdAt])
-    @@index([siteId, createdAt])
-    @@map("audit_logs")
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([siteId, createdAt])
+  @@map("audit_logs")
 }
 
 // ─── Notifications ────────────────────────────────────────────
 
 enum NotificationChannel {
-    IN_APP
-    EMAIL
+  IN_APP
+  EMAIL
 }
 
 enum NotificationCategory {
-    DEPLOYMENT
-    DOMAIN
-    BILLING
-    FORM_SUBMISSION
-    SYSTEM
+  DEPLOYMENT
+  DOMAIN
+  BILLING
+  FORM_SUBMISSION
+  SYSTEM
 }
 
 model Notification {
-    id        String               @id @default(cuid())
-    tenantId  String               @map("tenant_id")
-    userId    String?              @map("user_id")
-    siteId    String?              @map("site_id")
-    category  NotificationCategory
-    channel   NotificationChannel  @default(IN_APP)
-    title     String
-    body      String
-    actionUrl String?              @map("action_url")
-    readAt    DateTime?            @map("read_at")
-    metadata  Json?
-    createdAt DateTime             @default(now()) @map("created_at")
+  id        String               @id @default(cuid())
+  tenantId  String               @map("tenant_id")
+  userId    String?              @map("user_id")
+  siteId    String?              @map("site_id")
+  category  NotificationCategory
+  channel   NotificationChannel  @default(IN_APP)
+  title     String
+  body      String
+  actionUrl String?              @map("action_url")
+  readAt    DateTime?            @map("read_at")
+  metadata  Json?
+  createdAt DateTime             @default(now()) @map("created_at")
 
-    @@index([tenantId, userId, readAt])
-    @@index([tenantId, createdAt])
-    @@index([userId, readAt])
-    @@map("notifications")
+  @@index([tenantId, userId, readAt])
+  @@index([tenantId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
 }
 
 model NotificationPreference {
-    id        String               @id @default(cuid())
-    userId    String               @map("user_id")
-    tenantId  String               @map("tenant_id")
-    category  NotificationCategory
-    channel   NotificationChannel
-    enabled   Boolean              @default(true)
-    createdAt DateTime             @default(now()) @map("created_at")
-    updatedAt DateTime             @updatedAt @map("updated_at")
+  id        String               @id @default(cuid())
+  userId    String               @map("user_id")
+  tenantId  String               @map("tenant_id")
+  category  NotificationCategory
+  channel   NotificationChannel
+  enabled   Boolean              @default(true)
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
 
-    @@unique([userId, tenantId, category, channel])
-    @@index([userId, tenantId])
-    @@map("notification_preferences")
+  @@unique([userId, tenantId, category, channel])
+  @@index([userId, tenantId])
+  @@map("notification_preferences")
 }

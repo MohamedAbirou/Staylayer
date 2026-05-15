@@ -83,13 +83,21 @@ export class SettingsService {
       seoDefaultDesc: settings.seoDefaultDesc,
       seoOgImage: settings.seoOgImage,
       seoIndexingEnabled: settings.seoIndexingEnabled,
+      seoLocaleDefaults: settings.seoLocaleDefaults,
       googleSiteVerify: settings.googleSiteVerify,
+      bingSiteVerify: settings.bingSiteVerify,
+      yandexSiteVerify: settings.yandexSiteVerify,
+      pinterestSiteVerify: settings.pinterestSiteVerify,
       gaTrackingId: settings.gaTrackingId,
       gtmContainerId: settings.gtmContainerId,
       clarityId: settings.clarityId,
       twitterHandle: settings.twitterHandle,
       linkedinUrl: settings.linkedinUrl,
       facebookUrl: settings.facebookUrl,
+      instagramUrl: settings.instagramUrl,
+      youtubeUrl: settings.youtubeUrl,
+      tiktokUrl: settings.tiktokUrl,
+      pinterestUrl: settings.pinterestUrl,
     };
   }
 
@@ -502,13 +510,21 @@ export class SettingsService {
     seoDefaultDesc: string;
     seoOgImage: string;
     seoIndexingEnabled: boolean;
+    seoLocaleDefaults: unknown;
     googleSiteVerify: string;
+    bingSiteVerify: string;
+    yandexSiteVerify: string;
+    pinterestSiteVerify: string;
     gaTrackingId: string;
     gtmContainerId: string;
     clarityId: string;
     twitterHandle: string;
     linkedinUrl: string;
     facebookUrl: string;
+    instagramUrl: string;
+    youtubeUrl: string;
+    tiktokUrl: string;
+    pinterestUrl: string;
     defaultLocale: string;
     activeLocales: string[];
     updatedAt: Date;
@@ -527,13 +543,21 @@ export class SettingsService {
       seoDefaultDesc: settings.seoDefaultDesc,
       seoOgImage: settings.seoOgImage,
       seoIndexingEnabled: settings.seoIndexingEnabled,
+      seoLocaleDefaults: settings.seoLocaleDefaults,
       googleSiteVerify: settings.googleSiteVerify,
+      bingSiteVerify: settings.bingSiteVerify,
+      yandexSiteVerify: settings.yandexSiteVerify,
+      pinterestSiteVerify: settings.pinterestSiteVerify,
       gaTrackingId: settings.gaTrackingId,
       gtmContainerId: settings.gtmContainerId,
       clarityId: settings.clarityId,
       twitterHandle: settings.twitterHandle,
       linkedinUrl: settings.linkedinUrl,
       facebookUrl: settings.facebookUrl,
+      instagramUrl: settings.instagramUrl,
+      youtubeUrl: settings.youtubeUrl,
+      tiktokUrl: settings.tiktokUrl,
+      pinterestUrl: settings.pinterestUrl,
       defaultLocale: settings.defaultLocale,
       activeLocales: settings.activeLocales,
       updatedAt: settings.updatedAt,

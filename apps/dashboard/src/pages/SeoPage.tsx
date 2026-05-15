@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertCircle,
   ArrowRight,
+  CheckCircle2,
+  ClipboardCheck,
+  FileText,
   Plus,
   Trash2,
   Loader as Loader2,
@@ -12,22 +16,27 @@ import {
   Phone,
 } from "lucide-react";
 import { useAuth } from "../auth/useAuth";
+import { getPages, updatePage } from "../api/pages";
 import {
   getRedirects,
   createRedirect,
   toggleRedirect,
   deleteRedirect,
+  validatePageSeo,
   getStructuredData,
   upsertStructuredData,
   type StructuredDataDto,
+  type StructuredOffer,
+  type StructuredRoomType,
 } from "../api/seo";
+import { useSettings } from "../hooks/useSettings";
 
-type Tab = "redirects" | "structured-data";
+type Tab = "audit" | "redirects" | "structured-data";
 
 export default function SeoPage() {
   const { session } = useAuth();
   const siteId = session?.activeSite?.id ?? null;
-  const [tab, setTab] = useState<Tab>("redirects");
+  const [tab, setTab] = useState<Tab>("audit");
 
   if (!siteId) {
     return (
@@ -93,6 +102,16 @@ export default function SeoPage() {
 
       <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
         <button
+          onClick={() => setTab("audit")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "audit"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          SEO Audit
+        </button>
+        <button
           onClick={() => setTab("redirects")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "redirects"
@@ -114,8 +133,401 @@ export default function SeoPage() {
         </button>
       </div>
 
+      {tab === "audit" && <SeoAuditPanel siteId={siteId} />}
       {tab === "redirects" && <RedirectsPanel siteId={siteId} />}
       {tab === "structured-data" && <StructuredDataPanel siteId={siteId} />}
+    </div>
+  );
+}
+
+type SeoAuditRow = {
+  key: string;
+  slug: string;
+  locale: string;
+  title: string;
+  published: boolean;
+  seoTitle: string;
+  seoDescription: string;
+  seoOgImage: string;
+  seoNoindex: boolean;
+  score: number;
+  pass: boolean;
+  issues: { field: string; severity: string; message: string }[];
+};
+
+function SeoAuditPanel({ siteId }: { siteId: string }) {
+  const queryClient = useQueryClient();
+  const { data: settings } = useSettings();
+  const locales = useMemo(
+    () => (settings?.activeLocales?.length ? settings.activeLocales : ["en"]),
+    [settings?.activeLocales],
+  );
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkForm, setBulkForm] = useState({
+    seoDescription: "",
+    seoOgImage: "",
+    seoNoindex: "keep" as "keep" | "true" | "false",
+  });
+
+  const auditQuery = useQuery({
+    queryKey: ["seo", "audit", siteId, locales],
+    enabled: Boolean(settings),
+    queryFn: async (): Promise<SeoAuditRow[]> => {
+      const pageResponses = await Promise.all(
+        locales.map((locale) => getPages({ locale, limit: 200 })),
+      );
+      const pages = pageResponses.flatMap((response) => response.data);
+
+      return Promise.all(
+        pages.map(async (page) => {
+          try {
+            const result = await validatePageSeo(
+              siteId,
+              page.slug,
+              page.locale,
+            );
+            return {
+              key: `${page.locale}:${page.slug}`,
+              slug: page.slug,
+              locale: page.locale,
+              title: page.title,
+              published: page.published,
+              seoTitle: page.seoTitle,
+              seoDescription: page.seoDescription,
+              seoOgImage: page.seoOgImage,
+              seoNoindex: page.seoNoindex,
+              score: result.score,
+              pass: result.pass,
+              issues: result.issues,
+            };
+          } catch {
+            return {
+              key: `${page.locale}:${page.slug}`,
+              slug: page.slug,
+              locale: page.locale,
+              title: page.title,
+              published: page.published,
+              seoTitle: page.seoTitle,
+              seoDescription: page.seoDescription,
+              seoOgImage: page.seoOgImage,
+              seoNoindex: page.seoNoindex,
+              score: 0,
+              pass: false,
+              issues: [
+                {
+                  field: "audit",
+                  severity: "error",
+                  message: "SEO audit could not validate this page",
+                },
+              ],
+            };
+          }
+        }),
+      );
+    },
+  });
+
+  const rows = auditQuery.data ?? [];
+  const selectedRows = rows.filter((row) => selected.includes(row.key));
+  const issueCount = rows.reduce((total, row) => total + row.issues.length, 0);
+  const averageScore = rows.length
+    ? Math.round(
+        rows.reduce((total, row) => total + row.score, 0) / rows.length,
+      )
+    : 0;
+  const warningRows = rows.filter((row) => row.issues.length > 0).length;
+  const hasBulkPayload =
+    bulkForm.seoDescription.trim() ||
+    bulkForm.seoOgImage.trim() ||
+    bulkForm.seoNoindex !== "keep";
+
+  useEffect(() => {
+    if (!auditQuery.data) return;
+    const rowKeys = new Set(auditQuery.data.map((row) => row.key));
+    setSelected((current) => current.filter((key) => rowKeys.has(key)));
+  }, [auditQuery.data]);
+
+  const bulkMutation = useMutation({
+    mutationFn: async () => {
+      const payload: {
+        seoDescription?: string;
+        seoOgImage?: string;
+        seoNoindex?: boolean;
+      } = {};
+
+      if (bulkForm.seoDescription.trim()) {
+        payload.seoDescription = bulkForm.seoDescription.trim();
+      }
+      if (bulkForm.seoOgImage.trim()) {
+        payload.seoOgImage = bulkForm.seoOgImage.trim();
+      }
+      if (bulkForm.seoNoindex !== "keep") {
+        payload.seoNoindex = bulkForm.seoNoindex === "true";
+      }
+
+      await Promise.all(
+        selectedRows.map((row) => updatePage(row.slug, row.locale, payload)),
+      );
+    },
+    onSuccess: () => {
+      setSelected([]);
+      setBulkForm({ seoDescription: "", seoOgImage: "", seoNoindex: "keep" });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "audit", siteId],
+      });
+    },
+  });
+
+  const toggleAll = () => {
+    setSelected((current) =>
+      current.length === rows.length ? [] : rows.map((row) => row.key),
+    );
+  };
+
+  const toggleRow = (key: string) => {
+    setSelected((current) =>
+      current.includes(key)
+        ? current.filter((selectedKey) => selectedKey !== key)
+        : [...current, key],
+    );
+  };
+
+  if (auditQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-sm text-gray-400">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Auditing pages...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 md:grid-cols-4">
+        {[
+          {
+            label: "Average score",
+            value: rows.length ? `${averageScore}/100` : "-",
+            icon: ClipboardCheck,
+          },
+          { label: "Pages checked", value: rows.length, icon: FileText },
+          { label: "Pages with issues", value: warningRows, icon: AlertCircle },
+          { label: "Total issues", value: issueCount, icon: CheckCircle2 },
+        ].map(({ label, value, icon: Icon }) => (
+          <div
+            key={label}
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <Icon className="h-4 w-4" />
+              {label}
+            </div>
+            <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Bulk SEO edit
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Apply shared descriptions, OG images, or indexing status to
+              selected page-locale rows.
+            </p>
+          </div>
+          <div className="grid flex-1 gap-3 sm:grid-cols-3 lg:max-w-3xl">
+            <input
+              type="text"
+              value={bulkForm.seoDescription}
+              onChange={(e) =>
+                setBulkForm((previous) => ({
+                  ...previous,
+                  seoDescription: e.target.value,
+                }))
+              }
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              placeholder="Meta description"
+            />
+            <input
+              type="url"
+              value={bulkForm.seoOgImage}
+              onChange={(e) =>
+                setBulkForm((previous) => ({
+                  ...previous,
+                  seoOgImage: e.target.value,
+                }))
+              }
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              placeholder="OG image URL"
+            />
+            <select
+              value={bulkForm.seoNoindex}
+              onChange={(e) =>
+                setBulkForm((previous) => ({
+                  ...previous,
+                  seoNoindex: e.target.value as "keep" | "true" | "false",
+                }))
+              }
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+            >
+              <option value="keep">Keep indexing</option>
+              <option value="false">Allow indexing</option>
+              <option value="true">Set noindex</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={() => bulkMutation.mutate()}
+            disabled={
+              !selectedRows.length || !hasBulkPayload || bulkMutation.isPending
+            }
+            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {bulkMutation.isPending && (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            )}
+            Apply to {selectedRows.length || 0}
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Page and locale portfolio
+            </h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Includes metadata checks plus demo-copy and platform-reference
+              warnings.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => auditQuery.refetch()}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Refresh audit
+          </button>
+        </div>
+        {rows.length === 0 ? (
+          <div className="flex flex-col items-center py-12 text-center">
+            <FileText className="h-8 w-8 text-gray-200" />
+            <p className="mt-3 text-sm text-gray-500">
+              No pages found for active locales
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-100 text-sm">
+              <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selected.length === rows.length && rows.length > 0
+                      }
+                      onChange={toggleAll}
+                      className="rounded border-gray-300"
+                    />
+                  </th>
+                  <th className="px-4 py-3">Page</th>
+                  <th className="px-4 py-3">Locale</th>
+                  <th className="px-4 py-3">Score</th>
+                  <th className="px-4 py-3">SEO fields</th>
+                  <th className="px-4 py-3">Issues</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {rows.map((row) => (
+                  <tr key={row.key} className="hover:bg-gray-50/70">
+                    <td className="px-4 py-3 align-top">
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(row.key)}
+                        onChange={() => toggleRow(row.key)}
+                        className="rounded border-gray-300"
+                      />
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <div className="font-medium text-gray-900">
+                        {row.title}
+                      </div>
+                      <div className="mt-0.5 font-mono text-xs text-gray-400">
+                        /{row.slug}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {row.published ? "Published" : "Draft"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top text-gray-600">
+                      {row.locale}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          row.score >= 85
+                            ? "bg-emerald-100 text-emerald-700"
+                            : row.score >= 65
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {row.score}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-top text-xs text-gray-600">
+                      <div>{row.seoTitle ? "Title set" : "Missing title"}</div>
+                      <div>
+                        {row.seoDescription
+                          ? "Description set"
+                          : "Missing description"}
+                      </div>
+                      <div>
+                        {row.seoOgImage ? "OG image set" : "No OG image"}
+                      </div>
+                      {row.seoNoindex && (
+                        <div className="text-amber-700">Noindex</div>
+                      )}
+                    </td>
+                    <td className="max-w-md px-4 py-3 align-top">
+                      {row.issues.length === 0 ? (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Clean
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {row.issues.slice(0, 3).map((issue, index) => (
+                            <div
+                              key={`${row.key}-${index}`}
+                              className="text-xs text-gray-700"
+                            >
+                              <span className="font-semibold capitalize text-amber-700">
+                                {issue.severity}
+                              </span>{" "}
+                              {issue.message}
+                            </div>
+                          ))}
+                          {row.issues.length > 3 && (
+                            <div className="text-xs text-gray-400">
+                              +{row.issues.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -317,6 +729,104 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
   );
 }
 
+const STRUCTURED_SCHEMA_OPTIONS = [
+  {
+    value: "HospitalityBusiness",
+    label: "Hospitality business",
+    description: "Primary lodging or hospitality identity schema.",
+  },
+  {
+    value: "BreadcrumbList",
+    label: "Breadcrumbs",
+    description: "Path-based breadcrumb schema on nested pages.",
+  },
+  {
+    value: "FAQPage",
+    label: "FAQ pages",
+    description: "Generated from FAQ components when present on a page.",
+  },
+  {
+    value: "HotelRoom",
+    label: "Room types",
+    description: "Room or villa types managed below.",
+  },
+  {
+    value: "Offer",
+    label: "Offers",
+    description: "Book-direct packages or seasonal offers managed below.",
+  },
+];
+
+function linesToList(value: string): string[] {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function formatRoomTypes(roomTypes: StructuredRoomType[] | null | undefined) {
+  return (roomTypes ?? [])
+    .map((room) =>
+      [
+        room.name,
+        room.description ?? "",
+        room.occupancy ? String(room.occupancy) : "",
+        room.bedType ?? "",
+        room.imageUrl ?? "",
+      ].join(" | "),
+    )
+    .join("\n");
+}
+
+function parseRoomTypes(value: string): StructuredRoomType[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, description, occupancy, bedType, imageUrl] = line
+        .split("|")
+        .map((part) => part.trim());
+      return {
+        name,
+        description,
+        occupancy: occupancy ? Number(occupancy) : null,
+        bedType,
+        imageUrl,
+      };
+    })
+    .filter((room) => room.name);
+}
+
+function formatOffers(offers: StructuredOffer[] | null | undefined) {
+  return (offers ?? [])
+    .map((offer) =>
+      [
+        offer.name,
+        offer.description ?? "",
+        offer.price ?? "",
+        offer.priceCurrency ?? "",
+        offer.url ?? "",
+        offer.availability ?? "",
+      ].join(" | "),
+    )
+    .join("\n");
+}
+
+function parseOffers(value: string): StructuredOffer[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, description, price, priceCurrency, url, availability] = line
+        .split("|")
+        .map((part) => part.trim());
+      return { name, description, price, priceCurrency, url, availability };
+    })
+    .filter((offer) => offer.name);
+}
+
 function StructuredDataPanel({ siteId }: { siteId: string }) {
   const queryClient = useQueryClient();
 
@@ -326,15 +836,32 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
   });
 
   const [form, setForm] = useState<Partial<StructuredDataDto>>({});
-  const [initialized, setInitialized] = useState(false);
+  const [amenitiesText, setAmenitiesText] = useState("");
+  const [roomTypesText, setRoomTypesText] = useState("");
+  const [offersText, setOffersText] = useState("");
 
-  if (data && !initialized) {
-    setForm(data);
-    setInitialized(true);
-  }
+  useEffect(() => {
+    if (!data) return;
+    setForm({
+      ...data,
+      enabledSchemas: data.enabledSchemas ?? [
+        "HospitalityBusiness",
+        "BreadcrumbList",
+      ],
+    });
+    setAmenitiesText((data.amenities ?? []).join("\n"));
+    setRoomTypesText(formatRoomTypes(data.roomTypes));
+    setOffersText(formatOffers(data.offers));
+  }, [data]);
 
   const saveMutation = useMutation({
-    mutationFn: () => upsertStructuredData(siteId, form),
+    mutationFn: () =>
+      upsertStructuredData(siteId, {
+        ...form,
+        amenities: linesToList(amenitiesText),
+        roomTypes: parseRoomTypes(roomTypesText),
+        offers: parseOffers(offersText),
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["seo", "structured-data", siteId],
@@ -344,6 +871,19 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
 
   const updateField = (key: string, value: unknown) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleSchema = (schema: string) => {
+    const current = form.enabledSchemas ?? [
+      "HospitalityBusiness",
+      "BreadcrumbList",
+    ];
+    updateField(
+      "enabledSchemas",
+      current.includes(schema)
+        ? current.filter((entry) => entry !== schema)
+        : [...current, schema],
+    );
   };
 
   if (isLoading) {
@@ -362,6 +902,49 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
         information helps search engines display enhanced listings for your
         hospitality business.
       </p>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center gap-2">
+          <ClipboardCheck className="h-4 w-4 text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-900">
+            Schema Coverage
+          </h3>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {STRUCTURED_SCHEMA_OPTIONS.map((option) => {
+            const enabledSchemas = form.enabledSchemas ?? [
+              "HospitalityBusiness",
+              "BreadcrumbList",
+            ];
+            const checked = enabledSchemas.includes(option.value);
+            return (
+              <label
+                key={option.value}
+                className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors ${
+                  checked
+                    ? "border-blue-200 bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleSchema(option.value)}
+                  className="mt-1 rounded border-gray-300"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-gray-900">
+                    {option.label}
+                  </span>
+                  <span className="mt-1 block text-xs text-gray-500">
+                    {option.description}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
@@ -505,6 +1088,68 @@ function StructuredDataPanel({ siteId }: { siteId: string }) {
               updateField("roomCount", v ? parseInt(v, 10) : null)
             }
           />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center gap-2">
+          <FileText className="h-4 w-4 text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-900">
+            Amenities, Rooms & Offers
+          </h3>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Amenities
+            </label>
+            <textarea
+              rows={5}
+              value={amenitiesText}
+              onChange={(event) => setAmenitiesText(event.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+              placeholder={"Pool\nBeach access\nBreakfast included"}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              One amenity per line or comma-separated; emitted as
+              LocationFeatureSpecification entries.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Room types
+            </label>
+            <textarea
+              rows={5}
+              value={roomTypesText}
+              onChange={(event) => setRoomTypesText(event.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+              placeholder={
+                "Sea View Suite | Private terrace and king bed | 2 | King bed | https://..."
+              }
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Format: name | description | occupancy | bed type | image URL.
+            </p>
+          </div>
+          <div className="lg:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Offers
+            </label>
+            <textarea
+              rows={4}
+              value={offersText}
+              onChange={(event) => setOffersText(event.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+              placeholder={
+                "Direct booking package | Breakfast and late checkout | 240 | EUR | https://... | InStock"
+              }
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Format: name | description | price | currency | URL |
+              availability.
+            </p>
+          </div>
         </div>
       </div>
 

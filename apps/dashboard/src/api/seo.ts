@@ -15,7 +15,12 @@ export interface RedirectDto {
 
 export interface SeoValidationResult {
   score: number;
-  issues: { field: string; severity: string; message: string; suggestion?: string }[];
+  issues: {
+    field: string;
+    severity: string;
+    message: string;
+    suggestion?: string;
+  }[];
   pass: boolean;
 }
 
@@ -41,6 +46,26 @@ export interface StructuredDataDto {
   latitude: number | null;
   longitude: number | null;
   imageUrl: string | null;
+  enabledSchemas: string[] | null;
+  roomTypes: StructuredRoomType[] | null;
+  offers: StructuredOffer[] | null;
+}
+
+export interface StructuredRoomType {
+  name: string;
+  description?: string;
+  occupancy?: number | null;
+  bedType?: string;
+  imageUrl?: string;
+}
+
+export interface StructuredOffer {
+  name: string;
+  description?: string;
+  price?: string;
+  priceCurrency?: string;
+  url?: string;
+  availability?: string;
 }
 
 export async function getRedirects(siteId: string): Promise<RedirectDto[]> {

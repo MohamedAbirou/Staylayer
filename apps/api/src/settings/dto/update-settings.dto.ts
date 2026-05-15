@@ -6,6 +6,7 @@ import {
   IsEmail,
   IsIn,
   IsOptional,
+  IsObject,
   IsString,
   IsUrl,
   Matches,
@@ -26,6 +27,7 @@ const GA_ID_PATTERN = /^(G|UA|AW|DC)-[A-Z0-9-]{4,32}$/;
 const GTM_ID_PATTERN = /^GTM-[A-Z0-9]{4,20}$/;
 const CLARITY_ID_PATTERN = /^[a-z0-9]{6,20}$/;
 const GOOGLE_VERIFY_PATTERN = /^[A-Za-z0-9_-]{20,100}$/;
+const SITE_VERIFY_PATTERN = /^[A-Za-z0-9_=-]{6,120}$/;
 const TWITTER_HANDLE_PATTERN = /^@?[A-Za-z0-9_]{1,15}$/;
 
 export class UpdateSettingsDto {
@@ -84,6 +86,13 @@ export class UpdateSettingsDto {
   @IsOptional()
   seoOgImage?: string;
 
+  @IsObject()
+  @IsOptional()
+  seoLocaleDefaults?: Record<
+    string,
+    { titleTemplate?: string; description?: string; ogImage?: string }
+  >;
+
   @IsBoolean()
   @IsOptional()
   seoIndexingEnabled?: boolean;
@@ -99,6 +108,41 @@ export class UpdateSettingsDto {
   })
   @IsOptional()
   googleSiteVerify?: string;
+
+  @IsString()
+  @MaxLength(120)
+  @ValidateIf(
+    (_, value) => value !== "" && value !== undefined && value !== null,
+  )
+  @Matches(SITE_VERIFY_PATTERN, {
+    message:
+      "bingSiteVerify must be the verification token from Bing Webmaster Tools",
+  })
+  @IsOptional()
+  bingSiteVerify?: string;
+
+  @IsString()
+  @MaxLength(120)
+  @ValidateIf(
+    (_, value) => value !== "" && value !== undefined && value !== null,
+  )
+  @Matches(SITE_VERIFY_PATTERN, {
+    message: "yandexSiteVerify must be the verification token from Yandex",
+  })
+  @IsOptional()
+  yandexSiteVerify?: string;
+
+  @IsString()
+  @MaxLength(120)
+  @ValidateIf(
+    (_, value) => value !== "" && value !== undefined && value !== null,
+  )
+  @Matches(SITE_VERIFY_PATTERN, {
+    message:
+      "pinterestSiteVerify must be the verification token from Pinterest",
+  })
+  @IsOptional()
+  pinterestSiteVerify?: string;
 
   // Analytics
   @IsString()
@@ -162,6 +206,34 @@ export class UpdateSettingsDto {
   @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
   @IsOptional()
   facebookUrl?: string;
+
+  @ValidateIf(
+    (_, value) => value !== "" && value !== undefined && value !== null,
+  )
+  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
+  @IsOptional()
+  instagramUrl?: string;
+
+  @ValidateIf(
+    (_, value) => value !== "" && value !== undefined && value !== null,
+  )
+  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
+  @IsOptional()
+  youtubeUrl?: string;
+
+  @ValidateIf(
+    (_, value) => value !== "" && value !== undefined && value !== null,
+  )
+  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
+  @IsOptional()
+  tiktokUrl?: string;
+
+  @ValidateIf(
+    (_, value) => value !== "" && value !== undefined && value !== null,
+  )
+  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
+  @IsOptional()
+  pinterestUrl?: string;
 
   // Localization
   @IsString()

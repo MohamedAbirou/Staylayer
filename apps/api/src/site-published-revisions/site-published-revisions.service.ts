@@ -34,13 +34,21 @@ type SettingsSnapshotEntry = {
   seoDefaultDesc: string;
   seoOgImage: string;
   seoIndexingEnabled: boolean;
+  seoLocaleDefaults: Prisma.JsonValue;
   googleSiteVerify: string;
+  bingSiteVerify: string;
+  yandexSiteVerify: string;
+  pinterestSiteVerify: string;
   gaTrackingId: string;
   gtmContainerId: string;
   clarityId: string;
   twitterHandle: string;
   linkedinUrl: string;
   facebookUrl: string;
+  instagramUrl: string;
+  youtubeUrl: string;
+  tiktokUrl: string;
+  pinterestUrl: string;
   defaultLocale: string;
   activeLocales: string[];
 };
@@ -138,13 +146,21 @@ export class SitePublishedRevisionsService {
             seoDefaultDesc: settings.seoDefaultDesc,
             seoOgImage: settings.seoOgImage,
             seoIndexingEnabled: settings.seoIndexingEnabled,
+            seoLocaleDefaults: settings.seoLocaleDefaults,
             googleSiteVerify: settings.googleSiteVerify,
+            bingSiteVerify: settings.bingSiteVerify,
+            yandexSiteVerify: settings.yandexSiteVerify,
+            pinterestSiteVerify: settings.pinterestSiteVerify,
             gaTrackingId: settings.gaTrackingId,
             gtmContainerId: settings.gtmContainerId,
             clarityId: settings.clarityId,
             twitterHandle: settings.twitterHandle,
             linkedinUrl: settings.linkedinUrl,
             facebookUrl: settings.facebookUrl,
+            instagramUrl: settings.instagramUrl,
+            youtubeUrl: settings.youtubeUrl,
+            tiktokUrl: settings.tiktokUrl,
+            pinterestUrl: settings.pinterestUrl,
             defaultLocale: settings.defaultLocale,
             activeLocales: settings.activeLocales,
           }
@@ -312,13 +328,22 @@ export class SitePublishedRevisionsService {
               seoDefaultDesc: settings.seoDefaultDesc,
               seoOgImage: settings.seoOgImage,
               seoIndexingEnabled: settings.seoIndexingEnabled,
+              seoLocaleDefaults:
+                settings.seoLocaleDefaults as Prisma.InputJsonValue,
               googleSiteVerify: settings.googleSiteVerify,
+              bingSiteVerify: settings.bingSiteVerify,
+              yandexSiteVerify: settings.yandexSiteVerify,
+              pinterestSiteVerify: settings.pinterestSiteVerify,
               gaTrackingId: settings.gaTrackingId,
               gtmContainerId: settings.gtmContainerId,
               clarityId: settings.clarityId,
               twitterHandle: settings.twitterHandle,
               linkedinUrl: settings.linkedinUrl,
               facebookUrl: settings.facebookUrl,
+              instagramUrl: settings.instagramUrl,
+              youtubeUrl: settings.youtubeUrl,
+              tiktokUrl: settings.tiktokUrl,
+              pinterestUrl: settings.pinterestUrl,
               defaultLocale: settings.defaultLocale,
               activeLocales: settings.activeLocales,
             },
@@ -341,13 +366,22 @@ export class SitePublishedRevisionsService {
               seoDefaultDesc: settings.seoDefaultDesc,
               seoOgImage: settings.seoOgImage,
               seoIndexingEnabled: settings.seoIndexingEnabled,
+              seoLocaleDefaults:
+                settings.seoLocaleDefaults as Prisma.InputJsonValue,
               googleSiteVerify: settings.googleSiteVerify,
+              bingSiteVerify: settings.bingSiteVerify,
+              yandexSiteVerify: settings.yandexSiteVerify,
+              pinterestSiteVerify: settings.pinterestSiteVerify,
               gaTrackingId: settings.gaTrackingId,
               gtmContainerId: settings.gtmContainerId,
               clarityId: settings.clarityId,
               twitterHandle: settings.twitterHandle,
               linkedinUrl: settings.linkedinUrl,
               facebookUrl: settings.facebookUrl,
+              instagramUrl: settings.instagramUrl,
+              youtubeUrl: settings.youtubeUrl,
+              tiktokUrl: settings.tiktokUrl,
+              pinterestUrl: settings.pinterestUrl,
               defaultLocale: settings.defaultLocale,
               activeLocales: settings.activeLocales,
             },
@@ -473,13 +507,21 @@ export class SitePublishedRevisionsService {
       seoDefaultDesc: asString(obj.seoDefaultDesc),
       seoOgImage: asString(obj.seoOgImage),
       seoIndexingEnabled: asBool(obj.seoIndexingEnabled, true),
+      seoLocaleDefaults: (obj.seoLocaleDefaults ?? {}) as Prisma.JsonValue,
       googleSiteVerify: asString(obj.googleSiteVerify),
+      bingSiteVerify: asString(obj.bingSiteVerify),
+      yandexSiteVerify: asString(obj.yandexSiteVerify),
+      pinterestSiteVerify: asString(obj.pinterestSiteVerify),
       gaTrackingId: asString(obj.gaTrackingId),
       gtmContainerId: asString(obj.gtmContainerId),
       clarityId: asString(obj.clarityId),
       twitterHandle: asString(obj.twitterHandle),
       linkedinUrl: asString(obj.linkedinUrl),
       facebookUrl: asString(obj.facebookUrl),
+      instagramUrl: asString(obj.instagramUrl),
+      youtubeUrl: asString(obj.youtubeUrl),
+      tiktokUrl: asString(obj.tiktokUrl),
+      pinterestUrl: asString(obj.pinterestUrl),
       defaultLocale: asString(obj.defaultLocale, "en"),
       activeLocales:
         asStringArray(obj.activeLocales).length > 0

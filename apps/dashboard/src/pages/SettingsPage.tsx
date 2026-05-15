@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useUsers } from "../hooks/useUsers";
 import { useSettings, useUpdateSettings } from "../hooks/useSettings";
@@ -83,6 +83,31 @@ const LOCALE_META: Record<
   fr: { label: "French", flag: "🇫🇷", nativeName: "Français" },
   de: { label: "German", flag: "🇩🇪", nativeName: "Deutsch" },
 };
+
+type SeoLocaleDefault = {
+  titleTemplate: string;
+  description: string;
+  ogImage: string;
+};
+
+type SeoLocaleDefaults = Record<string, SeoLocaleDefault>;
+
+function normalizeSeoLocaleDefaults(
+  defaults?: Record<
+    string,
+    { titleTemplate?: string; description?: string; ogImage?: string }
+  >,
+): SeoLocaleDefaults {
+  return LOCALES.reduce<SeoLocaleDefaults>((acc, locale) => {
+    const entry = defaults?.[locale] ?? {};
+    acc[locale] = {
+      titleTemplate: entry.titleTemplate ?? "",
+      description: entry.description ?? "",
+      ogImage: entry.ogImage ?? "",
+    };
+    return acc;
+  }, {});
+}
 
 type InquiryDeliveryPresetId = "none" | "automation" | "crm" | "pms" | "custom";
 
@@ -908,11 +933,18 @@ function SiteSettingsTab() {
     gtmContainerId: "",
     clarityId: "",
     googleSiteVerify: "",
+    bingSiteVerify: "",
+    yandexSiteVerify: "",
+    pinterestSiteVerify: "",
   });
   const [social, setSocial] = useState({
     twitterHandle: "",
     linkedinUrl: "",
     facebookUrl: "",
+    instagramUrl: "",
+    youtubeUrl: "",
+    tiktokUrl: "",
+    pinterestUrl: "",
   });
   const [generalDirty, setGeneralDirty] = useState(false);
   const [analyticsDirty, setAnalyticsDirty] = useState(false);
@@ -939,11 +971,18 @@ function SiteSettingsTab() {
         gtmContainerId: settings.gtmContainerId,
         clarityId: settings.clarityId,
         googleSiteVerify: settings.googleSiteVerify,
+        bingSiteVerify: settings.bingSiteVerify,
+        yandexSiteVerify: settings.yandexSiteVerify,
+        pinterestSiteVerify: settings.pinterestSiteVerify,
       });
       setSocial({
         twitterHandle: settings.twitterHandle,
         linkedinUrl: settings.linkedinUrl,
         facebookUrl: settings.facebookUrl,
+        instagramUrl: settings.instagramUrl,
+        youtubeUrl: settings.youtubeUrl,
+        tiktokUrl: settings.tiktokUrl,
+        pinterestUrl: settings.pinterestUrl,
       });
     }
   }, [settings]);
@@ -1251,34 +1290,31 @@ function SiteSettingsTab() {
           <SettingsField
             label="Logo URL"
             id="logoUrl"
-            hint="Direct image file or CDN asset URL; share pages will not render"
+            hint="Hosted asset URL or compact uploaded image for site branding"
           >
-            <input
+            <AssetPickerField
               id="logoUrl"
-              type="url"
               value={general.logoUrl}
-              onChange={(e) => {
-                setGeneral((p) => ({ ...p, logoUrl: e.target.value }));
+              onChange={(value) => {
+                setGeneral((p) => ({ ...p, logoUrl: value }));
                 setGeneralDirty(true);
               }}
-              className={inputCls}
               placeholder="https://example.com/logo.png"
             />
           </SettingsField>
           <SettingsField
             label="Favicon URL"
             id="faviconUrl"
-            hint="Direct .ico, .png, .svg, or image CDN asset URL; not a photo page"
+            hint="Hosted icon URL or compact uploaded icon asset"
           >
-            <input
+            <AssetPickerField
               id="faviconUrl"
-              type="url"
               value={general.faviconUrl}
-              onChange={(e) => {
-                setGeneral((p) => ({ ...p, faviconUrl: e.target.value }));
+              kind="icon"
+              onChange={(value) => {
+                setGeneral((p) => ({ ...p, faviconUrl: value }));
                 setGeneralDirty(true);
               }}
-              className={inputCls}
               placeholder="https://example.com/favicon.ico"
             />
           </SettingsField>
@@ -1320,6 +1356,9 @@ function SiteSettingsTab() {
               gtmContainerId: settings.gtmContainerId,
               clarityId: settings.clarityId,
               googleSiteVerify: settings.googleSiteVerify,
+              bingSiteVerify: settings.bingSiteVerify,
+              yandexSiteVerify: settings.yandexSiteVerify,
+              pinterestSiteVerify: settings.pinterestSiteVerify,
             });
           setAnalyticsDirty(false);
         }}
@@ -1396,6 +1435,66 @@ function SiteSettingsTab() {
               placeholder="abc123xyz..."
             />
           </SettingsField>
+          <SettingsField
+            label="Bing Verification"
+            id="bingVerify"
+            hint="msvalidate.01 token from Bing Webmaster Tools"
+          >
+            <input
+              id="bingVerify"
+              type="text"
+              value={analytics.bingSiteVerify}
+              onChange={(e) => {
+                setAnalytics((p) => ({
+                  ...p,
+                  bingSiteVerify: e.target.value,
+                }));
+                setAnalyticsDirty(true);
+              }}
+              className={inputCls}
+              placeholder="Bing verification token"
+            />
+          </SettingsField>
+          <SettingsField
+            label="Yandex Verification"
+            id="yandexVerify"
+            hint="Verification token from Yandex Webmaster"
+          >
+            <input
+              id="yandexVerify"
+              type="text"
+              value={analytics.yandexSiteVerify}
+              onChange={(e) => {
+                setAnalytics((p) => ({
+                  ...p,
+                  yandexSiteVerify: e.target.value,
+                }));
+                setAnalyticsDirty(true);
+              }}
+              className={inputCls}
+              placeholder="Yandex verification token"
+            />
+          </SettingsField>
+          <SettingsField
+            label="Pinterest Verification"
+            id="pinterestVerify"
+            hint="p:domain_verify token from Pinterest"
+          >
+            <input
+              id="pinterestVerify"
+              type="text"
+              value={analytics.pinterestSiteVerify}
+              onChange={(e) => {
+                setAnalytics((p) => ({
+                  ...p,
+                  pinterestSiteVerify: e.target.value,
+                }));
+                setAnalyticsDirty(true);
+              }}
+              className={inputCls}
+              placeholder="Pinterest verification token"
+            />
+          </SettingsField>
         </div>
       </SettingsCard>
 
@@ -1413,11 +1512,15 @@ function SiteSettingsTab() {
               twitterHandle: settings.twitterHandle,
               linkedinUrl: settings.linkedinUrl,
               facebookUrl: settings.facebookUrl,
+              instagramUrl: settings.instagramUrl,
+              youtubeUrl: settings.youtubeUrl,
+              tiktokUrl: settings.tiktokUrl,
+              pinterestUrl: settings.pinterestUrl,
             });
           setSocialDirty(false);
         }}
       >
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SettingsField
             label="Twitter / X Handle"
             id="twitter"
@@ -1472,6 +1575,74 @@ function SiteSettingsTab() {
               }}
               className={inputCls}
               placeholder="https://facebook.com/..."
+            />
+          </SettingsField>
+          <SettingsField
+            label="Instagram URL"
+            id="instagram"
+            hint="Full Instagram profile URL"
+          >
+            <input
+              id="instagram"
+              type="url"
+              value={social.instagramUrl}
+              onChange={(e) => {
+                setSocial((p) => ({ ...p, instagramUrl: e.target.value }));
+                setSocialDirty(true);
+              }}
+              className={inputCls}
+              placeholder="https://instagram.com/..."
+            />
+          </SettingsField>
+          <SettingsField
+            label="YouTube URL"
+            id="youtube"
+            hint="Full YouTube channel URL"
+          >
+            <input
+              id="youtube"
+              type="url"
+              value={social.youtubeUrl}
+              onChange={(e) => {
+                setSocial((p) => ({ ...p, youtubeUrl: e.target.value }));
+                setSocialDirty(true);
+              }}
+              className={inputCls}
+              placeholder="https://youtube.com/@..."
+            />
+          </SettingsField>
+          <SettingsField
+            label="TikTok URL"
+            id="tiktok"
+            hint="Full TikTok profile URL"
+          >
+            <input
+              id="tiktok"
+              type="url"
+              value={social.tiktokUrl}
+              onChange={(e) => {
+                setSocial((p) => ({ ...p, tiktokUrl: e.target.value }));
+                setSocialDirty(true);
+              }}
+              className={inputCls}
+              placeholder="https://tiktok.com/@..."
+            />
+          </SettingsField>
+          <SettingsField
+            label="Pinterest URL"
+            id="pinterest"
+            hint="Full Pinterest profile URL"
+          >
+            <input
+              id="pinterest"
+              type="url"
+              value={social.pinterestUrl}
+              onChange={(e) => {
+                setSocial((p) => ({ ...p, pinterestUrl: e.target.value }));
+                setSocialDirty(true);
+              }}
+              className={inputCls}
+              placeholder="https://pinterest.com/..."
             />
           </SettingsField>
         </div>
@@ -1539,6 +1710,7 @@ function SeoDefaultsTab() {
     seoDefaultDesc: "",
     seoOgImage: "",
     seoIndexingEnabled: true,
+    seoLocaleDefaults: normalizeSeoLocaleDefaults(),
   });
   const [dirty, setDirty] = useState(false);
   const [previewTitle, setPreviewTitle] = useState("Example Page Title");
@@ -1550,12 +1722,38 @@ function SeoDefaultsTab() {
         seoDefaultDesc: settings.seoDefaultDesc,
         seoOgImage: settings.seoOgImage,
         seoIndexingEnabled: settings.seoIndexingEnabled,
+        seoLocaleDefaults: normalizeSeoLocaleDefaults(
+          settings.seoLocaleDefaults,
+        ),
       });
     }
   }, [settings]);
 
   const serp = form.seoTitleTemplate.replace("%s", previewTitle);
   const descLen = form.seoDefaultDesc.length;
+  const activeSeoLocales = settings?.activeLocales?.length
+    ? settings.activeLocales
+    : [...LOCALES];
+  const updateLocaleDefault = (
+    locale: string,
+    patch: Partial<SeoLocaleDefault>,
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      seoLocaleDefaults: {
+        ...previous.seoLocaleDefaults,
+        [locale]: {
+          ...(previous.seoLocaleDefaults[locale] ?? {
+            titleTemplate: "",
+            description: "",
+            ogImage: "",
+          }),
+          ...patch,
+        },
+      },
+    }));
+    setDirty(true);
+  };
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -1630,6 +1828,9 @@ function SeoDefaultsTab() {
               seoDefaultDesc: settings.seoDefaultDesc,
               seoOgImage: settings.seoOgImage,
               seoIndexingEnabled: settings.seoIndexingEnabled,
+              seoLocaleDefaults: normalizeSeoLocaleDefaults(
+                settings.seoLocaleDefaults,
+              ),
             });
           }
           setDirty(false);
@@ -1684,15 +1885,13 @@ function SeoDefaultsTab() {
             id="ogImage"
             hint="Recommended size: 1200×630px, used when no page-specific OG image is set"
           >
-            <input
+            <AssetPickerField
               id="ogImage"
-              type="text"
               value={form.seoOgImage}
-              onChange={(e) => {
-                setForm((p) => ({ ...p, seoOgImage: e.target.value }));
+              onChange={(value) => {
+                setForm((p) => ({ ...p, seoOgImage: value }));
                 setDirty(true);
               }}
-              className={inputCls}
               placeholder="https://example.com/og-default.jpg"
             />
           </SettingsField>
@@ -1746,6 +1945,117 @@ function SeoDefaultsTab() {
               </div>
             </div>
           )}
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  Locale-specific defaults
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Override the global title template, description, or OG image
+                  for multilingual search snippets.
+                </p>
+              </div>
+              <Languages className="h-4 w-4 text-gray-400" />
+            </div>
+            <div className="space-y-4">
+              {activeSeoLocales.map((locale) => {
+                const meta = LOCALE_META[locale];
+                const localeDefaults = form.seoLocaleDefaults[locale] ?? {
+                  titleTemplate: "",
+                  description: "",
+                  ogImage: "",
+                };
+                const localeDescLen = localeDefaults.description.length;
+
+                return (
+                  <div
+                    key={locale}
+                    className="rounded-lg border border-gray-200 bg-white p-4"
+                  >
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-lg">{meta?.flag}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {meta?.label ?? locale.toUpperCase()}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Leave blank to inherit global defaults
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <SettingsField
+                        label="Title Template"
+                        id={`seoLocaleTitle-${locale}`}
+                        hint="Use %s as the page title placeholder"
+                      >
+                        <input
+                          id={`seoLocaleTitle-${locale}`}
+                          type="text"
+                          value={localeDefaults.titleTemplate}
+                          onChange={(e) =>
+                            updateLocaleDefault(locale, {
+                              titleTemplate: e.target.value,
+                            })
+                          }
+                          className={inputCls}
+                          placeholder={form.seoTitleTemplate || "%s | Brand"}
+                        />
+                      </SettingsField>
+                      <SettingsField
+                        label="OG Image URL"
+                        id={`seoLocaleOg-${locale}`}
+                        hint="Optional locale-specific social sharing image"
+                      >
+                        <input
+                          id={`seoLocaleOg-${locale}`}
+                          type="url"
+                          value={localeDefaults.ogImage}
+                          onChange={(e) =>
+                            updateLocaleDefault(locale, {
+                              ogImage: e.target.value,
+                            })
+                          }
+                          className={inputCls}
+                          placeholder={form.seoOgImage || "https://..."}
+                        />
+                      </SettingsField>
+                      <SettingsField
+                        label="Meta Description"
+                        id={`seoLocaleDesc-${locale}`}
+                        hint={`${localeDescLen}/160 characters`}
+                        hintColor={
+                          localeDescLen > 160
+                            ? "text-red-500"
+                            : localeDescLen > 140
+                              ? "text-amber-500"
+                              : "text-gray-400"
+                        }
+                      >
+                        <textarea
+                          id={`seoLocaleDesc-${locale}`}
+                          rows={2}
+                          value={localeDefaults.description}
+                          onChange={(e) =>
+                            updateLocaleDefault(locale, {
+                              description: e.target.value,
+                            })
+                          }
+                          className={`${inputCls} resize-none`}
+                          placeholder={
+                            form.seoDefaultDesc ||
+                            "Localized default meta description"
+                          }
+                        />
+                      </SettingsField>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
             <div>
@@ -2117,6 +2427,110 @@ function LocalizationTab() {
 
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-shadow";
+
+const MAX_SEO_ASSET_FILE_SIZE = 350 * 1024;
+
+function isAllowedSeoAsset(file: File, kind: "image" | "icon") {
+  const allowedTypes =
+    kind === "icon"
+      ? [
+          "image/png",
+          "image/jpeg",
+          "image/svg+xml",
+          "image/webp",
+          "image/x-icon",
+        ]
+      : ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
+
+  return allowedTypes.includes(file.type);
+}
+
+function AssetPickerField({
+  id,
+  value,
+  onChange,
+  placeholder,
+  kind = "image",
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  kind?: "image" | "icon";
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input
+          id={id}
+          type="url"
+          value={value.startsWith("data:") ? "" : value}
+          onChange={(event) => onChange(event.target.value)}
+          className={inputCls}
+          placeholder={placeholder}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="shrink-0 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          Upload
+        </button>
+        {value ? (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="shrink-0 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={
+          kind === "icon"
+            ? "image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon"
+            : "image/png,image/jpeg,image/svg+xml,image/webp"
+        }
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+
+          if (!file) return;
+
+          if (!isAllowedSeoAsset(file, kind)) {
+            toast.error("Choose a PNG, JPG, SVG, or WebP image asset.");
+            event.target.value = "";
+            return;
+          }
+
+          if (file.size > MAX_SEO_ASSET_FILE_SIZE) {
+            toast.error("Choose an image smaller than 350 KB.");
+            event.target.value = "";
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              onChange(reader.result);
+            }
+          };
+          reader.readAsDataURL(file);
+          event.target.value = "";
+        }}
+      />
+      <p className="text-xs text-gray-400">
+        Paste a hosted asset URL or upload a compact image for validated
+        preview.
+      </p>
+    </div>
+  );
+}
 
 function SettingsField({
   label,

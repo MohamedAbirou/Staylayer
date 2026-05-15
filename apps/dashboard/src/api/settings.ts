@@ -13,13 +13,24 @@ export interface SiteSettings {
   seoDefaultDesc: string;
   seoOgImage: string;
   seoIndexingEnabled: boolean;
+  seoLocaleDefaults: Record<
+    string,
+    { titleTemplate?: string; description?: string; ogImage?: string }
+  >;
   googleSiteVerify: string;
+  bingSiteVerify: string;
+  yandexSiteVerify: string;
+  pinterestSiteVerify: string;
   gaTrackingId: string;
   gtmContainerId: string;
   clarityId: string;
   twitterHandle: string;
   linkedinUrl: string;
   facebookUrl: string;
+  instagramUrl: string;
+  youtubeUrl: string;
+  tiktokUrl: string;
+  pinterestUrl: string;
   defaultLocale: string;
   activeLocales: string[];
   updatedAt: string;
@@ -38,13 +49,24 @@ export interface UpdateSettingsPayload {
   seoDefaultDesc?: string;
   seoOgImage?: string;
   seoIndexingEnabled?: boolean;
+  seoLocaleDefaults?: Record<
+    string,
+    { titleTemplate?: string; description?: string; ogImage?: string }
+  >;
   googleSiteVerify?: string;
+  bingSiteVerify?: string;
+  yandexSiteVerify?: string;
+  pinterestSiteVerify?: string;
   gaTrackingId?: string;
   gtmContainerId?: string;
   clarityId?: string;
   twitterHandle?: string;
   linkedinUrl?: string;
   facebookUrl?: string;
+  instagramUrl?: string;
+  youtubeUrl?: string;
+  tiktokUrl?: string;
+  pinterestUrl?: string;
   defaultLocale?: string;
   activeLocales?: string[];
 }

@@ -186,13 +186,21 @@ export class PublicRuntimeService {
             seoDefaultDesc: true,
             seoOgImage: true,
             seoIndexingEnabled: true,
+            seoLocaleDefaults: true,
             gaTrackingId: true,
             gtmContainerId: true,
             clarityId: true,
             googleSiteVerify: true,
+            bingSiteVerify: true,
+            yandexSiteVerify: true,
+            pinterestSiteVerify: true,
             twitterHandle: true,
             facebookUrl: true,
             linkedinUrl: true,
+            instagramUrl: true,
+            youtubeUrl: true,
+            tiktokUrl: true,
+            pinterestUrl: true,
             supportEmail: true,
           },
         },
@@ -245,16 +253,25 @@ export class PublicRuntimeService {
       locale: page.locale,
       puckData: page.puckData,
     });
+    const localeSeoDefaults = this.getLocaleSeoDefaults(
+      site.settings?.seoLocaleDefaults,
+      page.locale,
+    );
     const structuredData = await this.buildStructuredData({
       siteId: site.id,
       hostname: resolution.canonicalHost,
       pathname,
       siteName: site.settings?.siteName || site.name,
       pageTitle: page.title,
+      puckData: page.puckData,
       logoUrl: this.toNullableString(site.settings?.logoUrl),
       sameAs: [
         this.toNullableString(site.settings?.facebookUrl),
         this.toNullableString(site.settings?.linkedinUrl),
+        this.toNullableString(site.settings?.instagramUrl),
+        this.toNullableString(site.settings?.youtubeUrl),
+        this.toNullableString(site.settings?.tiktokUrl),
+        this.toNullableString(site.settings?.pinterestUrl),
       ].filter((value): value is string => Boolean(value)),
     });
     const payload = {
@@ -284,6 +301,15 @@ export class PublicRuntimeService {
           googleSiteVerification: this.toNullableString(
             site.settings?.googleSiteVerify,
           ),
+          bingSiteVerification: this.toNullableString(
+            site.settings?.bingSiteVerify,
+          ),
+          yandexSiteVerification: this.toNullableString(
+            site.settings?.yandexSiteVerify,
+          ),
+          pinterestSiteVerification: this.toNullableString(
+            site.settings?.pinterestSiteVerify,
+          ),
         },
         social: {
           twitterHandle: this.normalizeTwitterHandle(
@@ -291,6 +317,10 @@ export class PublicRuntimeService {
           ),
           facebookUrl: this.toNullableString(site.settings?.facebookUrl),
           linkedinUrl: this.toNullableString(site.settings?.linkedinUrl),
+          instagramUrl: this.toNullableString(site.settings?.instagramUrl),
+          youtubeUrl: this.toNullableString(site.settings?.youtubeUrl),
+          tiktokUrl: this.toNullableString(site.settings?.tiktokUrl),
+          pinterestUrl: this.toNullableString(site.settings?.pinterestUrl),
         },
         contact: {
           supportEmail: this.toNullableString(site.settings?.supportEmail),
@@ -307,10 +337,11 @@ export class PublicRuntimeService {
           title: this.buildSeoTitle(
             page.seoTitle,
             page.title,
-            site.settings?.seoTitleTemplate,
+            localeSeoDefaults.titleTemplate || site.settings?.seoTitleTemplate,
           ),
           description:
             this.toNullableString(page.seoDescription) ||
+            localeSeoDefaults.description ||
             this.toNullableString(site.settings?.seoDefaultDesc) ||
             "",
           keywords: this.parseKeywords(page.seoKeywords),
@@ -321,6 +352,7 @@ export class PublicRuntimeService {
           ),
           ogImage:
             this.toNullableString(page.seoOgImage) ||
+            localeSeoDefaults.ogImage ||
             this.toNullableString(site.settings?.seoOgImage),
           noindex:
             draft ||
@@ -660,6 +692,7 @@ export class PublicRuntimeService {
     pathname: string;
     siteName: string;
     pageTitle: string;
+    puckData: Record<string, unknown>;
     logoUrl: string | null;
     sameAs: string[];
   }): Promise<Record<string, unknown>[]> {
@@ -694,16 +727,63 @@ export class PublicRuntimeService {
       entries.push(businessJsonLd);
     }
 
-    const breadcrumb = this.buildBreadcrumbJsonLd(
-      input.hostname,
-      input.pathname,
-      input.pageTitle,
+    const enabledSchemas = await this.seoService.getEnabledSchemas(
+      input.siteId,
     );
+
+    const breadcrumb = enabledSchemas.includes("BreadcrumbList")
+      ? this.buildBreadcrumbJsonLd(
+          input.hostname,
+          input.pathname,
+          input.pageTitle,
+        )
+      : null;
     if (breadcrumb) {
       entries.push(breadcrumb);
     }
 
+    const pageSchemas = await this.seoService.generatePageTypeJsonLd(
+      input.siteId,
+      {
+        hostname: input.hostname,
+        pathname: input.pathname,
+        puckData: input.puckData,
+      },
+    );
+    entries.push(...pageSchemas);
+
     return entries;
+  }
+
+  private getLocaleSeoDefaults(raw: unknown, locale: string) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return { titleTemplate: null, description: null, ogImage: null };
+    }
+
+    const localeDefaults = (raw as Record<string, unknown>)[locale];
+    if (
+      !localeDefaults ||
+      typeof localeDefaults !== "object" ||
+      Array.isArray(localeDefaults)
+    ) {
+      return { titleTemplate: null, description: null, ogImage: null };
+    }
+
+    const defaults = localeDefaults as Record<string, unknown>;
+
+    return {
+      titleTemplate: this.toNullableString(
+        typeof defaults.titleTemplate === "string"
+          ? defaults.titleTemplate
+          : null,
+      ),
+      description: this.toNullableString(
+        typeof defaults.description === "string" ? defaults.description : null,
+      ),
+      ogImage: this.toNullableString(
+        typeof defaults.ogImage === "string" ? defaults.ogImage : null,
+      ),
+    };
   }
 
   private buildBreadcrumbJsonLd(

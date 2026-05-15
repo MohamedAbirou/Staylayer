@@ -91,7 +91,7 @@ function AccordionItem({
 export const FAQ = ({
   heading = "Frequently asked questions",
   headingPosition = "center",
-  subheading = "Everything you need to know about our platform.",
+  subheading = "Helpful details for planning a direct stay.",
   items = [],
   columns = "1",
   backgroundColor = "",
@@ -223,8 +223,9 @@ export const faqConfig: ComponentConfig<FAQProps> = {
         answer: { type: "textarea", label: "Answer", contentEditable: true },
       },
       defaultItemProps: {
-        question: "What is this product?",
-        answer: "This is a description of your product or service.",
+        question: "Can I book directly?",
+        answer:
+          "Yes. Send an inquiry with your dates and the reservations team will confirm availability and next steps.",
       },
     },
     columns: {
@@ -296,27 +297,27 @@ export const faqConfig: ComponentConfig<FAQProps> = {
   defaultProps: {
     heading: "Frequently asked questions",
     headingPosition: "center",
-    subheading: "Everything you need to know about our platform.",
+    subheading: "Helpful details for planning a direct stay.",
     items: [
       {
-        question: "How do I get started?",
+        question: "Can I book directly?",
         answer:
-          "Getting started is easy! Simply sign up for an account and follow our step-by-step onboarding process.",
+          "Yes. Send an inquiry with your preferred dates and the reservations team will confirm availability, rates, and next steps.",
       },
       {
-        question: "Is there a free trial?",
+        question: "What information should I include?",
         answer:
-          "Yes, we offer a 14-day free trial with full access to all features. No credit card required.",
+          "Include your arrival and departure dates, number of guests, room preferences, and any special requests for your stay.",
       },
       {
-        question: "Can I cancel anytime?",
+        question: "Do you support longer stays or groups?",
         answer:
-          "Absolutely. You can cancel your subscription at any time with no penalties or hidden fees.",
+          "Share your group size and ideal dates so the team can recommend the best rooms, villas, or packages.",
       },
       {
-        question: "Do you offer support?",
+        question: "When will I hear back?",
         answer:
-          "We provide 24/7 customer support via email, chat, and phone. Our team is always here to help.",
+          "Most direct inquiries receive a personal reply within one business day.",
       },
     ],
     columns: "1",

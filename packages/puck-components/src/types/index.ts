@@ -36,9 +36,6 @@ export type { FooterProps } from "../components/navigation/Footer";
 
 export interface RootData {
   title: string;
-  seoTitle: string;
-  seoDescription: string;
-  seoKeywords: string;
   backgroundColor: string;
   fontFamily: string;
 }

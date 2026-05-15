@@ -72,7 +72,51 @@ export interface StructuredDataDto {
   latitude: number | null;
   longitude: number | null;
   imageUrl: string | null;
+  enabledSchemas: string[] | null;
+  roomTypes: StructuredRoomType[] | null;
+  offers: StructuredOffer[] | null;
 }
+
+export interface StructuredRoomType {
+  name: string;
+  description?: string;
+  occupancy?: number | null;
+  bedType?: string;
+  imageUrl?: string;
+}
+
+export interface StructuredOffer {
+  name: string;
+  description?: string;
+  price?: string;
+  priceCurrency?: string;
+  url?: string;
+  availability?: string;
+}
+
+const DEFAULT_ENABLED_SCHEMAS = ["HospitalityBusiness", "BreadcrumbList"];
+const MANAGED_SCHEMA_TYPES = new Set([
+  "HospitalityBusiness",
+  "BreadcrumbList",
+  "FAQPage",
+  "HotelRoom",
+  "Offer",
+]);
+
+const GENERIC_CONTENT_PATTERNS = [
+  /what is this product/i,
+  /description of your product or service/i,
+  /everything you need to know about our platform/i,
+  /14-day free trial/i,
+  /cancel your subscription/i,
+  /onboarding & setup guidance/i,
+  /feature walkthroughs/i,
+  /partnership opportunities/i,
+  /general support/i,
+  /have a question about staylayer/i,
+  /example page title/i,
+  /lorem ipsum/i,
+];
 
 @Injectable()
 export class SeoService {
@@ -168,6 +212,18 @@ export class SeoService {
       where: { siteId, slug, locale, deletedAt: null },
     });
     if (!page) throw new NotFoundException("Page not found");
+
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId },
+      select: {
+        name: true,
+        settings: {
+          select: {
+            siteName: true,
+          },
+        },
+      },
+    });
 
     const issues: SeoIssue[] = [];
 
@@ -270,6 +326,13 @@ export class SeoService {
       });
     }
 
+    issues.push(
+      ...this.findContentQualityIssues(
+        page.puckData,
+        site?.settings?.siteName || site?.name || "",
+      ),
+    );
+
     const score = this.calculateSeoScore(issues, page);
 
     return {
@@ -292,6 +355,22 @@ export class SeoService {
     siteId: string,
     input: Partial<Omit<StructuredDataDto, "id" | "siteId">>,
   ): Promise<StructuredDataDto> {
+    const enabledSchemas = input.enabledSchemas
+      ? this.normalizeEnabledSchemas(input.enabledSchemas)
+      : undefined;
+    const amenities =
+      input.amenities !== undefined
+        ? this.normalizeStringArray(input.amenities)
+        : undefined;
+    const roomTypes =
+      input.roomTypes !== undefined
+        ? this.normalizeRoomTypes(input.roomTypes)
+        : undefined;
+    const offers =
+      input.offers !== undefined
+        ? this.normalizeOffers(input.offers)
+        : undefined;
+
     const data = await this.prisma.siteStructuredData.upsert({
       where: { siteId },
       create: {
@@ -310,11 +389,14 @@ export class SeoService {
         priceRange: input.priceRange ?? null,
         checkInTime: input.checkInTime ?? null,
         checkOutTime: input.checkOutTime ?? null,
-        amenities: input.amenities ?? undefined,
+        amenities: amenities ?? undefined,
         roomCount: input.roomCount ?? null,
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
         imageUrl: input.imageUrl ?? null,
+        enabledSchemas: enabledSchemas ?? DEFAULT_ENABLED_SCHEMAS,
+        roomTypes: (roomTypes ?? undefined) as unknown as Prisma.InputJsonValue,
+        offers: (offers ?? undefined) as unknown as Prisma.InputJsonValue,
       },
       update: {
         ...(input.businessType !== undefined
@@ -353,8 +435,7 @@ export class SeoService {
           : {}),
         ...(input.amenities !== undefined
           ? {
-              amenities:
-                input.amenities !== null ? input.amenities : Prisma.DbNull,
+              amenities: amenities !== null ? amenities : Prisma.DbNull,
             }
           : {}),
         ...(input.roomCount !== undefined
@@ -365,6 +446,30 @@ export class SeoService {
           ? { longitude: input.longitude }
           : {}),
         ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+        ...(input.enabledSchemas !== undefined
+          ? {
+              enabledSchemas:
+                enabledSchemas && enabledSchemas.length > 0
+                  ? enabledSchemas
+                  : DEFAULT_ENABLED_SCHEMAS,
+            }
+          : {}),
+        ...(input.roomTypes !== undefined
+          ? {
+              roomTypes:
+                roomTypes !== null
+                  ? (roomTypes as unknown as Prisma.InputJsonValue)
+                  : Prisma.DbNull,
+            }
+          : {}),
+        ...(input.offers !== undefined
+          ? {
+              offers:
+                offers !== null
+                  ? (offers as unknown as Prisma.InputJsonValue)
+                  : Prisma.DbNull,
+            }
+          : {}),
       },
     });
     return this.structuredDataToDto(data);
@@ -377,6 +482,10 @@ export class SeoService {
       where: { siteId },
     });
     if (!data) return null;
+
+    if (!this.schemaEnabled(data.enabledSchemas, "HospitalityBusiness")) {
+      return null;
+    }
 
     const jsonLd: Record<string, unknown> = {
       "@context": "https://schema.org",
@@ -434,7 +543,280 @@ export class SeoService {
     return jsonLd;
   }
 
+  async getEnabledSchemas(siteId: string): Promise<string[]> {
+    const data = await this.prisma.siteStructuredData.findUnique({
+      where: { siteId },
+      select: { enabledSchemas: true },
+    });
+
+    return this.normalizeEnabledSchemas(data?.enabledSchemas ?? null);
+  }
+
+  async generatePageTypeJsonLd(
+    siteId: string,
+    input: {
+      hostname: string;
+      pathname: string;
+      puckData: Record<string, unknown>;
+    },
+  ): Promise<Record<string, unknown>[]> {
+    const data = await this.prisma.siteStructuredData.findUnique({
+      where: { siteId },
+      select: {
+        enabledSchemas: true,
+        roomTypes: true,
+        offers: true,
+      },
+    });
+
+    const enabledSchemas = this.normalizeEnabledSchemas(
+      data?.enabledSchemas ?? null,
+    );
+    const entries: Record<string, unknown>[] = [];
+
+    if (enabledSchemas.includes("FAQPage")) {
+      const faqItems = this.extractFaqItems(input.puckData);
+      if (faqItems.length > 0) {
+        entries.push({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqItems.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: item.answer,
+            },
+          })),
+        });
+      }
+    }
+
+    if (enabledSchemas.includes("HotelRoom")) {
+      for (const room of this.normalizeRoomTypes(data?.roomTypes ?? null) ??
+        []) {
+        const roomJsonLd: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "HotelRoom",
+          name: room.name,
+        };
+        if (room.description) roomJsonLd.description = room.description;
+        if (room.bedType) roomJsonLd.bed = room.bedType;
+        if (room.imageUrl) roomJsonLd.image = room.imageUrl;
+        if (room.occupancy) {
+          roomJsonLd.occupancy = {
+            "@type": "QuantitativeValue",
+            value: room.occupancy,
+          };
+        }
+        entries.push(roomJsonLd);
+      }
+    }
+
+    if (enabledSchemas.includes("Offer")) {
+      for (const offer of this.normalizeOffers(data?.offers ?? null) ?? []) {
+        const offerJsonLd: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "Offer",
+          name: offer.name,
+          url: offer.url || this.absoluteUrl(input.hostname, input.pathname),
+        };
+        if (offer.description) offerJsonLd.description = offer.description;
+        if (offer.price) offerJsonLd.price = offer.price;
+        if (offer.priceCurrency) {
+          offerJsonLd.priceCurrency = offer.priceCurrency;
+        }
+        if (offer.availability) {
+          offerJsonLd.availability = `https://schema.org/${offer.availability}`;
+        }
+        entries.push(offerJsonLd);
+      }
+    }
+
+    return entries;
+  }
+
   // ── Private ───────────────────────────────────────────────────────────────
+
+  private normalizeEnabledSchemas(value: unknown): string[] {
+    const schemas = Array.isArray(value) ? value : DEFAULT_ENABLED_SCHEMAS;
+    const normalized = schemas
+      .filter((schema): schema is string => typeof schema === "string")
+      .filter((schema) => MANAGED_SCHEMA_TYPES.has(schema));
+
+    return normalized.length > 0
+      ? Array.from(new Set(normalized))
+      : DEFAULT_ENABLED_SCHEMAS;
+  }
+
+  private schemaEnabled(value: unknown, schema: string): boolean {
+    return this.normalizeEnabledSchemas(value).includes(schema);
+  }
+
+  private normalizeStringArray(value: unknown): string[] | null {
+    if (value === null) return null;
+    if (!Array.isArray(value)) return [];
+
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 50);
+  }
+
+  private normalizeRoomTypes(value: unknown): StructuredRoomType[] | null {
+    if (value === null) return null;
+    if (!Array.isArray(value)) return [];
+
+    return value
+      .filter((item): item is Record<string, unknown> =>
+        Boolean(item && typeof item === "object" && !Array.isArray(item)),
+      )
+      .map((item) => ({
+        name: this.toCleanString(item.name),
+        description: this.toCleanString(item.description),
+        occupancy: this.toPositiveInt(item.occupancy),
+        bedType: this.toCleanString(item.bedType),
+        imageUrl: this.toCleanString(item.imageUrl),
+      }))
+      .filter((item) => Boolean(item.name))
+      .slice(0, 25);
+  }
+
+  private normalizeOffers(value: unknown): StructuredOffer[] | null {
+    if (value === null) return null;
+    if (!Array.isArray(value)) return [];
+
+    return value
+      .filter((item): item is Record<string, unknown> =>
+        Boolean(item && typeof item === "object" && !Array.isArray(item)),
+      )
+      .map((item) => ({
+        name: this.toCleanString(item.name),
+        description: this.toCleanString(item.description),
+        price: this.toCleanString(item.price),
+        priceCurrency: this.toCleanString(item.priceCurrency),
+        url: this.toCleanString(item.url),
+        availability: this.toCleanString(item.availability),
+      }))
+      .filter((item) => Boolean(item.name))
+      .slice(0, 25);
+  }
+
+  private extractFaqItems(
+    puckData: Record<string, unknown>,
+  ): Array<{ question: string; answer: string }> {
+    const items: Array<{ question: string; answer: string }> = [];
+
+    const visit = (value: unknown) => {
+      if (!value || typeof value !== "object") return;
+
+      if (Array.isArray(value)) {
+        value.forEach(visit);
+        return;
+      }
+
+      const record = value as Record<string, unknown>;
+      const props =
+        record.props && typeof record.props === "object"
+          ? (record.props as Record<string, unknown>)
+          : record;
+
+      if (record.type === "FAQ" && Array.isArray(props.items)) {
+        for (const item of props.items) {
+          if (!item || typeof item !== "object" || Array.isArray(item)) {
+            continue;
+          }
+
+          const faq = item as Record<string, unknown>;
+          const question = this.toCleanString(faq.question);
+          const answer = this.toCleanString(faq.answer);
+          if (question && answer) {
+            items.push({ question, answer });
+          }
+        }
+      }
+
+      Object.values(record).forEach(visit);
+    };
+
+    visit(puckData);
+    return items.slice(0, 50);
+  }
+
+  private findContentQualityIssues(
+    puckData: unknown,
+    siteName: string,
+  ): SeoIssue[] {
+    const text = this.extractText(puckData).join("\n");
+    const issues: SeoIssue[] = [];
+
+    if (!text.trim()) {
+      issues.push({
+        field: "content",
+        severity: "warning",
+        message: "Page content appears to be empty",
+        suggestion:
+          "Add customer-specific copy before relying on this page for organic search.",
+      });
+      return issues;
+    }
+
+    if (GENERIC_CONTENT_PATTERNS.some((pattern) => pattern.test(text))) {
+      issues.push({
+        field: "content",
+        severity: "warning",
+        message: "Page content still contains generic demo copy",
+        suggestion:
+          "Replace placeholder FAQ, contact, or product copy with property-specific content.",
+      });
+    }
+
+    if (/staylayer/i.test(text) && siteName && !/staylayer/i.test(siteName)) {
+      issues.push({
+        field: "content",
+        severity: "warning",
+        message: "Page content mentions StayLayer on a customer site",
+        suggestion:
+          "Replace platform references with the customer brand, destination, and direct-booking value proposition.",
+      });
+    }
+
+    return issues;
+  }
+
+  private extractText(value: unknown): string[] {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed ? [trimmed] : [];
+    }
+
+    if (!value || typeof value !== "object") {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      return value.flatMap((item) => this.extractText(item));
+    }
+
+    return Object.values(value as Record<string, unknown>).flatMap((item) =>
+      this.extractText(item),
+    );
+  }
+
+  private toCleanString(value: unknown): string {
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  private toPositiveInt(value: unknown): number | null {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  private absoluteUrl(hostname: string, pathname: string): string {
+    const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+    return `https://${hostname}${normalizedPath}`;
+  }
 
   private normalizePath(path: string): string {
     let p = path.trim();
@@ -522,6 +904,9 @@ export class SeoService {
     latitude: number | null;
     longitude: number | null;
     imageUrl: string | null;
+    enabledSchemas: string[];
+    roomTypes: unknown;
+    offers: unknown;
   }): StructuredDataDto {
     return {
       id: d.id,
@@ -545,6 +930,9 @@ export class SeoService {
       latitude: d.latitude,
       longitude: d.longitude,
       imageUrl: d.imageUrl,
+      enabledSchemas: this.normalizeEnabledSchemas(d.enabledSchemas),
+      roomTypes: this.normalizeRoomTypes(d.roomTypes),
+      offers: this.normalizeOffers(d.offers),
     };
   }
 }

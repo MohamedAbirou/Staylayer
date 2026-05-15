@@ -88,18 +88,6 @@ export const puckConfig: Config = {
         type: "text",
         label: "Page Title",
       },
-      seoTitle: {
-        type: "text",
-        label: "SEO Title",
-      },
-      seoDescription: {
-        type: "textarea",
-        label: "SEO Description",
-      },
-      seoKeywords: {
-        type: "text",
-        label: "SEO Keywords (comma-separated)",
-      },
       backgroundColor: {
         type: "custom",
         label: "Page Background",
@@ -124,9 +112,6 @@ export const puckConfig: Config = {
     },
     defaultProps: {
       title: "",
-      seoTitle: "",
-      seoDescription: "",
-      seoKeywords: "",
       backgroundColor: "#ffffff",
       fontFamily: "Inter",
     },

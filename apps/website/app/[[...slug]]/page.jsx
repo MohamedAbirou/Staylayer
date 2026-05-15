@@ -247,6 +247,24 @@ export async function generateMetadata({ params }) {
     };
   }
 
+  const otherVerification = {};
+  if (site.verification?.bingSiteVerification) {
+    otherVerification["msvalidate.01"] = site.verification.bingSiteVerification;
+  }
+  if (site.verification?.yandexSiteVerification) {
+    otherVerification.yandex = site.verification.yandexSiteVerification;
+  }
+  if (site.verification?.pinterestSiteVerification) {
+    otherVerification["p:domain_verify"] =
+      site.verification.pinterestSiteVerification;
+  }
+  if (Object.keys(otherVerification).length > 0) {
+    metadata.verification = {
+      ...(metadata.verification || {}),
+      other: otherVerification,
+    };
+  }
+
   return metadata;
 }
 

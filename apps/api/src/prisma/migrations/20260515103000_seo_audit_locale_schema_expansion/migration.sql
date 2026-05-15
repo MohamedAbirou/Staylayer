@@ -1,0 +1,14 @@
+ALTER TABLE "site_settings"
+  ADD COLUMN IF NOT EXISTS "seo_locale_defaults" JSONB NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS "bing_site_verify" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "yandex_site_verify" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "pinterest_site_verify" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "instagram_url" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "youtube_url" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "tiktok_url" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "pinterest_url" TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE "site_structured_data"
+  ADD COLUMN IF NOT EXISTS "enabled_schemas" TEXT[] NOT NULL DEFAULT ARRAY['HospitalityBusiness', 'BreadcrumbList']::TEXT[],
+  ADD COLUMN IF NOT EXISTS "room_types" JSONB,
+  ADD COLUMN IF NOT EXISTS "offers" JSONB;

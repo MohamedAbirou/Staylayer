@@ -124,6 +124,8 @@ export class PagesService {
           seoTitle: true,
           seoDescription: true,
           seoKeywords: true,
+          seoOgImage: true,
+          seoNoindex: true,
           deletedAt: true,
           createdAt: true,
           updatedAt: true,

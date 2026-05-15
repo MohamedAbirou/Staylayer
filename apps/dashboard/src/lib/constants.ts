@@ -46,6 +46,9 @@ export interface PageListItem {
   published: boolean;
   seoTitle: string;
   seoDescription: string;
+  seoKeywords: string;
+  seoOgImage: string;
+  seoNoindex: boolean;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
