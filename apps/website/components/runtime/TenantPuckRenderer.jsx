@@ -6,6 +6,9 @@ import {
 } from "@myallocator/puck-components";
 import { Render } from "@puckeditor/core";
 import { useRouter } from "next/navigation";
+import { RuntimeSiteBrand } from "./RuntimeSiteBrand";
+
+const DEFAULT_NAVBAR_LOGO_URL = "/images/logo.png";
 
 function isExternalHref(href) {
   return (
@@ -26,6 +29,48 @@ function buildAvailableForms(formsByKey) {
       assignment: form.assignment || null,
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function hasNavbar(puckData) {
+  return (puckData?.content || []).some((block) => block?.type === "Navbar");
+}
+
+function applyRuntimeTheme(puckData, site) {
+  const logoUrl = site?.theme?.logoUrl;
+
+  if (!logoUrl || !hasNavbar(puckData)) {
+    return puckData;
+  }
+
+  return {
+    ...puckData,
+    content: (puckData.content || []).map((block) => {
+      if (block?.type !== "Navbar") {
+        return block;
+      }
+
+      const props = block.props || {};
+      const currentLogoUrl = String(props.logoImageUrl || "").trim();
+      const shouldUseRuntimeLogo =
+        !currentLogoUrl || currentLogoUrl === DEFAULT_NAVBAR_LOGO_URL;
+
+      if (!shouldUseRuntimeLogo) {
+        return block;
+      }
+
+      return {
+        ...block,
+        props: {
+          ...props,
+          logoImageUrl: logoUrl,
+          logoImageAlt: props.logoImageAlt || `${site?.name || "Site"} logo`,
+          logoText: props.logoText || site?.name || "",
+          logoType:
+            props.logoType === "text" ? "both" : props.logoType || "image",
+        },
+      };
+    }),
+  };
 }
 
 async function parseJsonResponse(response, fallbackMessage) {
@@ -55,6 +100,10 @@ export function TenantPuckRenderer({ runtime }) {
   if (!runtime?.page?.puckData?.content) {
     return null;
   }
+
+  const themedPuckData = applyRuntimeTheme(runtime.page.puckData, runtime.site);
+  const shouldRenderBrandHeader =
+    Boolean(runtime.site?.theme?.logoUrl) && !hasNavbar(themedPuckData);
 
   const availableForms = buildAvailableForms(runtime.forms?.byKey);
   const runtimeValue = {
@@ -121,8 +170,11 @@ export function TenantPuckRenderer({ runtime }) {
 
   return (
     <ContactSectionRuntimeProvider value={runtimeValue}>
+      {shouldRenderBrandHeader ? (
+        <RuntimeSiteBrand site={runtime.site} />
+      ) : null}
       <div className="puck-root" onClick={handleClick}>
-        <Render config={puckConfig} data={runtime.page.puckData} />
+        <Render config={puckConfig} data={themedPuckData} />
       </div>
     </ContactSectionRuntimeProvider>
   );

@@ -1251,11 +1251,11 @@ function SiteSettingsTab() {
           <SettingsField
             label="Logo URL"
             id="logoUrl"
-            hint="Direct URL to your logo image (SVG or PNG recommended)"
+            hint="Direct image file or CDN asset URL; share pages will not render"
           >
             <input
               id="logoUrl"
-              type="text"
+              type="url"
               value={general.logoUrl}
               onChange={(e) => {
                 setGeneral((p) => ({ ...p, logoUrl: e.target.value }));
@@ -1268,11 +1268,11 @@ function SiteSettingsTab() {
           <SettingsField
             label="Favicon URL"
             id="faviconUrl"
-            hint="URL to favicon (.ico, .png or .svg, 32×32 recommended)"
+            hint="Direct .ico, .png, .svg, or image CDN asset URL; not a photo page"
           >
             <input
               id="faviconUrl"
-              type="text"
+              type="url"
               value={general.faviconUrl}
               onChange={(e) => {
                 setGeneral((p) => ({ ...p, faviconUrl: e.target.value }));
@@ -1283,19 +1283,20 @@ function SiteSettingsTab() {
             />
           </SettingsField>
         </div>
-        {general.logoUrl && (
-          <div className="mt-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-            <img
-              src={general.logoUrl}
-              alt="Logo preview"
-              className="h-8 max-w-30 object-contain"
-              onError={(e) =>
-                ((e.target as HTMLImageElement).style.display = "none")
-              }
-            />
-            <span className="text-xs text-gray-500">Logo preview</span>
-          </div>
-        )}
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <SiteAssetPreview
+            src={general.logoUrl}
+            label="Logo preview"
+            failedLabel="Logo preview failed. Use a direct image asset URL."
+            imageClassName="h-8 max-w-30 object-contain"
+          />
+          <SiteAssetPreview
+            src={general.faviconUrl}
+            label="Favicon preview"
+            failedLabel="Favicon preview failed. Use a direct icon or image asset URL."
+            imageClassName="h-8 w-8 object-contain"
+          />
+        </div>
         {settings?.updatedBy && (
           <p className="mt-3 text-xs text-gray-500">
             Settings last updated by {settings.updatedBy} ·{" "}
@@ -1475,6 +1476,52 @@ function SiteSettingsTab() {
           </SettingsField>
         </div>
       </SettingsCard>
+    </div>
+  );
+}
+
+function SiteAssetPreview({
+  src,
+  label,
+  failedLabel,
+  imageClassName,
+}: {
+  src: string;
+  label: string;
+  failedLabel: string;
+  imageClassName: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
+        failed
+          ? "border-amber-200 bg-amber-50 text-amber-800"
+          : "border-gray-200 bg-gray-50 text-gray-500"
+      }`}
+    >
+      {failed ? (
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-amber-200 bg-white text-[10px] font-semibold uppercase text-amber-700">
+          Error
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={label}
+          className={imageClassName}
+          onError={() => setFailed(true)}
+        />
+      )}
+      <span className="text-xs">{failed ? failedLabel : label}</span>
     </div>
   );
 }
@@ -1679,7 +1726,7 @@ function SeoDefaultsTab() {
                 <img
                   src={form.seoOgImage}
                   alt="Social OG card preview"
-                  className="aspect-[1200/630] w-full object-cover"
+                  className="aspect-1200/630 w-full object-cover"
                   onError={(e) =>
                     ((e.target as HTMLImageElement).style.display = "none")
                   }

@@ -56,10 +56,16 @@ export class UpdateSettingsDto {
   inquiryWebhookSecret?: string;
 
   @IsString()
+  @MaxLength(500)
+  @ValidateIf((_, value) => value !== "")
+  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
   @IsOptional()
   logoUrl?: string;
 
   @IsString()
+  @MaxLength(500)
+  @ValidateIf((_, value) => value !== "")
+  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
   @IsOptional()
   faviconUrl?: string;
 
