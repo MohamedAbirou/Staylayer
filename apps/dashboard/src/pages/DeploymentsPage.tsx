@@ -304,12 +304,13 @@ export default function DeploymentsPage() {
   const billingBlocked = billingPlan?.actions.publishingBlocked ?? false;
   const deploymentBusy = Boolean(latest && isDeploymentInFlight(latest.status));
   const sharedRuntimeActive = runtimeProfile?.sharedRuntimeReady === true;
+  const defaultHostedHostname = runtimeProfile?.defaultHostname ?? null;
   const readinessTone =
     latest?.status === "FAILED"
       ? "danger"
       : billingBlocked
         ? "warning"
-        : activePrimaryDomain
+        : activePrimaryDomain || defaultHostedHostname
           ? "success"
           : "warning";
 
@@ -373,6 +374,7 @@ export default function DeploymentsPage() {
         tone={readinessTone}
         latest={latest}
         activePrimaryDomain={activePrimaryDomain?.hostname ?? null}
+        defaultHostedHostname={defaultHostedHostname}
         pendingPrimaryDomain={pendingPrimaryDomain?.hostname ?? null}
         providerTarget={providerTarget}
         billingBlocked={billingBlocked}
@@ -481,7 +483,9 @@ export default function DeploymentsPage() {
                 ? "Verified and serving live traffic"
                 : pendingPrimaryDomain
                   ? "Connected but not verified yet"
-                  : "Connect a primary domain before customer launch"
+                  : defaultHostedHostname
+                    ? "Using the default hosted domain"
+                    : "Connect a primary domain or enable a hosted domain before customer launch"
             }
           />
           <SignalTile
@@ -1002,6 +1006,7 @@ function ReadinessBanner({
   tone,
   latest,
   activePrimaryDomain,
+  defaultHostedHostname,
   pendingPrimaryDomain,
   providerTarget,
   billingBlocked,
@@ -1009,6 +1014,7 @@ function ReadinessBanner({
   tone: "success" | "warning" | "danger";
   latest: SiteDeployment | null;
   activePrimaryDomain: string | null;
+  defaultHostedHostname: string | null;
   pendingPrimaryDomain: string | null;
   providerTarget: string | null;
   billingBlocked: boolean;
@@ -1031,6 +1037,8 @@ function ReadinessBanner({
       "The site can deploy, but billing is currently blocking safe publishing and launch.";
   } else if (activePrimaryDomain) {
     message = `Production traffic is routed through ${activePrimaryDomain}. Keep the provider target bookmarked for diagnostics only.`;
+  } else if (defaultHostedHostname) {
+    message = `Production traffic is routed through the default hosted domain ${defaultHostedHostname}. A custom domain is optional.`;
   } else if (pendingPrimaryDomain && providerTarget) {
     message = `The domain ${pendingPrimaryDomain} is connected. Point DNS at the current provider target and wait for verification and SSL.`;
   } else if (providerTarget) {
