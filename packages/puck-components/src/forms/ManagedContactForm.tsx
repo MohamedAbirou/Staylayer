@@ -344,7 +344,7 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
     if (!resolvedForm) {
       nextErrors.form =
         resolutionError ||
-        "Choose a published form before submitting the preview.";
+        "Choose a published form before submitting an inquiry.";
     }
 
     if (renderableFields.length === 0) {
@@ -409,14 +409,14 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
       });
 
       const nextMessage =
-        "Inquiry submitted. Check the Inbox tab for the new entry.";
+        "Inquiry submitted. The reservations team will follow up soon.";
       setFormData(buildInitialFormData(submissionFields));
       setSuccessMessage(nextMessage);
       runtime.notify?.({ type: "success", message: nextMessage });
     } catch (error) {
       const message = extractErrorMessage(
         error,
-        "Failed to submit the inquiry from preview.",
+        "Failed to submit the inquiry. Please try again.",
       );
       setErrors({ form: message });
       runtime.notify?.({ type: "error", message });
@@ -442,16 +442,12 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
       />
 
       <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
-        {resolvedForm
-          ? `Live preview: ${resolvedForm.name} (${resolvedForm.key})`
-          : normalizedFormKey
-            ? `Assigned form key: ${normalizedFormKey}`
-            : "Using page-based form routing"}
+        Direct inquiry form
       </div>
 
       {isLoadingForm && (
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-          Loading the live Form Studio schema...
+          Loading the inquiry form...
         </div>
       )}
 

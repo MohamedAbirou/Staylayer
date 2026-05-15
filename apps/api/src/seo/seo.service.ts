@@ -114,6 +114,13 @@ const GENERIC_CONTENT_PATTERNS = [
   /partnership opportunities/i,
   /general support/i,
   /have a question about staylayer/i,
+  /live preview/i,
+  /form studio powered/i,
+  /tenant-safe runtime/i,
+  /live inquiry form/i,
+  /live form runtime/i,
+  /shared website runtime/i,
+  /api remains the source of truth/i,
   /example page title/i,
   /lorem ipsum/i,
 ];
