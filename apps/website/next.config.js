@@ -13,6 +13,10 @@ const imageHosts = (process.env.PUBLIC_IMAGE_HOSTS || "")
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Render dynamic metadata into the real <head> for every request.
+  // The shared Website runtime is SEO-critical, so streamed metadata in the
+  // response body is not acceptable for production verification.
+  htmlLimitedBots: /.*/,
   transpilePackages: ["@staylayer/puck-components", "@puckeditor/core"],
   images: {
     remotePatterns: imageHosts.map((hostname) => ({
