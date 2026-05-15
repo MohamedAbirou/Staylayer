@@ -13,14 +13,116 @@ function normalizePuckData(
       ? (puckData.root as Record<string, unknown>)
       : {};
 
-  if ("props" in root) {
-    return puckData;
+  return ensurePuckNodeIds(
+    "props" in root
+      ? puckData
+      : {
+          ...puckData,
+          root: { props: root },
+        },
+  );
+}
+
+function toSafePuckIdPart(value: string) {
+  return value
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
+function createStableNodeId(
+  type: string,
+  path: Array<string | number>,
+  usedIds: Set<string>,
+) {
+  const base = [toSafePuckIdPart(type) || "block", ...path]
+    .map((part) => toSafePuckIdPart(String(part)) || "item")
+    .join("-");
+  let candidate = base;
+  let suffix = 2;
+
+  while (usedIds.has(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
   }
 
-  return {
-    ...puckData,
-    root: { props: root },
-  };
+  usedIds.add(candidate);
+  return candidate;
+}
+
+function isPuckNode(value: unknown): value is {
+  type: string;
+  props?: Record<string, unknown>;
+} {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    typeof (value as { type?: unknown }).type === "string",
+  );
+}
+
+function normalizePuckNode(
+  node: { type: string; props?: Record<string, unknown> },
+  path: Array<string | number>,
+  usedIds: Set<string>,
+) {
+  const props =
+    node.props && typeof node.props === "object" ? { ...node.props } : {};
+  const currentId = typeof props.id === "string" ? props.id.trim() : "";
+  if (currentId && !usedIds.has(currentId)) {
+    usedIds.add(currentId);
+    props.id = currentId;
+  } else {
+    props.id = createStableNodeId(node.type, path, usedIds);
+  }
+
+  Object.entries(props).forEach(([key, value]) => {
+    if (!Array.isArray(value)) {
+      return;
+    }
+
+    props[key] = value.map((item, index) =>
+      isPuckNode(item)
+        ? normalizePuckNode(item, [...path, key, index], usedIds)
+        : item,
+    );
+  });
+
+  return { ...node, props };
+}
+
+function ensurePuckNodeIds(puckData: Record<string, unknown>) {
+  const usedIds = new Set<string>();
+  const content = Array.isArray(puckData.content)
+    ? puckData.content.map((item, index) =>
+        isPuckNode(item) ? normalizePuckNode(item, [index], usedIds) : item,
+      )
+    : [];
+  const zones =
+    puckData.zones && typeof puckData.zones === "object"
+      ? Object.fromEntries(
+          Object.entries(puckData.zones as Record<string, unknown>).map(
+            ([zoneId, zoneContent]) => [
+              zoneId,
+              Array.isArray(zoneContent)
+                ? zoneContent.map((item, index) =>
+                    isPuckNode(item)
+                      ? normalizePuckNode(
+                          item,
+                          ["zone", zoneId, index],
+                          usedIds,
+                        )
+                      : item,
+                  )
+                : zoneContent,
+            ],
+          ),
+        )
+      : puckData.zones;
+
+  return { ...puckData, content, zones };
 }
 
 function normalizePage(page: Page): Page {
