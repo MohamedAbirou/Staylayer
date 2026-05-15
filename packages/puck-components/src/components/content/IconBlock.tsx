@@ -7,6 +7,7 @@ import {
   animationDurationField,
   animationDelayField,
 } from "../../lib/animations";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface IconBlockProps {
   icon: string;
@@ -288,10 +289,14 @@ export const IconBlock = ({
         )}
       >
         {title && (
-          <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-base font-semibold text-gray-900">
+            {parseMarkup(title)}
+          </h3>
         )}
         {description && (
-          <p className="text-sm leading-relaxed text-gray-600">{description}</p>
+          <p className="text-sm leading-relaxed text-gray-600">
+            {parseMarkup(description)}
+          </p>
         )}
       </div>
     </div>

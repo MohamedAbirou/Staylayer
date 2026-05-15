@@ -9,6 +9,7 @@ import {
   maxWidthMap,
   resolvePaddingClasses,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 import {
   MatrialIconsApartment,
   MatrialIconsAttachMoney,
@@ -549,7 +550,7 @@ export const Navbar = ({
             type="button"
             className="flex items-center gap-0.5 bg-transparent border-none rounded-md px-3 py-2 cursor-default transition-opacity duration-150 text-(--link-fg) [font-size:var(--link-fs)] [font-weight:var(--link-weight)] opacity-(--link-opacity) hover:underline hover:underline-offset-[3px]"
           >
-            {link.label}
+            {parseMarkup(link.label)}
             <svg
               className="w-3.5 h-3.5 shrink-0 transition-transform duration-200 [transform:var(--caret-r)]"
               style={
@@ -585,7 +586,7 @@ export const Navbar = ({
               } as React.CSSProperties
             }
           >
-            {link.label}
+            {parseMarkup(link.label)}
           </a>
         )}
 
@@ -614,7 +615,7 @@ export const Navbar = ({
                   >
                     {section.title && (
                       <p className="m-0 mb-2 px-2 text-xs font-bold uppercase tracking-[0.07em] text-(--link-fg) opacity-60">
-                        {section.title}
+                        {parseMarkup(section.title)}
                       </p>
                     )}
                     {(section.links || []).map((dlink, di) => (
@@ -629,10 +630,12 @@ export const Navbar = ({
                           </span>
                         )}
                         <span>
-                          <span className="block font-bold">{dlink.label}</span>
+                          <span className="block font-bold">
+                            {parseMarkup(dlink.label)}
+                          </span>
                           {dlink.description && (
                             <span className="block mt-0.5 text-xs text-gray-500">
-                              {dlink.description}
+                              {parseMarkup(dlink.description)}
                             </span>
                           )}
                         </span>
@@ -650,7 +653,7 @@ export const Navbar = ({
                   <div key={si} className="flex flex-col gap-y-2 min-w-[120px]">
                     {section.title && (
                       <p className="m-0 mb-2 px-2 text-sm font-bold text-(--link-fg)">
-                        {section.title}
+                        {parseMarkup(section.title)}
                       </p>
                     )}
                     {(section.links || []).map((dlink, di) => (
@@ -664,7 +667,9 @@ export const Navbar = ({
                             <NavIcon name={dlink.icon} className="w-5 h-5" />
                           </span>
                         )}
-                        <span className="text-sm font-bold">{dlink.label}</span>
+                        <span className="text-sm font-bold">
+                          {parseMarkup(dlink.label)}
+                        </span>
                       </a>
                     ))}
                   </div>
@@ -681,7 +686,7 @@ export const Navbar = ({
                     <div key={si} className={cn(si > 0 && "mt-4")}>
                       {section.title && (
                         <p className="m-0 mb-2 px-2 uppercase text-xs font-bold text-(--link-fg) opacity-60">
-                          {section.title}
+                          {parseMarkup(section.title)}
                         </p>
                       )}
                       {(section.links || []).map((dlink, di) => {
@@ -707,7 +712,7 @@ export const Navbar = ({
                                 />
                               </span>
                             )}
-                            {dlink.label}
+                            {parseMarkup(dlink.label)}
                           </div>
                         );
                       })}
@@ -731,8 +736,7 @@ export const Navbar = ({
                               idx > 0 && "mt-2",
                             )}
                           >
-                            {sub.title.charAt(0).toUpperCase() +
-                              sub.title.slice(1)}
+                            {parseMarkup(sub.title)}
                           </p>
                         )}
                         <div className="flex flex-wrap">
@@ -748,7 +752,7 @@ export const Navbar = ({
                                 </span>
                               )}
                               <span className="text-sm font-bold flex items-center gap-1">
-                                {sl.label}
+                                {parseMarkup(sl.label)}
                                 <svg
                                   width="12"
                                   height="12"
@@ -800,7 +804,7 @@ export const Navbar = ({
                   }
                   className="w-full flex items-center justify-between px-5 py-3.5 bg-transparent border-none [border-bottom:1px_solid_var(--accordion-border)] text-(--link-fg) [font-size:var(--link-fs)] [font-weight:var(--link-weight)] opacity-(--link-opacity) cursor-pointer text-left"
                 >
-                  {link.label}
+                  {parseMarkup(link.label)}
                   <svg
                     className="w-4 h-4 shrink-0 transition-transform duration-[250ms] [transform:var(--mob-caret-r)]"
                     style={
@@ -837,7 +841,7 @@ export const Navbar = ({
                       <div key={si} className="py-2">
                         {section.title && (
                           <p className="mb-1 pt-1.5 pb-0.5 px-5 text-[11px] font-bold uppercase tracking-[0.08em] text-(--link-fg) opacity-60 m-0">
-                            {section.title}
+                            {parseMarkup(section.title)}
                           </p>
                         )}
                         {(section.links || []).map((dlink, di) => (
@@ -856,11 +860,11 @@ export const Navbar = ({
                             )}
                             <span>
                               <span className="block font-semibold">
-                                {dlink.label}
+                                {parseMarkup(dlink.label)}
                               </span>
                               {dlink.description && (
                                 <span className="block text-xs text-gray-500 mt-px">
-                                  {dlink.description}
+                                  {parseMarkup(dlink.description)}
                                 </span>
                               )}
                             </span>
@@ -878,7 +882,7 @@ export const Navbar = ({
                 rel={link.openInNewTab ? "noopener noreferrer" : undefined}
                 className="block px-5 py-3.5 no-underline [border-bottom:1px_solid_var(--accordion-border)] text-(--link-fg) [font-size:var(--link-fs)] [font-weight:var(--link-weight)] opacity-(--link-opacity)"
               >
-                {link.label}
+                {parseMarkup(link.label)}
               </a>
             )}
           </li>
@@ -906,7 +910,7 @@ export const Navbar = ({
               ctaVariant === "ring" && "[box-shadow:var(--cta-ring)]",
             )}
           >
-            {ctaLabel}
+            {parseMarkup(ctaLabel)}
           </a>
         </li>
       )}
@@ -998,7 +1002,7 @@ export const Navbar = ({
               )}
               {showText && logoText && (
                 <span className="[font-size:var(--logo-fs)] [font-weight:var(--logo-weight)] leading-[1.1] tracking-tight">
-                  {logoText}
+                  {parseMarkup(logoText)}
                 </span>
               )}
             </a>
@@ -1048,7 +1052,7 @@ export const Navbar = ({
                   ctaVariant === "ring" && "[box-shadow:var(--cta-ring)]",
                 )}
               >
-                {ctaLabel}
+                {parseMarkup(ctaLabel)}
               </a>
             )}
 

@@ -37,7 +37,6 @@ import {
   contactFormConfig,
   contactSectionConfig,
 } from "./components/content/ContactSection";
-import { annualReportSectionConfig } from "./components/content/AnnualReportSection";
 
 // ─── Media ──────────────────────────────────────────────────────────────────
 import { imageBlockConfig } from "./components/media/ImageBlock";
@@ -45,6 +44,7 @@ import { videoEmbedConfig } from "./components/media/VideoEmbed";
 
 // ─── CTA ────────────────────────────────────────────────────────────────────
 import { buttonConfig } from "./components/cta/Button";
+import { linkConfig } from "./components/cta/Link";
 import { buttonGroupConfig } from "./components/cta/ButtonGroup";
 import { ctaBannerConfig } from "./components/cta/CTABanner";
 
@@ -78,10 +78,86 @@ import { breadcrumbConfig } from "./components/navigation/Breadcrumb";
 import { languageSwitcherConfig } from "./components/navigation/LanguageSwitcher";
 
 // ─── Custom Fields for Root ─────────────────────────────────────────────────
-import { colorFieldRender } from "./lib/fields";
+import { colorFieldRender, withMarkupHintsForComponents } from "./lib/fields";
 
 // ─── Animation Styles ──────────────────────────────────────────────────────
 import { animationStyles } from "./lib/animations";
+
+const components = withMarkupHintsForComponents({
+  // Layout
+  Container: containerConfig,
+  Section: sectionConfig,
+  Columns: columnsConfig,
+  FlexBox: flexBoxConfig,
+  Grid: gridConfig,
+  BentoGrid: bentoGridConfig,
+  Spacer: spacerConfig,
+  Divider: dividerConfig,
+  Separator: separatorConfig,
+  Card: cardConfig,
+
+  // Typography
+  Heading: headingConfig,
+  Paragraph: paragraphConfig,
+  RichText: richTextConfig,
+  Badge: badgeConfig,
+  Avatar: avatarConfig,
+  List: listConfig,
+
+  // Hero
+  Hero: heroConfig,
+  HeroSplit: heroSplitConfig,
+
+  // Content
+  TextWithImage: textWithImageConfig,
+  FeatureShowcase: featureShowcaseConfig,
+  FeatureCard: featureCardConfig,
+  StatsBar: statsBarConfig,
+  FeatureTable: featureTableConfig,
+  DataTable: dataTableConfig,
+  Alert: alertConfig,
+  IconBlock: iconBlockConfig,
+  ContactForm: contactFormConfig,
+  ContactSection: contactSectionConfig,
+
+  // Media
+  Image: imageBlockConfig,
+  Video: videoEmbedConfig,
+
+  // CTA
+  Button: buttonConfig,
+  Link: linkConfig,
+  ButtonGroup: buttonGroupConfig,
+  CTABanner: ctaBannerConfig,
+
+  // Social Proof
+  Testimonial: testimonialConfig,
+  TestimonialCarousel: testimonialCarouselConfig,
+  QuoteCard: quoteCardConfig,
+  LogoCloud: logoCloudConfig,
+  Marquee: marqueeConfig,
+
+  // Pricing
+  PricingCard: pricingCardConfig,
+  PricingTable: pricingTableConfig,
+  ComparisonTable: comparisonTableConfig,
+  PricingOnePlan: pricingOnePlanConfig,
+
+  // Interactive
+  FAQ: faqConfig,
+  Accordion: accordionConfig,
+  StepList: stepListConfig,
+  Tabs: tabsConfig,
+  Progress: progressConfig,
+  Countdown: countdownConfig,
+
+  // Navigation
+  Navbar: navbarConfig,
+  LanguageSwitcher: languageSwitcherConfig,
+  Footer: footerConfig,
+  Banner: bannerConfig,
+  Breadcrumb: breadcrumbConfig,
+});
 
 // ─── Puck Config ────────────────────────────────────────────────────────────
 export const puckConfig: Config = {
@@ -202,7 +278,6 @@ export const puckConfig: Config = {
         "IconBlock",
         "ContactForm",
         "ContactSection",
-        "AnnualReportSection",
       ],
     },
     media: {
@@ -211,7 +286,7 @@ export const puckConfig: Config = {
     },
     cta: {
       title: "Calls to Action",
-      components: ["Button", "ButtonGroup", "CTABanner"],
+      components: ["Button", "Link", "ButtonGroup", "CTABanner"],
     },
     social: {
       title: "Social Proof",
@@ -244,80 +319,5 @@ export const puckConfig: Config = {
       ],
     },
   },
-
-  components: {
-    // Layout
-    Container: containerConfig,
-    Section: sectionConfig,
-    Columns: columnsConfig,
-    FlexBox: flexBoxConfig,
-    Grid: gridConfig,
-    BentoGrid: bentoGridConfig,
-    Spacer: spacerConfig,
-    Divider: dividerConfig,
-    Separator: separatorConfig,
-    Card: cardConfig,
-
-    // Typography
-    Heading: headingConfig,
-    Paragraph: paragraphConfig,
-    RichText: richTextConfig,
-    Badge: badgeConfig,
-    Avatar: avatarConfig,
-    List: listConfig,
-
-    // Hero
-    Hero: heroConfig,
-    HeroSplit: heroSplitConfig,
-
-    // Content
-    TextWithImage: textWithImageConfig,
-    FeatureShowcase: featureShowcaseConfig,
-    FeatureCard: featureCardConfig,
-    StatsBar: statsBarConfig,
-    FeatureTable: featureTableConfig,
-    DataTable: dataTableConfig,
-    Alert: alertConfig,
-    IconBlock: iconBlockConfig,
-    ContactForm: contactFormConfig,
-    ContactSection: contactSectionConfig,
-    AnnualReportSection: annualReportSectionConfig,
-
-    // Media
-    Image: imageBlockConfig,
-    Video: videoEmbedConfig,
-
-    // CTA
-    Button: buttonConfig,
-    ButtonGroup: buttonGroupConfig,
-    CTABanner: ctaBannerConfig,
-
-    // Social Proof
-    Testimonial: testimonialConfig,
-    TestimonialCarousel: testimonialCarouselConfig,
-    QuoteCard: quoteCardConfig,
-    LogoCloud: logoCloudConfig,
-    Marquee: marqueeConfig,
-
-    // Pricing
-    PricingCard: pricingCardConfig,
-    PricingTable: pricingTableConfig,
-    ComparisonTable: comparisonTableConfig,
-    PricingOnePlan: pricingOnePlanConfig,
-
-    // Interactive
-    FAQ: faqConfig,
-    Accordion: accordionConfig,
-    StepList: stepListConfig,
-    Tabs: tabsConfig,
-    Progress: progressConfig,
-    Countdown: countdownConfig,
-
-    // Navigation
-    Navbar: navbarConfig,
-    LanguageSwitcher: languageSwitcherConfig,
-    Footer: footerConfig,
-    Banner: bannerConfig,
-    Breadcrumb: breadcrumbConfig,
-  },
+  components,
 };

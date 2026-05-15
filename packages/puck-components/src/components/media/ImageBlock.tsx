@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { imageField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface ImageBlockProps {
   url: string;
@@ -92,7 +93,7 @@ export const ImageBlock = ({
       )}
       {caption && (
         <figcaption className="mt-2 text-center text-sm text-gray-500">
-          {caption}
+          {parseMarkup(caption)}
         </figcaption>
       )}
     </figure>

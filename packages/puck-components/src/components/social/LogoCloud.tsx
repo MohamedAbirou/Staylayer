@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface LogoItem {
   url: string;
@@ -51,7 +52,7 @@ export const LogoCloud = ({
           }}
           className={`mb-8 text-center font-medium uppercase tracking-wider text-gray-500 ${titleFontSize === 0 ? " text-sm" : ""}`}
         >
-          {title}
+          {parseMarkup(title)}
         </p>
       )}
       <div

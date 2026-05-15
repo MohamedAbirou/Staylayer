@@ -17,6 +17,10 @@ const OG_LOCALE_MAP = {
   es: "es_ES",
   fr: "fr_FR",
   de: "de_DE",
+  it: "it_IT",
+  pt: "pt_BR",
+  nl: "nl_NL",
+  ar: "ar_SA",
 };
 const SUPPORTED_RUNTIME_LOCALES = new Set(Object.keys(OG_LOCALE_MAP));
 

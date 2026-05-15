@@ -7,6 +7,7 @@ import {
   animationDurationField,
   animationDelayField,
 } from "../../lib/animations";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface PricingPlan {
   planName: string;
@@ -89,7 +90,7 @@ export const PricingTable = ({
                 }}
                 className={`font-${headingWeight || "bold"} tracking-tight ${headingFontSize === 0 ? " text-3xl md:text-4xl" : ""}`}
               >
-                {heading}
+                {parseMarkup(heading)}
               </h2>
             )}
             {subheading && (
@@ -103,7 +104,7 @@ export const PricingTable = ({
                 }}
                 className={`mt-3 text-gray-500 ${subheadingFontSize === 0 ? " text-base md:text-lg" : ""}`}
               >
-                {subheading}
+                {parseMarkup(subheading)}
               </p>
             )}
           </div>
@@ -141,24 +142,26 @@ export const PricingTable = ({
               >
                 {plan.badge && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-bold text-white bg-(--accent)">
-                    {plan.badge}
+                    {parseMarkup(plan.badge)}
                   </span>
                 )}
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold">{plan.planName}</h3>
+                  <h3 className="text-lg font-semibold">
+                    {parseMarkup(plan.planName)}
+                  </h3>
                   <div className="mt-3 flex items-baseline gap-1">
                     <span className="text-4xl font-extrabold tracking-tight">
-                      {plan.price}
+                      {parseMarkup(plan.price)}
                     </span>
                     {plan.period && (
                       <span className="text-sm text-gray-500">
-                        {plan.period}
+                        {parseMarkup(plan.period)}
                       </span>
                     )}
                   </div>
                   {plan.description && (
                     <p className="mt-3 text-sm text-gray-500">
-                      {plan.description}
+                      {parseMarkup(plan.description)}
                     </p>
                   )}
                 </div>
@@ -200,7 +203,7 @@ export const PricingTable = ({
                             !feature.included && "text-gray-400 line-through",
                           )}
                         >
-                          {feature.text}
+                          {parseMarkup(feature.text)}
                         </span>
                       </li>
                     ))}
@@ -215,7 +218,7 @@ export const PricingTable = ({
                         : "border border-gray-300 text-gray-700 hover:bg-gray-50",
                     )}
                   >
-                    {plan.ctaLabel}
+                    {parseMarkup(plan.ctaLabel)}
                   </button>
                 ) : (
                   <a
@@ -227,7 +230,7 @@ export const PricingTable = ({
                         : "border border-gray-300 text-gray-700 hover:bg-gray-50",
                     )}
                   >
-                    {plan.ctaLabel}
+                    {parseMarkup(plan.ctaLabel)}
                   </a>
                 )}
               </div>

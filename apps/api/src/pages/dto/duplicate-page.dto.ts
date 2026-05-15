@@ -6,6 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
+import { SUPPORTED_LOCALES } from "../../common/supported-locales";
 
 export class DuplicatePageDto {
   @IsString()
@@ -23,6 +24,6 @@ export class DuplicatePageDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(["en", "es", "fr", "de"])
+  @IsIn([...SUPPORTED_LOCALES])
   newLocale?: string;
 }

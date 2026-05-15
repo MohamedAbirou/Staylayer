@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface TestimonialItem {
   quote: string;
@@ -119,7 +120,7 @@ export const TestimonialCarousel = ({
                 }}
                 className={`font-${headingWeight || "bold"} ${headingFontSize === 0 ? " text-2xl md:text-3xl" : ""}`}
               >
-                {heading}
+                {parseMarkup(heading)}
               </h2>
             )}
             {subheading && (
@@ -133,7 +134,7 @@ export const TestimonialCarousel = ({
                 }}
                 className={`mt-3 ${subheadingFontSize === 0 ? " text-base" : ""}`}
               >
-                {subheading}
+                {parseMarkup(subheading)}
               </p>
             )}
           </div>
@@ -197,7 +198,7 @@ export const TestimonialCarousel = ({
 
                   {/* Quote */}
                   <blockquote className="text-lg leading-relaxed md:text-xl">
-                    &ldquo;{t.quote}&rdquo;
+                    &ldquo;{parseMarkup(t.quote)}&rdquo;
                   </blockquote>
 
                   {/* Author */}
@@ -221,12 +222,14 @@ export const TestimonialCarousel = ({
                       </div>
                     )}
                     <div className="text-left">
-                      <p className="text-sm font-semibold">{t.author}</p>
+                      <p className="text-sm font-semibold">
+                        {parseMarkup(t.author)}
+                      </p>
                       {(t.role || t.company) && (
                         <p className="text-xs opacity-60">
-                          {t.role}
+                          {t.role && <>{parseMarkup(t.role)}</>}
                           {t.role && t.company && ", "}
-                          {t.company}
+                          {t.company && <>{parseMarkup(t.company)}</>}
                         </p>
                       )}
                     </div>

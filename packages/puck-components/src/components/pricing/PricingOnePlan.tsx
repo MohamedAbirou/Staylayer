@@ -216,7 +216,7 @@ export const PricingOnePlan = ({
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: "var(--badge-dot)" }}
               />
-              {badgeText}
+              {parseMarkup(badgeText)}
             </div>
           )}
 
@@ -234,7 +234,7 @@ export const PricingOnePlan = ({
                   : {}),
               }}
             >
-              {heading}
+              {parseMarkup(heading)}
             </h2>
           )}
 
@@ -251,7 +251,7 @@ export const PricingOnePlan = ({
                   : {}),
               }}
             >
-              {subheading}
+              {parseMarkup(subheading)}
             </p>
           )}
         </div>
@@ -275,11 +275,13 @@ export const PricingOnePlan = ({
                       className="text-xl font-semibold mb-0.5 leading-none"
                       style={headingColor ? { color: headingColor } : {}}
                     >
-                      {planTitle}
+                      {parseMarkup(planTitle)}
                     </h3>
                   )}
                   {planSubtitle && (
-                    <p className="text-sm text-slate-500">{planSubtitle}</p>
+                    <p className="text-sm text-slate-500">
+                      {parseMarkup(planSubtitle)}
+                    </p>
                   )}
                 </div>
                 <div className="text-left sm:text-right">
@@ -295,16 +297,16 @@ export const PricingOnePlan = ({
                         : {}),
                     }}
                   >
-                    {price}
+                    {parseMarkup(price)}
                     {period && (
                       <span className="ml-1 text-base font-normal text-slate-500">
-                        {period}
+                        {parseMarkup(period)}
                       </span>
                     )}
                   </div>
                   {priceNote && (
                     <div className="text-xs text-slate-500 mt-1">
-                      {priceNote}
+                      {parseMarkup(priceNote)}
                     </div>
                   )}
                 </div>
@@ -345,14 +347,18 @@ export const PricingOnePlan = ({
                         >
                           ✓
                         </span>
-                        <span className="text-sm leading-6">{item.text}</span>
+                        <span className="text-sm leading-6">
+                          {parseMarkup(item.text)}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 ))}
 
               {featuresNote && (
-                <p className="mt-4 text-sm text-slate-500">{featuresNote}</p>
+                <p className="mt-4 text-sm text-slate-500">
+                  {parseMarkup(featuresNote)}
+                </p>
               )}
 
               {/* Disclaimer / note box */}
@@ -364,7 +370,7 @@ export const PricingOnePlan = ({
                     color: disclaimerTextColor,
                   }}
                 >
-                  {disclaimer}
+                  {parseMarkup(disclaimer)}
                 </div>
               )}
 
@@ -374,7 +380,7 @@ export const PricingOnePlan = ({
                   className="absolute -right-2 -top-2 rounded-full px-3 py-1 text-xs font-semibold text-white shadow"
                   style={{ backgroundColor: "var(--card-badge-bg)" }}
                 >
-                  {cardBadgeText}
+                  {parseMarkup(cardBadgeText)}
                 </div>
               )}
             </div>
@@ -405,16 +411,18 @@ export const PricingOnePlan = ({
                           : {}),
                       }}
                     >
-                      {price}
+                      {parseMarkup(price)}
                     </span>
                     {period && (
-                      <span className="text-slate-500 pb-1">{period}</span>
+                      <span className="text-slate-500 pb-1">
+                        {parseMarkup(period)}
+                      </span>
                     )}
                   </div>
 
                   {priceDescription && (
                     <p className="mt-3 text-slate-600 text-sm leading-6">
-                      {priceDescription}
+                      {parseMarkup(priceDescription)}
                     </p>
                   )}
 
@@ -427,7 +435,7 @@ export const PricingOnePlan = ({
                         color: "var(--cta-fg)",
                       }}
                     >
-                      {ctaLabel}
+                      {parseMarkup(ctaLabel)}
                     </Tag>
                   </div>
                 </div>
@@ -447,7 +455,9 @@ export const PricingOnePlan = ({
                           >
                             ✓
                           </span>
-                          <span className="text-sm leading-6">{item.text}</span>
+                          <span className="text-sm leading-6">
+                            {parseMarkup(item.text)}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -455,7 +465,7 @@ export const PricingOnePlan = ({
 
                   {featuresNote && (
                     <p className="mt-4 text-sm text-slate-500">
-                      {featuresNote}
+                      {parseMarkup(featuresNote)}
                     </p>
                   )}
                 </div>
@@ -467,7 +477,7 @@ export const PricingOnePlan = ({
                   className="absolute -right-2 -top-2 rounded-full px-3 py-1 text-xs font-semibold text-white shadow"
                   style={{ backgroundColor: "var(--card-badge-bg)" }}
                 >
-                  {cardBadgeText}
+                  {parseMarkup(cardBadgeText)}
                 </div>
               )}
             </div>
@@ -481,7 +491,7 @@ export const PricingOnePlan = ({
                     className="group rounded-2xl border border-slate-200 bg-slate-50 p-5"
                   >
                     <summary className="cursor-pointer select-none text-base font-semibold text-slate-900 group-open:mb-3 list-none flex items-center justify-between">
-                      <span>{item.title}</span>
+                      <span>{parseMarkup(item.title)}</span>
                       <svg
                         className="w-4 h-4 shrink-0 transition-transform duration-200 group-open:rotate-180 text-slate-500"
                         fill="none"
@@ -497,7 +507,7 @@ export const PricingOnePlan = ({
                       </svg>
                     </summary>
                     <p className="text-sm leading-7 text-slate-600">
-                      {item.body}
+                      {parseMarkup(item.body)}
                     </p>
                   </details>
                 ))}

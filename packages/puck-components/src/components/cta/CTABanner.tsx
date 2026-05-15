@@ -6,6 +6,7 @@ import {
   imageField,
   textColorField,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface CTABannerProps {
   heading: string;
@@ -116,7 +117,7 @@ export const CTABanner = ({
             }}
             className={`font-${headingWeight || "bold"} ${headingFontSize === 0 ? " text-2xl md:text-3xl" : ""}`}
           >
-            {heading}
+            {parseMarkup(heading)}
           </h2>
           {description && (
             <p
@@ -129,7 +130,7 @@ export const CTABanner = ({
               }}
               className={`max-w-2xl leading-relaxed ${descriptionFontSize === 0 ? " text-base md:text-lg" : ""}`}
             >
-              {description}
+              {parseMarkup(description)}
             </p>
           )}
           {showActions !== "hide" && (
@@ -165,7 +166,7 @@ export const ctaBannerConfig: ComponentConfig<CTABannerProps> = {
     },
     actions: {
       type: "slot",
-      allow: ["Button", "ButtonGroup"],
+      allow: ["Button", "ButtonGroup", "Link"],
     },
     alignment: {
       type: "radio",

@@ -82,6 +82,10 @@ const LOCALE_META: Record<
   es: { label: "Spanish", flag: "🇪🇸", nativeName: "Español" },
   fr: { label: "French", flag: "🇫🇷", nativeName: "Français" },
   de: { label: "German", flag: "🇩🇪", nativeName: "Deutsch" },
+  it: { label: "Italian", flag: "🇮🇹", nativeName: "Italiano" },
+  pt: { label: "Portuguese", flag: "🇵🇹", nativeName: "Português" },
+  nl: { label: "Dutch", flag: "🇳🇱", nativeName: "Nederlands" },
+  ar: { label: "Arabic", flag: "🇸🇦", nativeName: "العربية" },
 };
 
 type SeoLocaleDefault = {

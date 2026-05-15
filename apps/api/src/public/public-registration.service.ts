@@ -11,6 +11,7 @@ import {
   TenantMembershipRole,
 } from "@prisma/client";
 import { BILLING_DEFAULT_PLAN_KEY } from "../billing/billing-plans";
+import { SUPPORTED_LOCALE_SET } from "../common/supported-locales";
 import {
   buildPublicSubdomainCandidate,
   normalizePublicSubdomainLabel,
@@ -23,8 +24,6 @@ import {
   PublicLegalDocumentSummary,
   getRequiredSignupLegalDocuments,
 } from "./legal-documents.registry";
-
-const SUPPORTED_PUBLIC_LOCALES = new Set(["en", "es", "fr", "de"]);
 
 export interface AcceptedLegalDocumentRecord {
   documentKey: string;
@@ -344,7 +343,7 @@ export class PublicRegistrationService {
       "primaryLocale",
     ).toLowerCase();
 
-    if (!SUPPORTED_PUBLIC_LOCALES.has(locale)) {
+    if (!SUPPORTED_LOCALE_SET.has(locale)) {
       throw new BadRequestException({
         code: "VALIDATION_ERROR",
         message: `Unsupported primary locale '${locale}'`,

@@ -6,6 +6,7 @@ import {
   textColorField,
   imageField,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -349,7 +350,7 @@ export const FeatureShowcase = ({
                 }}
                 className={`font-${headingWeight || "bold"} ${headingFontSize === 0 ? ` ${headingSizeMap[headingSize] ?? "text-3xl md:text-4xl"}` : ""}`}
               >
-                {heading}
+                {parseMarkup(heading)}
               </h2>
             )}
             {subheading && (
@@ -363,7 +364,7 @@ export const FeatureShowcase = ({
                 }}
                 className={`mt-3 ${subheadingFontSize === 0 ? " text-base md:text-lg" : ""}`}
               >
-                {subheading}
+                {parseMarkup(subheading)}
               </p>
             )}
           </div>

@@ -1,3 +1,4 @@
+import type { ComponentConfig } from "@puckeditor/core";
 import { createElement, type ReactElement } from "react";
 
 // ─── Color Picker Custom Field ──────────────────────────────────────────────
@@ -193,4 +194,74 @@ export function resolvePaddingClasses(
   if (paddingX !== undefined && paddingXClasses[paddingX])
     parts.push(paddingXClasses[paddingX]);
   return parts.join(" ");
+}
+
+const MARKUP_HINT_SUFFIX = "supports **bold** and [text]{#hex}";
+
+type MarkupField = {
+  type?: string;
+  label?: string;
+  contentEditable?: boolean;
+  arrayFields?: Record<string, MarkupField>;
+};
+
+function appendMarkupHint(label?: string) {
+  if (!label) {
+    return MARKUP_HINT_SUFFIX;
+  }
+
+  if (label.includes(MARKUP_HINT_SUFFIX)) {
+    return label;
+  }
+
+  return `${label} · ${MARKUP_HINT_SUFFIX}`;
+}
+
+function decorateMarkupField<T extends MarkupField>(field: T): T {
+  const nextField = { ...field };
+
+  if (
+    (nextField.type === "text" || nextField.type === "textarea") &&
+    nextField.contentEditable
+  ) {
+    nextField.label = appendMarkupHint(nextField.label);
+  }
+
+  if (nextField.arrayFields) {
+    nextField.arrayFields = Object.fromEntries(
+      Object.entries(nextField.arrayFields).map(([key, value]) => [
+        key,
+        decorateMarkupField(value),
+      ]),
+    );
+  }
+
+  return nextField;
+}
+
+export function withMarkupHints<T extends ComponentConfig<any>>(config: T): T {
+  if (!config.fields) {
+    return config;
+  }
+
+  return {
+    ...config,
+    fields: Object.fromEntries(
+      Object.entries(config.fields).map(([key, field]) => [
+        key,
+        decorateMarkupField(field as MarkupField),
+      ]),
+    ) as T["fields"],
+  } as T;
+}
+
+export function withMarkupHintsForComponents<
+  T extends Record<string, ComponentConfig<any>>,
+>(components: T): T {
+  return Object.fromEntries(
+    Object.entries(components).map(([key, config]) => [
+      key,
+      withMarkupHints(config),
+    ]),
+  ) as T;
 }

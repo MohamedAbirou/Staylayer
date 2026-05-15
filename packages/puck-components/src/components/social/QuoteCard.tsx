@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface QuoteCardProps {
   quote: string;
@@ -79,7 +80,7 @@ export const QuoteCard = ({
           }}
           className={`leading-relaxed tracking-tight ${quoteFontSize === 0 ? " text-base md:text-lg" : ""}`}
         >
-          {quote}
+          {parseMarkup(quote)}
         </p>
       </blockquote>
 
@@ -103,7 +104,7 @@ export const QuoteCard = ({
                 authorFontSize === 0 ? "text-lg leading-tight" : "leading-tight"
               }
             >
-              {author}
+              {parseMarkup(author)}
             </div>
           )}
         </div>

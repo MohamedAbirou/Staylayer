@@ -7,6 +7,7 @@ import {
   animationDurationField,
   animationDelayField,
 } from "../../lib/animations";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface ComparisonColumn {
   heading: string;
@@ -95,7 +96,7 @@ export const ComparisonTable = ({
                 }}
                 className={`font-${headingWeight || "bold"} tracking-tight ${headingFontSize === 0 ? " text-2xl md:text-3xl" : ""}`}
               >
-                {heading}
+                {parseMarkup(heading)}
               </h2>
             )}
             {subheading && (
@@ -109,7 +110,7 @@ export const ComparisonTable = ({
                 }}
                 className={`mt-3 text-gray-500 ${subheadingFontSize === 0 ? " text-base" : ""}`}
               >
-                {subheading}
+                {parseMarkup(subheading)}
               </p>
             )}
           </div>
@@ -131,7 +132,7 @@ export const ComparisonTable = ({
                         : "text-gray-900",
                     )}
                   >
-                    {col.heading}
+                    {parseMarkup(col.heading)}
                   </th>
                 ))}
               </tr>
@@ -158,7 +159,7 @@ export const ComparisonTable = ({
                     )}
                   >
                     <td className="py-3 pr-4 font-medium text-gray-700">
-                      {row.feature}
+                      {parseMarkup(row.feature)}
                     </td>
 
                     {columns.map((col, ci) => {
@@ -214,7 +215,9 @@ export const ComparisonTable = ({
                               />
                             </svg>
                           ) : (
-                            <span className="text-gray-600">{val}</span>
+                            <span className="text-gray-600">
+                              {parseMarkup(val)}
+                            </span>
                           )}
                         </td>
                       );

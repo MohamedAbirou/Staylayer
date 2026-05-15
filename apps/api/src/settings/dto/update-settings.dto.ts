@@ -14,12 +14,11 @@ import {
   ValidateIf,
 } from "class-validator";
 import { Transform } from "class-transformer";
+import { SUPPORTED_LOCALES } from "../../common/supported-locales";
 
 // Coerce empty string → undefined so @IsOptional() skips validation for "clear" values
 const emptyToUndefined = () =>
   Transform(({ value }) => (value === "" ? undefined : value));
-
-const SUPPORTED_LOCALES = ["en", "es", "fr", "de"];
 
 // Strict but tolerant regex patterns for popular analytics products.
 // Empty string is coerced to undefined and skips validation entirely.

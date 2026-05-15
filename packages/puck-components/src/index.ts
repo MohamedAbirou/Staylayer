@@ -67,11 +67,6 @@ export type {
   ContactRuntimeSubmitPayload,
   ContactSectionRuntimeValue,
 } from "./forms/contact-section-runtime";
-export {
-  AnnualReportSection,
-  annualReportSectionConfig,
-} from "./components/content/AnnualReportSection";
-export type { AnnualReportSectionProps } from "./components/content/AnnualReportSection";
 
 // ─── Media Components ──────────────────────────────────────────────────────
 export { ImageBlock, imageBlockConfig } from "./components/media/ImageBlock";
@@ -79,6 +74,7 @@ export { VideoEmbed, videoEmbedConfig } from "./components/media/VideoEmbed";
 
 // ─── CTA Components ────────────────────────────────────────────────────────
 export { Button, buttonConfig } from "./components/cta/Button";
+export { Link, linkConfig } from "./components/cta/Link";
 export { ButtonGroup, buttonGroupConfig } from "./components/cta/ButtonGroup";
 export { CTABanner, ctaBannerConfig } from "./components/cta/CTABanner";
 

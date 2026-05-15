@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface PricingFeature {
   text: string;
@@ -77,7 +78,7 @@ export const PricingCard = ({
           }}
           className={`font-semibold text-gray-900 ${planNameFontSize === 0 ? " text-lg" : ""}`}
         >
-          {planName}
+          {parseMarkup(planName)}
         </h3>
         <div className="mt-3 flex items-baseline gap-1">
           <span
@@ -87,9 +88,11 @@ export const PricingCard = ({
             }}
             className={`font-extrabold tracking-tight text-gray-900 ${priceFontSize === 0 ? " text-4xl" : ""}`}
           >
-            {price}
+            {parseMarkup(price)}
           </span>
-          {period && <span className="text-sm text-gray-500">{period}</span>}
+          {period && (
+            <span className="text-sm text-gray-500">{parseMarkup(period)}</span>
+          )}
         </div>
         {description && (
           <p
@@ -101,7 +104,7 @@ export const PricingCard = ({
             }}
             className={`mt-3 text-gray-500 ${descriptionFontSize === 0 ? " text-sm" : ""}`}
           >
-            {description}
+            {parseMarkup(description)}
           </p>
         )}
       </div>
@@ -138,7 +141,7 @@ export const PricingCard = ({
               </svg>
             )}
             <span className={cn(!feature.included && "text-gray-400")}>
-              {feature.text}
+              {parseMarkup(feature.text)}
             </span>
           </li>
         ))}
@@ -153,7 +156,7 @@ export const PricingCard = ({
               : "border border-gray-300 text-gray-700 hover:bg-gray-50",
           )}
         >
-          {ctaLabel}
+          {parseMarkup(ctaLabel)}
         </button>
       ) : (
         <a
@@ -165,7 +168,7 @@ export const PricingCard = ({
               : "border border-gray-300 text-gray-700 hover:bg-gray-50",
           )}
         >
-          {ctaLabel}
+          {parseMarkup(ctaLabel)}
         </a>
       )}
     </div>

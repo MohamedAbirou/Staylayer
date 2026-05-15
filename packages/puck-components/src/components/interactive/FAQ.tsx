@@ -6,6 +6,7 @@ import {
   maxWidthMap,
   textColorField,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface FAQItem {
   question: string;
@@ -56,7 +57,9 @@ function AccordionItem({
         className="flex w-full items-center justify-between py-4 text-left transition-colors hover:opacity-80"
         aria-expanded={isOpen}
       >
-        <span className="pr-4 text-base font-medium">{question}</span>
+        <span className="pr-4 text-base font-medium">
+          {parseMarkup(question)}
+        </span>
         <svg
           className={cn(
             "h-5 w-5 shrink-0 transition-transform duration-200 text-(--accent)",
@@ -80,7 +83,7 @@ function AccordionItem({
       >
         <div className="overflow-hidden">
           <div className=" px-4 mb-4 text-sm leading-relaxed opacity-80">
-            {answer}
+            {parseMarkup(answer)}
           </div>
         </div>
       </div>
@@ -139,7 +142,7 @@ export const FAQ = ({
                 }}
                 className={`font-${headingWeight || "bold"} ${headingFontSize === 0 ? " text-2xl md:text-3xl" : ""}`}
               >
-                {heading}
+                {parseMarkup(heading)}
               </h2>
             )}
             {subheading && (
@@ -153,7 +156,7 @@ export const FAQ = ({
                 }}
                 className={`mt-3 ${subheadingFontSize === 0 ? " text-base" : ""}`}
               >
-                {subheading}
+                {parseMarkup(subheading)}
               </p>
             )}
           </div>

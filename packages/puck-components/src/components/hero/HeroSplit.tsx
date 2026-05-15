@@ -7,6 +7,7 @@ import {
   imageField,
   resolvePaddingClasses,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface HeroSplitProps {
   heading: string;
@@ -123,7 +124,7 @@ export const HeroSplit = ({
             }}
             className={`font-${headingWeight || "extrabold"} leading-tight tracking-tight ${headingFontSize === 0 ? " text-3xl md:text-4xl lg:text-5xl" : ""}`}
           >
-            {heading}
+            {parseMarkup(heading)}
           </h1>
           {subheading && (
             <p
@@ -136,7 +137,7 @@ export const HeroSplit = ({
               }}
               className={`leading-relaxed ${subheadingFontSize === 0 ? " text-lg" : ""}`}
             >
-              {subheading}
+              {parseMarkup(subheading)}
             </p>
           )}
           <div className="mt-2">
@@ -182,7 +183,7 @@ export const heroSplitConfig: ComponentConfig<HeroSplitProps> = {
     },
     actions: {
       type: "slot",
-      allow: ["Button", "ButtonGroup"],
+      allow: ["Button", "ButtonGroup", "Link"],
     },
     textAlignment: {
       type: "radio",

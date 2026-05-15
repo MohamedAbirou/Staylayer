@@ -5,6 +5,7 @@ import {
   textColorField,
   imageField,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface TestimonialProps {
   quote: string;
@@ -69,7 +70,7 @@ export const Testimonial = ({
         }}
         className={`leading-relaxed ${quoteFontSize === 0 ? " text-base md:text-lg" : ""}`}
       >
-        {quote}
+        {parseMarkup(quote)}
       </p>
       <footer className="flex items-center gap-3 pt-2">
         {avatarUrl ? (
@@ -123,13 +124,13 @@ export const Testimonial = ({
             }}
             className={`not-italic font-semibold ${authorFontSize === 0 ? " text-sm" : ""}`}
           >
-            {author}
+            {parseMarkup(author)}
           </cite>
           {(role || company) && (
             <p className="text-xs opacity-60">
-              {role}
+              {role && parseMarkup(role)}
               {role && company && ", "}
-              {company}
+              {company && parseMarkup(company)}
             </p>
           )}
         </div>

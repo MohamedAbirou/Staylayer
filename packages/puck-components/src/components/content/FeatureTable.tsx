@@ -1,5 +1,6 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface FeatureRow {
   name: string;
@@ -75,7 +76,7 @@ export const FeatureTable = ({
               }}
               className={`font-${headingWeight || "semibold"} tracking-tight ${headingFontSize === 0 ? " text-3xl" : ""}`}
             >
-              {heading}
+              {parseMarkup(heading)}
             </h2>
           )}
           {subheading && (
@@ -89,7 +90,7 @@ export const FeatureTable = ({
               }}
               className={`mt-3 text-gray-600 ${subheadingFontSize === 0 ? " text-base" : ""}`}
             >
-              {subheading}
+              {parseMarkup(subheading)}
             </p>
           )}
         </div>
@@ -122,13 +123,13 @@ export const FeatureTable = ({
                   className="px-5 py-4 text-left text-sm font-medium"
                   style={{ color: headerTextColor }}
                 >
-                  {col1Label}
+                  {parseMarkup(col1Label)}
                 </th>
                 <th
                   className="px-5 py-4 text-left text-sm font-medium"
                   style={{ color: headerTextColor }}
                 >
-                  {col2Label}
+                  {parseMarkup(col2Label)}
                 </th>
               </tr>
             </thead>
@@ -153,11 +154,11 @@ export const FeatureTable = ({
                           ✓
                         </span>
                       )}
-                      <span>{f.name}</span>
+                      <span>{parseMarkup(f.name)}</span>
                     </div>
                   </td>
                   <td className="px-5 py-4 align-top opacity-80 text-sm">
-                    {f.description}
+                    {parseMarkup(f.description)}
                   </td>
                 </tr>
               ))}
@@ -170,7 +171,7 @@ export const FeatureTable = ({
             className="border-t border-gray-200 px-5 py-4 text-sm text-gray-600"
             style={{ background: footerBgColor }}
           >
-            {footerText}
+            {parseMarkup(footerText)}
           </div>
         )}
       </div>

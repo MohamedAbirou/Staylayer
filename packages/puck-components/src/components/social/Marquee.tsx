@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface MarqueeItem {
   imageUrl: string;
@@ -188,7 +189,7 @@ export const Marquee = ({
             ...(titleFontSize > 0 ? { fontSize: `${titleFontSize}px` } : {}),
           }}
         >
-          {title}
+          {parseMarkup(title)}
         </p>
       )}
 

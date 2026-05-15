@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -309,7 +310,7 @@ export const Tabs = ({
           className={getTabButtonClasses(i)}
           style={getTabStyle(i)}
         >
-          {tabs[i]?.label ?? `Tab ${i + 1}`}
+          {parseMarkup(tabs[i]?.label ?? `Tab ${i + 1}`)}
           {/* Underline indicator rendered as an absolute span so thickness is CSS-controlled */}
           {variant === "underline" && selected === i && (
             <span
@@ -347,7 +348,7 @@ export const Tabs = ({
               <div key={i}>
                 {/* Label badge so the editor knows which tab this panel belongs to */}
                 <span className="mb-1 inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-600">
-                  {tabs[i]?.label ?? `Tab ${i + 1}`}
+                  {parseMarkup(tabs[i]?.label ?? `Tab ${i + 1}`)}
                 </span>
                 <div
                   className={cn(

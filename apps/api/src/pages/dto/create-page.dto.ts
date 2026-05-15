@@ -8,6 +8,7 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
+import { SUPPORTED_LOCALES } from "../../common/supported-locales";
 
 export class CreatePageDto {
   @IsString()
@@ -19,7 +20,7 @@ export class CreatePageDto {
   slug: string;
 
   @IsString()
-  @IsIn(["en", "es", "fr", "de"])
+  @IsIn([...SUPPORTED_LOCALES])
   locale: string;
 
   @IsString()

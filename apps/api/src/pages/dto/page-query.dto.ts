@@ -9,13 +9,14 @@ import {
 } from "class-validator";
 import { Transform } from "class-transformer";
 import { SiteScopeQueryDto } from "../../common/dto/site-scope-query.dto";
+import { SUPPORTED_LOCALES } from "../../common/supported-locales";
 
 export { SiteScopeQueryDto as SiteScopedQueryDto };
 
 export class PageQueryDto extends SiteScopeQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(["en", "es", "fr", "de"])
+  @IsIn([...SUPPORTED_LOCALES])
   locale?: string;
 
   @IsOptional()
@@ -57,7 +58,7 @@ export class PageQueryDto extends SiteScopeQueryDto {
 export class PageLocaleQueryDto extends SiteScopeQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(["en", "es", "fr", "de"])
+  @IsIn([...SUPPORTED_LOCALES])
   locale?: string = "en";
 
   @IsOptional()
@@ -73,14 +74,14 @@ export class PageLocaleQueryDto extends SiteScopeQueryDto {
 export class PublishedPagesQueryDto extends SiteScopeQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(["en", "es", "fr", "de"])
+  @IsIn([...SUPPORTED_LOCALES])
   locale?: string;
 }
 
 export class VersionQueryDto extends SiteScopeQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(["en", "es", "fr", "de"])
+  @IsIn([...SUPPORTED_LOCALES])
   locale?: string = "en";
 
   @IsOptional()

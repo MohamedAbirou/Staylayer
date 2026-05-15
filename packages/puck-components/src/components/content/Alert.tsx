@@ -6,6 +6,7 @@ import {
   animationDurationField,
   animationDelayField,
 } from "../../lib/animations";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface AlertProps {
   variant: string;
@@ -181,11 +182,13 @@ export const Alert = ({
       <div className="flex-1 min-w-0">
         {title && (
           <h5 className={cn("text-sm font-semibold mb-0.5", styles.text)}>
-            {title}
+            {parseMarkup(title)}
           </h5>
         )}
         {((description as any)?.props?.value || !description) && (
-          <p className={cn("text-sm opacity-90", styles.text)}>{description}</p>
+          <p className={cn("text-sm opacity-90", styles.text)}>
+            {parseMarkup(description)}
+          </p>
         )}
       </div>
     </div>

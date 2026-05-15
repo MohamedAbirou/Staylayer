@@ -1,5 +1,6 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface BadgeProps {
   text: string;
@@ -35,7 +36,7 @@ export const Badge = ({
         sizeMap[size],
       )}
     >
-      {text}
+      {parseMarkup(text)}
     </span>
   );
 };

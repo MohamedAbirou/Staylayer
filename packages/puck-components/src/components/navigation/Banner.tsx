@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface BannerProps {
   text: string;
@@ -126,20 +127,20 @@ export const Banner = ({
           <span className="shrink-0">{iconSvgs[icon]}</span>
         )}
         <p className="text-center font-medium">
-          {text}
+          <span>{parseMarkup(text)}</span>
           {linkText && (
             <>
               {" "}
               {puck?.isEditing ? (
                 <span className="font-semibold underline underline-offset-2 cursor-pointer">
-                  {linkText}
+                  {parseMarkup(linkText)}
                 </span>
               ) : (
                 <a
                   href={linkUrl}
                   className="font-semibold underline underline-offset-2 hover:no-underline"
                 >
-                  {linkText}
+                  {parseMarkup(linkText)}
                 </a>
               )}
             </>

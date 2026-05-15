@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
+import { SUPPORTED_LOCALES } from "../common/supported-locales";
 import { PrismaService } from "../prisma/prisma.service";
 
 type PageSnapshotEntry = {
@@ -526,7 +527,7 @@ export class SitePublishedRevisionsService {
       activeLocales:
         asStringArray(obj.activeLocales).length > 0
           ? asStringArray(obj.activeLocales)
-          : ["en", "es", "fr", "de"],
+          : [...SUPPORTED_LOCALES],
     };
   }
 }

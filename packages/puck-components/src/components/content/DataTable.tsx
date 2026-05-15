@@ -105,7 +105,7 @@ export const DataTable = ({
                         ...(fontSize > 0 ? { fontSize: `${fontSize}px` } : {}),
                       }}
                     >
-                      {col.header}
+                      {parseMarkup(col.header)}
                     </th>
                   ))}
                 </tr>
@@ -180,7 +180,7 @@ export const DataTable = ({
             }}
           >
             <p className="text-sm" style={{ color: footerTextColor }}>
-              {footerText}
+              {parseMarkup(footerText)}
             </p>
           </div>
         )}

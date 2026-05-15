@@ -20,6 +20,11 @@ import { WorkspaceScopeGuard } from "../auth/guards/workspace-scope.guard";
 import { MembershipRoles } from "../auth/decorators/roles.decorator";
 import { WorkspaceAccessService } from "../auth/workspace-access.service";
 import { AuthenticatedRequestUser } from "../auth/auth.types";
+import {
+  AddTranslationGlossaryTermDto,
+  CreateTranslationJobDto,
+  TranslationGlossaryPreviewQueryDto,
+} from "./dto/translation-locale.dto";
 
 @Controller("translation")
 @UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
@@ -50,15 +55,7 @@ export class TranslationController {
   async createJob(
     @Req() req: Request,
     @Query("siteId") siteId: string,
-    @Body()
-    body: {
-      sourceLocale: string;
-      targetLocale: string;
-      pageIds?: string[];
-      publishedOnly?: boolean;
-      overwrite?: boolean;
-      autoPublish?: boolean;
-    },
+    @Body() body: CreateTranslationJobDto,
   ) {
     await this.ensureSiteAccess(req);
     const user = this.getUser(req);
@@ -154,16 +151,15 @@ export class TranslationController {
   async getGlossaryPreview(
     @Req() req: Request,
     @Query("siteId") siteId: string,
-    @Query("sourceLocale") sourceLocale: string,
-    @Query("targetLocale") targetLocale: string,
+    @Query() query: TranslationGlossaryPreviewQueryDto,
   ) {
     await this.ensureSiteAccess(req);
     const user = this.getUser(req);
     return this.translationService.getGlossaryPreview(
       user.activeTenantId!,
       siteId,
-      sourceLocale,
-      targetLocale,
+      query.sourceLocale,
+      query.targetLocale,
     );
   }
 
@@ -213,14 +209,7 @@ export class TranslationController {
   async addGlossaryTerm(
     @Req() req: Request,
     @Param("glossaryId") glossaryId: string,
-    @Body()
-    body: {
-      sourceTerm: string;
-      targetTerm: string;
-      sourceLocale: string;
-      targetLocale: string;
-      caseSensitive?: boolean;
-    },
+    @Body() body: AddTranslationGlossaryTermDto,
   ) {
     const user = this.getUser(req);
     return this.translationService.addGlossaryTerm(

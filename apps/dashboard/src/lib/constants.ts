@@ -18,7 +18,16 @@ export function buildMarketingLoginUrl(returnTo?: string | null): string {
   return url.toString();
 }
 
-export const LOCALES = ["en", "es", "fr", "de"] as const;
+export const LOCALES = [
+  "en",
+  "es",
+  "fr",
+  "de",
+  "it",
+  "pt",
+  "nl",
+  "ar",
+] as const;
 export type Locale = (typeof LOCALES)[number];
 
 export interface Page {

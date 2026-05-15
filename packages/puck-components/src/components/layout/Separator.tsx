@@ -1,5 +1,6 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface SeparatorProps {
   orientation: string;
@@ -62,7 +63,7 @@ export const Separator = ({
       >
         <div className="flex-1 h-px bg-(--sep-color)" />
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider shrink-0">
-          {label}
+          {parseMarkup(label)}
         </span>
         <div className="flex-1 h-px bg-(--sep-color)" />
       </div>

@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface ButtonProps {
   label: string;
@@ -274,7 +275,7 @@ export const Button = ({
       style={customStyle as React.CSSProperties}
     >
       {iconEl && iconPosition === "left" && iconEl}
-      <span>{label}</span>
+      <span>{parseMarkup(label)}</span>
       {iconEl && iconPosition === "right" && iconEl}
     </Tag>
   );

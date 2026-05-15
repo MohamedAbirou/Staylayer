@@ -6,6 +6,7 @@ import {
   textColorField,
   imageField,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface HeroProps {
   heading: string;
@@ -131,7 +132,7 @@ export const Hero = ({
             }}
             className={`max-w-[var(--heading-max-w)] font-${headingWeight || "extrabold"} leading-tight tracking-tight ${headingFontSize === 0 ? " text-4xl md:text-5xl lg:text-6xl" : ""}`}
           >
-            {headingPrefix && <>{headingPrefix} </>}
+            {headingPrefix && <>{parseMarkup(headingPrefix)} </>}
             <span className="relative inline-block whitespace-nowrap">
               {showHighlightUnderline && (
                 <svg
@@ -164,10 +165,10 @@ export const Hero = ({
                   } as React.CSSProperties
                 }
               >
-                {headingHighlight}
+                {parseMarkup(headingHighlight)}
               </span>
             </span>
-            {headingSuffix && <> {headingSuffix}</>}
+            {headingSuffix && <> {parseMarkup(headingSuffix)}</>}
           </h1>
         ) : (
           <h1
@@ -179,7 +180,7 @@ export const Hero = ({
             }}
             className={`max-w-[var(--heading-max-w)] font-${headingWeight || "extrabold"} leading-tight tracking-tight ${headingFontSize === 0 ? " text-4xl md:text-5xl lg:text-6xl" : ""}`}
           >
-            {heading}
+            {parseMarkup(heading)}
           </h1>
         )}
         {subheading && (
@@ -193,7 +194,7 @@ export const Hero = ({
             }}
             className={`max-w-[var(--subheading-max-w)] leading-relaxed ${subheadingFontSize === 0 ? " text-lg md:text-xl" : ""} font-${subheadingWeight || "extrabold"}`}
           >
-            {subheading}
+            {parseMarkup(subheading)}
           </p>
         )}
         {showActions !== "hide" && (
@@ -230,7 +231,7 @@ export const heroConfig: ComponentConfig<HeroProps> = {
     },
     actions: {
       type: "slot",
-      allow: ["Button", "ButtonGroup"],
+      allow: ["Button", "ButtonGroup", "Link"],
     },
     alignment: {
       type: "radio",

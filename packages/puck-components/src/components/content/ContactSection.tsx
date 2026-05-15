@@ -6,6 +6,7 @@ import {
 } from "../../forms/contact-section-runtime";
 import { textColorField, backgroundColorField } from "../../lib/fields";
 import { cn } from "../../lib/cn";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface ContactSectionProps {
   formKey?: string;
@@ -192,7 +193,7 @@ export const ContactSection = ({
     >
       {heading && (
         <h3 className="text-xl font-bold mb-4" style={{ color: headingColor }}>
-          {heading}
+          {parseMarkup(heading)}
         </h3>
       )}
       {description && (
@@ -200,7 +201,7 @@ export const ContactSection = ({
           className="mb-2 text-base leading-relaxed"
           style={{ color: descriptionColor }}
         >
-          {description}
+          {parseMarkup(description)}
         </p>
       )}
       {bulletItems.length > 0 && (
@@ -209,14 +210,14 @@ export const ContactSection = ({
           style={{ color: descriptionColor }}
         >
           {bulletItems.map((item, i) => (
-            <li key={i}>{item.text}</li>
+            <li key={i}>{parseMarkup(item.text)}</li>
           ))}
         </ul>
       )}
       {badgeText && (
         <div className="mt-4">
           <span className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium text-sm">
-            {badgeText}
+            {parseMarkup(badgeText)}
           </span>
         </div>
       )}
@@ -258,11 +259,13 @@ export const ContactSection = ({
                 href={`mailto:${emailAddress}`}
                 className="text-blue-700 underline font-medium"
               >
-                {emailLabel}
+                {parseMarkup(emailLabel)}
               </a>
             </p>
             {emailNote && (
-              <p className="mt-2 text-xs text-slate-400">{emailNote}</p>
+              <p className="mt-2 text-xs text-slate-400">
+                {parseMarkup(emailNote)}
+              </p>
             )}
           </div>
         )}

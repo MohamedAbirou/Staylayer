@@ -6,6 +6,7 @@ import {
   textColorField,
   imageField,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 const gradientDirMap: Record<string, string> = {
   "to-r": "bg-gradient-to-r",
@@ -139,7 +140,7 @@ export const TextWithImage = ({
             }}
             className={`font-${titleFontWeight} mx-auto text-white`}
           >
-            {sectionTitle}
+            {parseMarkup(sectionTitle)}
           </h2>
         </div>
       )}
@@ -173,7 +174,7 @@ export const TextWithImage = ({
                   }}
                   className={`font-${headingWeight || "bold"} leading-tight`}
                 >
-                  {heading}
+                  {parseMarkup(heading)}
                 </h2>
               )}
 

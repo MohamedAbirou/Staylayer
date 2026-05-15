@@ -3,6 +3,7 @@ import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
 import { emojiField } from "../../lib/emoji-picker";
 import { useState, useRef, useEffect } from "react";
+import { parseMarkup } from "../../lib/parse-markup";
 import {
   MatrialIconsApartment,
   MatrialIconsAttachMoney,
@@ -392,7 +393,7 @@ export const FeatureCard = ({
                     {i + 1}
                   </span>
                 )}
-                <span className="pt-0.5">{item.text}</span>
+                <span className="pt-0.5">{parseMarkup(item.text)}</span>
               </li>
             );
           })}
@@ -436,7 +437,7 @@ export const FeatureCard = ({
                     &#10004;
                   </span>
                 )}
-                <span>{item.text}</span>
+                <span>{parseMarkup(item.text)}</span>
               </li>
             );
           })}
@@ -477,7 +478,7 @@ export const FeatureCard = ({
                   }}
                 />
               )}
-              <span>{item.text}</span>
+              <span>{parseMarkup(item.text)}</span>
             </li>
           );
         })}
@@ -528,7 +529,7 @@ export const FeatureCard = ({
           }}
           className={`font-${titleWeight || "semibold"} ${titleFontSize === 0 ? " text-lg" : ""}`}
         >
-          {title}
+          {parseMarkup(title)}
         </h3>
       )}
       {((description as any)?.props?.value || description) && (
@@ -542,7 +543,7 @@ export const FeatureCard = ({
           }}
           className={`leading-relaxed font-${descriptionWeight || "medium"} ${descriptionFontSize === 0 ? " text-sm" : ""}`}
         >
-          {description}
+          {parseMarkup(description)}
         </p>
       )}
       <div

@@ -8,6 +8,7 @@ import {
   maxWidthMap,
   resolvePaddingClasses,
 } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -335,7 +336,7 @@ export const Footer = ({
                   )}
                   {showText && logoText && (
                     <span className="[font-size:var(--logo-fs)] [font-weight:var(--logo-weight)] leading-[1.1] tracking-tight">
-                      {logoText}
+                      {parseMarkup(logoText)}
                     </span>
                   )}
                 </a>
@@ -346,7 +347,7 @@ export const Footer = ({
                   className={`leading-relaxed text-(--fg) opacity-(--tagline-opacity) max-w-[var(--tagline-max-w)]`}
                   style={{ fontSize: `var(--tagline-fs)` }}
                 >
-                  {tagline}
+                  {parseMarkup(tagline)}
                 </p>
               )}
             </div>
@@ -367,7 +368,7 @@ export const Footer = ({
                 <div key={ci} className="flex flex-col gap-3">
                   {col.heading && (
                     <h3 className="text-(--accent) [font-size:var(--col-heading-fs)] [font-weight:var(--logo-weight)] [letter-spacing:var(--col-heading-ls)] [text-transform:var(--col-heading-transform)] m-0">
-                      {col.heading}
+                      {parseMarkup(col.heading)}
                     </h3>
                   )}
                   <ul className="flex flex-col gap-2 list-none m-0 p-0">
@@ -383,7 +384,7 @@ export const Footer = ({
                           }
                           className="footer-link no-underline transition-opacity text-(--fg) [font-size:var(--link-fs)] opacity-(--link-opacity)"
                         >
-                          {link.label}
+                          {parseMarkup(link.label)}
                         </a>
                       </li>
                     ))}
@@ -412,7 +413,7 @@ export const Footer = ({
           >
             {copyrightText && (
               <p className="text-(--bottom-fg) [font-size:var(--bottom-fs)] opacity-(--bottom-opacity) m-0">
-                {copyrightText}
+                {parseMarkup(copyrightText)}
               </p>
             )}
             {socialLinks.length > 0 && (
@@ -441,7 +442,7 @@ export const Footer = ({
                     rel={bl.openInNewTab ? "noopener noreferrer" : undefined}
                     className="footer-bottom-link no-underline transition-opacity text-(--bottom-fg) [font-size:var(--bottom-fs)] opacity-(--bottom-opacity)"
                   >
-                    {bl.label}
+                    {parseMarkup(bl.label)}
                   </a>
                 ))}
               </nav>

@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface BreadcrumbItem {
   label: string;
@@ -48,17 +49,19 @@ export const Breadcrumb = ({
           return (
             <li key={i} className="flex items-center gap-1.5">
               {isLast ? (
-                <span className="font-medium opacity-90">{item.label}</span>
+                <span className="font-medium opacity-90">
+                  {parseMarkup(item.label)}
+                </span>
               ) : puck?.isEditing ? (
                 <span className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity">
-                  {item.label}
+                  {parseMarkup(item.label)}
                 </span>
               ) : (
                 <a
                   href={item.href}
                   className="opacity-60 hover:opacity-100 transition-opacity no-underline"
                 >
-                  {item.label}
+                  {parseMarkup(item.label)}
                 </a>
               )}
               {!isLast && (

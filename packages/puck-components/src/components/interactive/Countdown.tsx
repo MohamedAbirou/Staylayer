@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface CountdownProps {
   targetDate: string;
@@ -154,7 +155,7 @@ export const Countdown = ({
             }}
             className={`font-${headingWeight || "bold"} ${headingFontSize === 0 ? " text-2xl md:text-3xl" : ""}`}
           >
-            {heading}
+            {parseMarkup(heading)}
           </h2>
         )}
         {description && (
@@ -168,7 +169,7 @@ export const Countdown = ({
             }}
             className={descriptionFontSize === 0 ? "text-base md:text-lg" : ""}
           >
-            {description}
+            {parseMarkup(description)}
           </p>
         )}
 

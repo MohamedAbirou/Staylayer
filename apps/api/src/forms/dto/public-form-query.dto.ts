@@ -5,8 +5,7 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
-
-const SUPPORTED_LOCALES = ["en", "es", "fr", "de"] as const;
+import { SUPPORTED_LOCALES } from "../../common/supported-locales";
 
 export class PublicFormQueryDto {
   @IsString()

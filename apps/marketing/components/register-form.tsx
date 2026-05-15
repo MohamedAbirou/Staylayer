@@ -251,6 +251,10 @@ export function RegisterForm({
             <option value="es">Spanish</option>
             <option value="fr">French</option>
             <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="pt">Portuguese</option>
+            <option value="nl">Dutch</option>
+            <option value="ar">Arabic</option>
           </select>
         </label>
       </div>

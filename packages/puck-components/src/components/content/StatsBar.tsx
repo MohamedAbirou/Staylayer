@@ -1,6 +1,7 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { backgroundColorField, textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface StatItem {
   value: string;
@@ -72,7 +73,7 @@ export const StatsBar = ({
               }}
               className={`font-extrabold ${valueFontSize === 0 ? " text-3xl md:text-4xl" : ""}`}
             >
-              {stat.value}
+              {parseMarkup(stat.value)}
             </span>
             <span
               style={{
@@ -83,7 +84,7 @@ export const StatsBar = ({
               }}
               className={`font-semibold uppercase tracking-wide ${labelFontSize === 0 ? " text-sm" : ""}`}
             >
-              {stat.label}
+              {parseMarkup(stat.label)}
             </span>
             {stat.description && (
               <span
@@ -96,7 +97,7 @@ export const StatsBar = ({
                 }}
                 className={`mt-1 ${descriptionFontSize === 0 ? " text-xs" : ""}`}
               >
-                {stat.description}
+                {parseMarkup(stat.description)}
               </span>
             )}
           </div>

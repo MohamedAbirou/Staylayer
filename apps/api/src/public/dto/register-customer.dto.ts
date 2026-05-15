@@ -5,10 +5,12 @@ import {
   IsArray,
   IsEmail,
   IsEnum,
+  IsIn,
   IsString,
   MinLength,
   ValidateNested,
 } from "class-validator";
+import { SUPPORTED_LOCALES } from "../../common/supported-locales";
 import { LegalAcceptanceDto } from "./legal-acceptance.dto";
 
 export class RegisterCustomerDto {
@@ -36,6 +38,7 @@ export class RegisterCustomerDto {
 
   @IsString()
   @MinLength(2)
+  @IsIn([...SUPPORTED_LOCALES])
   primaryLocale: string;
 
   @IsArray()

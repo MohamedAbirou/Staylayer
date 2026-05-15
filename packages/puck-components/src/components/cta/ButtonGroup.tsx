@@ -42,7 +42,7 @@ export const buttonGroupConfig: ComponentConfig<ButtonGroupProps> = {
   fields: {
     buttons: {
       type: "slot",
-      allow: ["Button"],
+      allow: ["Button", "Link"],
     },
     alignment: {
       type: "radio",

@@ -7,6 +7,7 @@ import {
   animationDurationField,
   animationDelayField,
 } from "../../lib/animations";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface ProgressProps {
   value: number;
@@ -86,7 +87,9 @@ export const Progress = ({
       {(label || showValue) && (
         <div className="flex items-center justify-between mb-1.5">
           {label && (
-            <span className="text-sm font-medium text-gray-700">{label}</span>
+            <span className="text-sm font-medium text-gray-700">
+              {parseMarkup(label)}
+            </span>
           )}
           {showValue && (
             <span className="text-sm font-medium text-gray-500">

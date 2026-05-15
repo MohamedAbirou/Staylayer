@@ -1,4 +1,6 @@
-export const SUPPORTED_RUNTIME_LOCALES = ["en", "es", "fr", "de"] as const;
+import { SUPPORTED_LOCALES } from "../common/supported-locales";
+
+export const SUPPORTED_RUNTIME_LOCALES = SUPPORTED_LOCALES;
 
 export function normalizeHostname(value: string | null | undefined): string {
   return String(value ?? "")

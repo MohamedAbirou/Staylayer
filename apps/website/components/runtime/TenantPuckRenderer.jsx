@@ -10,7 +10,16 @@ import { useRouter } from "next/navigation";
 
 const DEFAULT_BRAND_LOGO_URL = "/images/logo.png";
 const BRAND_COMPONENT_TYPES = new Set(["Navbar", "Footer"]);
-const SUPPORTED_RUNTIME_LOCALES = new Set(["en", "es", "fr", "de"]);
+const SUPPORTED_RUNTIME_LOCALES = new Set([
+  "en",
+  "es",
+  "fr",
+  "de",
+  "it",
+  "pt",
+  "nl",
+  "ar",
+]);
 
 function isExternalHref(href) {
   return (
@@ -120,6 +129,8 @@ export function TenantPuckRenderer({ runtime }) {
   }
 
   const themedPuckData = applyRuntimeTheme(runtime.page.puckData, runtime.site);
+  const pageLocale = runtime.page.locale || runtime.site.defaultLocale || "en";
+  const languageDirection = pageLocale === "ar" ? "rtl" : "ltr";
 
   const availableForms = buildAvailableForms(runtime.forms?.byKey);
   const pageLocales = runtime.page.availableLocales || [];
@@ -131,7 +142,7 @@ export function TenantPuckRenderer({ runtime }) {
   );
   const runtimeValue = {
     pageSlug: runtime.page.slug || "home",
-    locale: runtime.page.locale || runtime.site.defaultLocale,
+    locale: pageLocale,
     availableForms,
     resolveForm: async ({ formKey = "", pageSlug, locale }) => {
       const normalizedFormKey = String(formKey || "").trim();
@@ -177,7 +188,7 @@ export function TenantPuckRenderer({ runtime }) {
   };
   const languageSwitcherRuntime = {
     pageSlug: runtime.page.slug || "home",
-    currentLocale: runtime.page.locale || runtime.site.defaultLocale,
+    currentLocale: pageLocale,
     defaultLocale: runtime.site.defaultLocale || "en",
     availableLocales,
   };
@@ -212,7 +223,12 @@ export function TenantPuckRenderer({ runtime }) {
   return (
     <LanguageSwitcherRuntimeProvider value={languageSwitcherRuntime}>
       <ContactSectionRuntimeProvider value={runtimeValue}>
-        <div className="puck-root" onClick={handleClick}>
+        <div
+          className="puck-root"
+          onClick={handleClick}
+          dir={languageDirection}
+          lang={pageLocale}
+        >
           <Render config={puckConfig} data={themedPuckData} />
         </div>
       </ContactSectionRuntimeProvider>

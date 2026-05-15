@@ -5,6 +5,7 @@ import {
   maxWidthMap,
 } from "../../lib/fields";
 import { cn } from "../../lib/cn";
+import { parseMarkup } from "../../lib/parse-markup";
 
 interface StepItem {
   title: string;
@@ -84,7 +85,7 @@ export const StepList = ({
                 className="font-semibold"
                 style={{ fontSize: titleSize, color: titleColor || undefined }}
               >
-                {step.title}
+                {parseMarkup(step.title)}
               </div>
               {step.description && (
                 <p
@@ -94,7 +95,7 @@ export const StepList = ({
                     color: descriptionColor || "#6b7280",
                   }}
                 >
-                  {step.description}
+                  {parseMarkup(step.description)}
                 </p>
               )}
             </div>
@@ -152,7 +153,7 @@ export const StepList = ({
               className="font-semibold"
               style={{ fontSize: titleSize, color: titleColor || undefined }}
             >
-              {step.title}
+              {parseMarkup(step.title)}
             </div>
             {step.description && (
               <p
@@ -162,7 +163,7 @@ export const StepList = ({
                   color: descriptionColor || "#6b7280",
                 }}
               >
-                {step.description}
+                {parseMarkup(step.description)}
               </p>
             )}
           </div>

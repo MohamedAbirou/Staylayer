@@ -4,6 +4,7 @@ import {
   BillingPlanKey,
   BillingProvider,
 } from "./billing.types";
+import { SUPPORTED_LOCALES } from "../common/supported-locales";
 
 export const BILLING_PROVIDER: BillingProvider = "stripe";
 export const BILLING_DEFAULT_TRIAL_DAYS = 14;
@@ -78,7 +79,7 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
       formSubmissions: 250,
       pages: 25,
       domains: 1,
-      allowedLanguages: ["en", "es", "fr", "de"],
+      allowedLanguages: [...SUPPORTED_LOCALES],
       translationCharactersPerMonth: 50_000,
       deploymentRetention: 10,
       rollbackEnabled: true,
@@ -114,7 +115,7 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
       formSubmissions: 1500,
       pages: 100,
       domains: 3,
-      allowedLanguages: ["en", "es", "fr", "de"],
+      allowedLanguages: [...SUPPORTED_LOCALES],
       translationCharactersPerMonth: 250_000,
       deploymentRetention: 30,
       rollbackEnabled: true,
@@ -145,12 +146,12 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     },
     limits: {
       sites: 5,
-      locales: 4,
+      locales: 8,
       seats: 15,
       formSubmissions: 10_000,
       pages: 500,
       domains: 15,
-      allowedLanguages: ["en", "es", "fr", "de"],
+      allowedLanguages: [...SUPPORTED_LOCALES],
       translationCharactersPerMonth: 1_000_000,
       deploymentRetention: 90,
       rollbackEnabled: true,

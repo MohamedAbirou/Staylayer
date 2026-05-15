@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
 import { textColorField } from "../../lib/fields";
+import { parseMarkup } from "../../lib/parse-markup";
 
 export interface AccordionProps {
   title: string;
@@ -38,7 +39,7 @@ export const Accordion = ({
         className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50"
         aria-expanded={isOpen}
       >
-        <span className="text-sm font-semibold">{title}</span>
+        <span className="text-sm font-semibold">{parseMarkup(title)}</span>
         <svg
           className={cn(
             "h-4 w-4 shrink-0 transition-transform duration-200 text-(--accent)",
@@ -62,7 +63,7 @@ export const Accordion = ({
       >
         <div className="overflow-hidden">
           <div className="border-t border-gray-200 px-4 py-3 text-sm leading-relaxed opacity-80">
-            {content}
+            {parseMarkup(content)}
           </div>
         </div>
       </div>
