@@ -17,6 +17,10 @@ import {
   normalizePathname,
   stripWww,
 } from "./public-runtime.util";
+import {
+  getConfiguredPlatformRootDomain,
+  isUsablePlatformRootDomain,
+} from "./platform-root-domain";
 
 export type ResolveHostResponse =
   | {
@@ -158,8 +162,8 @@ export class HostResolutionService {
     hostname: string,
     pathname: string,
   ): Extract<ResolveHostResponse, { action: "redirect" }> | null {
-    const platformRootDomain = normalizeHostname(
-      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    const platformRootDomain = getConfiguredPlatformRootDomain(
+      this.configService,
     );
     const marketingOrigin = this.configService.get<string>(
       "MARKETING_APP_ORIGIN",
@@ -295,9 +299,14 @@ export class HostResolutionService {
   private async resolvePlatformSubdomain(
     hostname: string,
   ): Promise<CachedServeResolution | null> {
-    const platformRootDomain = normalizeHostname(
-      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    const platformRootDomain = getConfiguredPlatformRootDomain(
+      this.configService,
     );
+
+    if (!isUsablePlatformRootDomain(platformRootDomain)) {
+      return null;
+    }
+
     const label = extractPlatformSubdomain(hostname, platformRootDomain);
 
     if (!label) {

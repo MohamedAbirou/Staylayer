@@ -232,7 +232,9 @@ export default function DomainsPage() {
             detail={
               runtimeProfile?.defaultHostname
                 ? "This site already has a shared public hostname you can use before a custom domain is ready."
-                : "Assign a public subdomain to give the site a default shared-runtime hostname."
+                : runtimeProfile?.defaultHostnameIssue
+                  ? runtimeProfile.defaultHostnameIssue
+                  : "Assign a public subdomain to give the site a default shared-runtime hostname."
             }
           />
           <DomainSignalTile

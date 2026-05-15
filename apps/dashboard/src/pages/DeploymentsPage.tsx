@@ -668,7 +668,10 @@ export default function DeploymentsPage() {
                           ) : null}
                         </div>
                       </div>
-                      <DeploymentLogs logs={deployment.recentLogs} />
+                      <DeploymentLogs
+                        logs={deployment.recentLogs}
+                        sharedRuntime={deployment.sharedRuntime}
+                      />
                     </div>
                   </div>
                 );
@@ -836,9 +839,8 @@ export default function DeploymentsPage() {
                     Cancel
                   </button>
                   <p className="text-xs text-gray-500">
-                    Shared-runtime keys such as WEBSITE_RUNTIME_SECRET,
-                    PLATFORM_ROOT_DOMAIN, and REVALIDATE_SECRET cannot be
-                    overridden here.
+                    Platform-managed publishing, routing, and cache keys cannot
+                    be overridden here.
                   </p>
                 </div>
               </div>
@@ -1232,18 +1234,32 @@ function DeploymentTimeline({
   );
 }
 
-function DeploymentLogs({ logs }: { logs: SiteDeployment["recentLogs"] }) {
+function DeploymentLogs({
+  logs,
+  sharedRuntime,
+}: {
+  logs: SiteDeployment["recentLogs"];
+  sharedRuntime: boolean;
+}) {
+  const title = sharedRuntime
+    ? "Recent runtime events"
+    : "Recent provider logs";
+
   return (
     <details
       className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-gray-950 text-gray-100"
       open
     >
       <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-300">
-        Recent provider logs
+        {title}
       </summary>
       <div className="max-h-72 space-y-2 overflow-auto border-t border-gray-800 px-4 py-3">
         {logs.length === 0 ? (
-          <p className="text-xs text-gray-500">No recent logs available.</p>
+          <p className="text-xs text-gray-500">
+            {sharedRuntime
+              ? "No runtime events available."
+              : "No recent logs available."}
+          </p>
         ) : (
           logs.map((entry) => (
             <div

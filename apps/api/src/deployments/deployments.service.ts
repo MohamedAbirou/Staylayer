@@ -13,10 +13,11 @@ import {
   Prisma,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { stripWww } from "../public-runtime/public-runtime.util";
 import {
-  normalizeHostname,
-  stripWww,
-} from "../public-runtime/public-runtime.util";
+  getConfiguredPlatformRootDomain,
+  isUsablePlatformRootDomain,
+} from "../public-runtime/platform-root-domain";
 import { SitePublishedRevisionsService } from "../site-published-revisions/site-published-revisions.service";
 import {
   DEPLOYMENT_PROVIDER,
@@ -1015,7 +1016,6 @@ export class DeploymentsService {
   ): CustomerSiteDeployment {
     const metadata = asDeploymentMetadata(deployment.metadata);
     const providerTimeline = asDeploymentTimeline(metadata.providerTimeline);
-    const recentLogs = asDeploymentLogs(metadata.providerLogs);
     const deploymentUrl = deployment.url
       ? this.normalizeUrl(deployment.url)
       : null;
@@ -1030,6 +1030,13 @@ export class DeploymentsService {
         : deploymentUrl;
 
     const sharedRuntime = metadata.sharedRuntime === true;
+    const storedLogs = asDeploymentLogs(metadata.providerLogs);
+    const recentLogs =
+      storedLogs.length > 0
+        ? storedLogs
+        : sharedRuntime
+          ? this.buildSharedRuntimeLogs(deployment, metadata)
+          : storedLogs;
     const publishedRevision =
       typeof metadata.publishedRevision === "number"
         ? metadata.publishedRevision
@@ -1084,15 +1091,96 @@ export class DeploymentsService {
       site.domains.forEach((domain) => hosts.add(domain.host));
     }
 
-    const platformRootDomain = normalizeHostname(
-      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    const platformRootDomain = getConfiguredPlatformRootDomain(
+      this.configService,
     );
 
-    if (site.publicSubdomain && platformRootDomain) {
+    if (
+      site.publicSubdomain &&
+      isUsablePlatformRootDomain(platformRootDomain)
+    ) {
       hosts.add(`${site.publicSubdomain}.${platformRootDomain}`);
     }
 
     return Array.from(hosts);
+  }
+
+  private buildSharedRuntimeLogs(
+    deployment: Deployment,
+    metadata: Record<string, unknown>,
+  ): DeploymentLogEntry[] {
+    const createdAt = deployment.createdAt.toISOString();
+    const updatedAt = deployment.updatedAt.toISOString();
+    const publishedAt =
+      typeof metadata.publishedAt === "string"
+        ? metadata.publishedAt
+        : updatedAt;
+    const revision =
+      typeof metadata.publishedRevision === "number"
+        ? metadata.publishedRevision
+        : null;
+    const hosts = Array.isArray(metadata.sharedRuntimeHosts)
+      ? metadata.sharedRuntimeHosts.filter(
+          (host): host is string => typeof host === "string" && host.length > 0,
+        )
+      : [];
+    const logs: DeploymentLogEntry[] = [
+      {
+        id: `${deployment.id}:runtime:publish-requested`,
+        createdAt,
+        text: "Shared runtime publish requested.",
+        phaseKey: "system:publish",
+        level: "info",
+      },
+    ];
+
+    if (deployment.status === DeploymentStatus.FAILED) {
+      logs.push({
+        id: `${deployment.id}:runtime:failed`,
+        createdAt: updatedAt,
+        text:
+          deployment.errorMessage ??
+          "Shared runtime publish failed before it reached the live route.",
+        phaseKey: "system:publish",
+        level: "error",
+      });
+
+      return logs;
+    }
+
+    if (deployment.status === DeploymentStatus.LIVE) {
+      logs.push(
+        {
+          id: `${deployment.id}:runtime:revalidated`,
+          createdAt: publishedAt,
+          text: "Website runtime cache invalidation completed.",
+          phaseKey: "system:revalidate",
+          level: "info",
+        },
+        {
+          id: `${deployment.id}:runtime:snapshot`,
+          createdAt: publishedAt,
+          text:
+            revision === null
+              ? "Published content snapshot captured."
+              : `Published content snapshot captured at revision ${revision}.`,
+          phaseKey: "system:snapshot",
+          level: "info",
+        },
+        {
+          id: `${deployment.id}:runtime:live`,
+          createdAt: updatedAt,
+          text:
+            hosts.length > 0
+              ? `Live routing active for ${hosts.join(", ")}.`
+              : "Live routing is active for the shared Website runtime.",
+          phaseKey: "system:live",
+          level: "info",
+        },
+      );
+    }
+
+    return logs;
   }
 
   private buildCustomerDeploymentTimeline(

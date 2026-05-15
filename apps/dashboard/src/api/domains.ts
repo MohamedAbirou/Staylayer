@@ -70,6 +70,7 @@ export interface SiteRuntimeProfile {
   publicSubdomain: string | null;
   platformRootDomain: string | null;
   defaultHostname: string | null;
+  defaultHostnameIssue?: string | null;
   websiteProjectId: string | null;
   websiteProjectTarget: string | null;
   sharedRuntimeReady: boolean;

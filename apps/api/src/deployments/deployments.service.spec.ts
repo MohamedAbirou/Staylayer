@@ -216,6 +216,66 @@ describe("DeploymentsService", () => {
     });
   });
 
+  it("does not treat provider-owned vercel.app domains as customer hosted subdomain roots", async () => {
+    configService.get.mockImplementation((key: string) => {
+      const values: Record<string, string> = {
+        WEBSITE_VERCEL_PROJECT_ID: "website-project-id",
+        WEBSITE_VERCEL_PROJECT_NAME: "staylayer-web",
+        WEBSITE_APP_ORIGIN: "https://website.example.com",
+        WEBSITE_RUNTIME_SECRET: "runtime-secret",
+        PLATFORM_ROOT_DOMAIN: "staylayer.vercel.app",
+      };
+
+      return values[key];
+    });
+    global.fetch = jest.fn() as typeof fetch;
+    prisma.deployment.findFirst.mockResolvedValue(null);
+    prisma.site.findUnique.mockResolvedValue({
+      id: "site-1",
+      publicSubdomain: "sunset-villa",
+      preferredHostVariant: HostVariant.APEX,
+      domains: [],
+    });
+    prisma.deployment.create.mockResolvedValue({
+      id: "dep-1",
+      siteId: "site-1",
+      status: DeploymentStatus.PENDING,
+      provider: "vercel",
+      providerProjectId: "website-project-id",
+      providerDeployId: null,
+      url: null,
+      errorMessage: null,
+      metadata: { sharedRuntime: true },
+      createdAt: new Date("2026-05-13T20:00:00.000Z"),
+      updatedAt: new Date("2026-05-13T20:00:00.000Z"),
+    });
+    prisma.deployment.update.mockResolvedValue({
+      id: "dep-1",
+      siteId: "site-1",
+      status: DeploymentStatus.FAILED,
+      provider: "vercel",
+      providerProjectId: "website-project-id",
+      providerDeployId: null,
+      url: null,
+      errorMessage:
+        "No shared-runtime host is available for this site yet. Assign a public subdomain or verify a custom domain first.",
+      metadata: { sharedRuntime: true },
+      createdAt: new Date("2026-05-13T20:00:00.000Z"),
+      updatedAt: new Date("2026-05-13T20:00:01.000Z"),
+    });
+
+    const result = await service.provisionSite("site-1");
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(
+      sitePublishedRevisionsService.captureSnapshot,
+    ).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      status: DeploymentStatus.FAILED,
+      errorMessage: expect.stringContaining("No shared-runtime host"),
+    });
+  });
+
   it("creates a deployment, syncs env, and stores provider metadata", async () => {
     prisma.deployment.findFirst.mockResolvedValueOnce(null);
     deploymentEnvironmentService.listCustomerEnvironmentEntries.mockResolvedValue(
@@ -859,6 +919,42 @@ describe("DeploymentsService", () => {
     ).resolves.toMatchObject({
       url: "https://harbor-house.vercel.app",
       providerUrl: "https://harbor-house-abc123.vercel.app",
+    });
+  });
+
+  it("shows shared-runtime publish events when provider logs are not present", async () => {
+    prisma.domain.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.resolveCustomerSiteDeployment("site-1", {
+        id: "dep-live",
+        siteId: "site-1",
+        status: DeploymentStatus.LIVE,
+        url: "https://sunset-villa.sites.example.com",
+        metadata: {
+          sharedRuntime: true,
+          providerUrl: "https://staylayer-web.vercel.app",
+          sharedRuntimeHosts: ["sunset-villa.sites.example.com"],
+          publishedAt: "2026-05-13T20:05:00.000Z",
+          publishedRevision: 7,
+        },
+        errorMessage: null,
+        providerDeployId: null,
+        createdAt: new Date("2026-05-13T20:00:00.000Z"),
+        updatedAt: new Date("2026-05-13T20:05:00.000Z"),
+      } as never),
+    ).resolves.toMatchObject({
+      sharedRuntime: true,
+      recentLogs: expect.arrayContaining([
+        expect.objectContaining({
+          phaseKey: "system:revalidate",
+          text: "Website runtime cache invalidation completed.",
+        }),
+        expect.objectContaining({
+          phaseKey: "system:live",
+          text: "Live routing active for sunset-villa.sites.example.com.",
+        }),
+      ]),
     });
   });
 });

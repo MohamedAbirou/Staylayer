@@ -14,6 +14,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UpdateSettingsDto } from "./dto/update-settings.dto";
 import { BillingService } from "../billing/billing.service";
 import { RevalidationService } from "../revalidation/revalidation.service";
+import {
+  getConfiguredPlatformRootDomain,
+  getPlatformRootDomainIssue,
+  isUsablePlatformRootDomain,
+} from "../public-runtime/platform-root-domain";
 
 type ReadinessSeverity = "ready" | "warning" | "blocking";
 
@@ -172,6 +177,7 @@ export class SettingsService {
       select: {
         id: true,
         slug: true,
+        publicSubdomain: true,
         primaryLocale: true,
         enabledLocales: true,
         settings: true,
@@ -250,6 +256,13 @@ export class SettingsService {
     const latestDeployment = site.deployments[0] ?? null;
     const primaryDomain =
       site.domains.find((domain) => domain.isPrimary) ?? null;
+    const platformRootDomain = getConfiguredPlatformRootDomain(
+      this.configService,
+    );
+    const defaultHostname =
+      site.publicSubdomain && isUsablePlatformRootDomain(platformRootDomain)
+        ? `${site.publicSubdomain}.${platformRootDomain}`
+        : null;
     const publishedPages = site.pages.filter((page) => page.published);
     const settings = site.settings;
     const hasPublishedPages = publishedPages.length > 0;
@@ -286,19 +299,7 @@ export class SettingsService {
         template.enabled,
     );
 
-    checks.push(
-      this.makeCheck(
-        "deployment_config",
-        "Deployment configuration",
-        this.isDeploymentConfigReady() ? "ready" : "blocking",
-        this.isDeploymentConfigReady()
-          ? "Required deployment environment values are configured."
-          : "Deployment provider configuration is incomplete for this environment.",
-        this.isDeploymentConfigReady()
-          ? null
-          : "Set the deployment provider env contract before go-live.",
-      ),
-    );
+    checks.push(this.getDeploymentConfigurationCheck());
 
     checks.push(
       this.makeCheck(
@@ -312,21 +313,45 @@ export class SettingsService {
 
     checks.push(
       this.makeCheck(
+        "hosted_subdomain",
+        "Default hosted domain",
+        defaultHostname ? "ready" : primaryDomain ? "warning" : "blocking",
+        defaultHostname
+          ? `Default hosted domain ${defaultHostname} is configured for customers without a custom domain.`
+          : primaryDomain
+            ? "Default hosted domains are unavailable, but this site can still launch on a verified custom domain."
+            : "No usable default hosted domain is configured for customers without a custom domain.",
+        defaultHostname
+          ? null
+          : primaryDomain
+            ? "Ask platform support to enable default hosted domains if this customer needs one."
+            : "Ask platform support to connect an owned wildcard hosted-site domain before launch.",
+      ),
+    );
+
+    checks.push(
+      this.makeCheck(
         "primary_domain",
-        "Primary domain",
+        "Custom domain",
         primaryDomain
           ? primaryDomain.status === DomainStatus.ACTIVE
             ? "ready"
             : primaryDomain.status === DomainStatus.FAILED
               ? "blocking"
               : "warning"
-          : "warning",
+          : defaultHostname
+            ? "ready"
+            : "warning",
         primaryDomain
           ? `Primary domain ${primaryDomain.host} is ${this.describeDomainStatus(primaryDomain.status)}.`
-          : "No primary custom domain is configured yet.",
+          : defaultHostname
+            ? `No custom domain is connected; the default hosted domain ${defaultHostname} will serve traffic.`
+            : "No primary custom domain is configured yet.",
         primaryDomain
           ? this.getDomainAction(primaryDomain.status)
-          : "Add a primary custom domain or confirm the default deployment URL is intentional.",
+          : defaultHostname
+            ? null
+            : "Add a custom domain or use the default hosted domain once platform support enables it.",
       ),
     );
 
@@ -660,7 +685,79 @@ export class SettingsService {
     return "ready";
   }
 
-  private isDeploymentConfigReady() {
+  private getDeploymentConfigurationCheck(): ReadinessCheck {
+    const sharedRuntimeConfigured = Boolean(
+      this.configService.get<string>("WEBSITE_VERCEL_PROJECT_ID")?.trim() ||
+      this.configService.get<string>("WEBSITE_VERCEL_PROJECT_NAME")?.trim() ||
+      this.configService.get<string>("WEBSITE_APP_ORIGIN")?.trim() ||
+      this.configService.get<string>("REVALIDATION_URL")?.trim(),
+    );
+
+    if (sharedRuntimeConfigured) {
+      const platformRootDomain = getConfiguredPlatformRootDomain(
+        this.configService,
+      );
+      const platformRootIssue = getPlatformRootDomainIssue(platformRootDomain);
+      const projectConfigured = Boolean(
+        this.configService.get<string>("WEBSITE_VERCEL_PROJECT_ID")?.trim() ||
+        this.configService.get<string>("WEBSITE_VERCEL_PROJECT_NAME")?.trim(),
+      );
+      const revalidationConfigured = Boolean(
+        this.configService.get<string>("WEBSITE_APP_ORIGIN")?.trim() ||
+        this.configService.get<string>("REVALIDATION_URL")?.trim(),
+      );
+      const runtimeSecretConfigured = Boolean(
+        this.configService.get<string>("WEBSITE_RUNTIME_SECRET")?.trim() ||
+        this.configService.get<string>("REVALIDATE_SECRET")?.trim(),
+      );
+
+      if (platformRootIssue) {
+        return this.makeCheck(
+          "deployment_config",
+          "Publishing configuration",
+          "blocking",
+          platformRootIssue,
+          "Platform support must connect an owned wildcard hosted-site domain, such as sites.yourbrand.com, before customer default URLs can go live.",
+        );
+      }
+
+      if (
+        !projectConfigured ||
+        !revalidationConfigured ||
+        !runtimeSecretConfigured
+      ) {
+        return this.makeCheck(
+          "deployment_config",
+          "Publishing configuration",
+          "blocking",
+          "Shared Website runtime publishing is incomplete for this environment.",
+          "Platform support must finish the shared Website project, cache invalidation, and runtime trust setup before go-live.",
+        );
+      }
+
+      return this.makeCheck(
+        "deployment_config",
+        "Publishing configuration",
+        "ready",
+        "Shared Website runtime publishing and hosted-domain routing are configured.",
+        null,
+      );
+    }
+
+    return this.makeCheck(
+      "deployment_config",
+      "Publishing configuration",
+      this.isDedicatedDeploymentConfigReady() ? "ready" : "blocking",
+      this.isDedicatedDeploymentConfigReady()
+        ? "Dedicated deployment provider configuration is complete."
+        : "Deployment provider configuration is incomplete for this environment.",
+      this.isDedicatedDeploymentConfigReady()
+        ? null
+        : "Platform support must finish deployment provider setup before go-live.",
+    );
+  }
+
+  private isDedicatedDeploymentConfigReady() {
     return [
       "DEPLOYMENTS_CMS_API_URL",
       "DEPLOYMENTS_REVALIDATE_SECRET",

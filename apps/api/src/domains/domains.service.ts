@@ -15,6 +15,11 @@ import {
   companionHost as deriveCompanionHost,
   normalizeHostname,
 } from "../public-runtime/public-runtime.util";
+import {
+  getConfiguredPlatformRootDomain,
+  getPlatformRootDomainIssue,
+  isUsablePlatformRootDomain,
+} from "../public-runtime/platform-root-domain";
 import { RevalidationService } from "../revalidation/revalidation.service";
 import { DomainVerificationService } from "./domain-verification.service";
 
@@ -57,16 +62,21 @@ export class DomainsService {
       });
     }
 
-    const platformRootDomain = this.normalizeConfiguredString(
-      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
+    const platformRootDomain = getConfiguredPlatformRootDomain(
+      this.configService,
     );
+    const usablePlatformRootDomain = isUsablePlatformRootDomain(
+      platformRootDomain,
+    )
+      ? platformRootDomain
+      : null;
     const websiteProjectId =
       this.domainVerificationService.getConfiguredWebsiteProjectId();
     const websiteProjectTarget =
       this.domainVerificationService.getConfiguredWebsiteExpectedTarget();
     const defaultHostname =
-      site.publicSubdomain && platformRootDomain
-        ? `${site.publicSubdomain}.${platformRootDomain}`
+      site.publicSubdomain && usablePlatformRootDomain
+        ? `${site.publicSubdomain}.${usablePlatformRootDomain}`
         : null;
 
     const latestLivePublish = await this.prisma.deployment.findFirst({
@@ -94,10 +104,13 @@ export class DomainsService {
       preferredHostVariant: site.preferredHostVariant,
       platformRootDomain,
       defaultHostname,
+      defaultHostnameIssue: defaultHostname
+        ? null
+        : getPlatformRootDomainIssue(platformRootDomain),
       websiteProjectId,
       websiteProjectTarget,
       sharedRuntimeReady: Boolean(
-        platformRootDomain && websiteProjectId && websiteProjectTarget,
+        usablePlatformRootDomain && websiteProjectId && websiteProjectTarget,
       ),
       publishedRevision: site.publishedRevision,
       lastPublishedAt,
@@ -150,9 +163,7 @@ export class DomainsService {
       });
     }
 
-    const platformRootDomain = this.normalizeConfiguredString(
-      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
-    );
+    const platformRootDomain = this.getUsablePlatformRootDomain();
     const classification = classifyHostname(domain.host, platformRootDomain);
 
     if (!classification.companionHost) {
@@ -174,9 +185,7 @@ export class DomainsService {
       orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     });
 
-    const platformRootDomain = this.normalizeConfiguredString(
-      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
-    );
+    const platformRootDomain = this.getUsablePlatformRootDomain();
     const hostIndex = new Map(rows.map((row) => [row.host, row.id] as const));
 
     return rows.map((row) =>
@@ -253,9 +262,7 @@ export class DomainsService {
     }
 
     return this.toCustomerDto(domain, {
-      platformRootDomain: this.normalizeConfiguredString(
-        this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
-      ),
+      platformRootDomain: this.getUsablePlatformRootDomain(),
     });
   }
 
@@ -290,9 +297,7 @@ export class DomainsService {
     );
     await this.bustHostCache(siteId);
     return this.toCustomerDto(updated, {
-      platformRootDomain: this.normalizeConfiguredString(
-        this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
-      ),
+      platformRootDomain: this.getUsablePlatformRootDomain(),
     });
   }
 
@@ -318,9 +323,7 @@ export class DomainsService {
     });
 
     return this.toCustomerDto(refreshed, {
-      platformRootDomain: this.normalizeConfiguredString(
-        this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
-      ),
+      platformRootDomain: this.getUsablePlatformRootDomain(),
     });
   }
 
@@ -714,9 +717,14 @@ export class DomainsService {
     return "Complete provider attachment and DNS setup, then recheck verification.";
   }
 
-  private normalizeConfiguredString(value: string | null | undefined) {
-    const normalized = String(value ?? "").trim();
-    return normalized.length > 0 ? normalized : null;
+  private getUsablePlatformRootDomain(): string | null {
+    const platformRootDomain = getConfiguredPlatformRootDomain(
+      this.configService,
+    );
+
+    return isUsablePlatformRootDomain(platformRootDomain)
+      ? platformRootDomain
+      : null;
   }
 
   private async bustHostCacheForHosts(hosts: string[]): Promise<void> {
@@ -738,9 +746,7 @@ export class DomainsService {
   }
 
   private async bustHostCache(siteId: string): Promise<void> {
-    const platformRootDomain = this.normalizeConfiguredString(
-      this.configService.get<string>("PLATFORM_ROOT_DOMAIN"),
-    );
+    const platformRootDomain = this.getUsablePlatformRootDomain();
 
     const site = await this.prisma.site.findUnique({
       where: { id: siteId },
