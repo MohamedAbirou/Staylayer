@@ -81,7 +81,7 @@ describe("DeploymentsService", () => {
           DEPLOYMENTS_REVALIDATE_SECRET: "secret-123",
           DEPLOYMENTS_WEBSITE_ROOT_DIRECTORY: "apps/website",
           DEPLOYMENTS_WEBSITE_BUILD_COMMAND:
-            "cd ../.. && pnpm install && pnpm --filter @myallocator/website build",
+            "cd ../.. && pnpm install && pnpm --filter @staylayer/website build",
           DEPLOYMENTS_WEBSITE_INSTALL_COMMAND:
             "cd ../.. && pnpm install --frozen-lockfile",
           DEPLOYMENTS_WEBSITE_OUTPUT_DIRECTORY: ".next",
@@ -375,7 +375,7 @@ describe("DeploymentsService", () => {
           framework: "nextjs",
           rootDirectory: "apps/website",
           buildCommand:
-            "cd ../.. && corepack prepare pnpm@10.33.4 --activate && pnpm --filter @myallocator/website build",
+            "cd ../.. && corepack prepare pnpm@10.33.4 --activate && pnpm --filter @staylayer/website build",
           installCommand:
             "cd ../.. && corepack prepare pnpm@10.33.4 --activate && pnpm install --registry https://registry.npmjs.org --fetch-timeout=60000 --fetch-retries=3 --no-frozen-lockfile",
           outputDirectory: ".next",

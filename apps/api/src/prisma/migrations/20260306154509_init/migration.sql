@@ -47,11 +47,11 @@ CREATE TABLE "page_versions" (
 -- CreateTable: Site-wide CMS settings (singleton row, id = 'default')
 CREATE TABLE "site_settings" (
     "id"                      TEXT NOT NULL     DEFAULT 'default',
-    "site_name"               TEXT NOT NULL     DEFAULT 'MyAllocator CMS',
+    "site_name"               TEXT NOT NULL     DEFAULT 'StayLayer CMS',
     "support_email"           TEXT NOT NULL     DEFAULT '',
     "logo_url"                TEXT NOT NULL     DEFAULT '',
     "favicon_url"             TEXT NOT NULL     DEFAULT '',
-    "seo_title_template"      TEXT NOT NULL     DEFAULT '%s | MyAllocator',
+    "seo_title_template"      TEXT NOT NULL     DEFAULT '%s | StayLayer',
     "seo_default_desc"        TEXT NOT NULL     DEFAULT '',
     "seo_og_image"            TEXT NOT NULL     DEFAULT '',
     "seo_indexing_enabled"    BOOLEAN NOT NULL  DEFAULT true,

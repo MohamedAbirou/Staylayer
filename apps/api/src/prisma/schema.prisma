@@ -391,7 +391,7 @@ model SiteSettings {
     siteId String @unique @map("site_id")
 
     // General
-    siteName                   String @default("MyAllocator CMS") @map("site_name")
+    siteName                   String @default("StayLayer CMS") @map("site_name")
     siteSubtitle               String @default("") @map("site_subtitle")
     supportEmail               String @default("") @map("support_email")
     publicPhone                String @default("") @map("public_phone")
@@ -406,7 +406,7 @@ model SiteSettings {
     faviconUrl                 String @default("") @map("favicon_url")
 
     // SEO Defaults
-    seoTitleTemplate   String  @default("%s | MyAllocator") @map("seo_title_template")
+    seoTitleTemplate   String  @default("%s | StayLayer") @map("seo_title_template")
     seoDefaultDesc     String  @default("") @map("seo_default_desc")
     seoOgImage         String  @default("") @map("seo_og_image")
     seoIndexingEnabled Boolean @default(true) @map("seo_indexing_enabled")

@@ -217,12 +217,12 @@ Settings that drive delivery:
 
 ## 6. Local validation checklist
 
-1. `pnpm --filter @myallocator/api exec prisma migrate dev`
-2. `pnpm --filter @myallocator/api exec ts-node src/prisma/seed.ts`
+1. `pnpm --filter @staylayer/api exec prisma migrate dev`
+2. `pnpm --filter @staylayer/api exec ts-node src/prisma/seed.ts`
 3. Export `WEBSITE_RUNTIME_SECRET` in both API and website `.env` files.
-4. Start API (`pnpm --filter @myallocator/api dev`) on `:4000`.
-5. Start dashboard (`pnpm --filter @myallocator/dashboard dev`) on `:4174`.
-6. Start website (`pnpm --filter @myallocator/website dev`) on `:3000`.
+4. Start API (`pnpm --filter @staylayer/api dev`) on `:4000`.
+5. Start dashboard (`pnpm --filter @staylayer/dashboard dev`) on `:4174`.
+6. Start website (`pnpm --filter @staylayer/website dev`) on `:3000`.
 7. Run `pnpm test:e2e` — the Playwright suite (including the new
    `website-runtime.spec.ts`) must be green.
 

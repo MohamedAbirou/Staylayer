@@ -9,7 +9,7 @@ import * as argon2 from "argon2";
 import { PlatformRole, SiteStatus, TenantMembershipRole } from "@prisma/client";
 import { expect } from "@playwright/test";
 
-describe("MyAllocator CMS API (e2e)", () => {
+describe("StayLayer CMS API (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaService;
 

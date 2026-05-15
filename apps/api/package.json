@@ -1,5 +1,5 @@
 {
-  "name": "@myallocator/api",
+  "name": "@staylayer/api",
   "version": "1.0.0",
   "private": true,
   "license": "UNLICENSED",
@@ -43,7 +43,7 @@
     "stripe": "^22.1.0"
   },
   "devDependencies": {
-    "@myallocator/typescript-config": "workspace:*",
+    "@staylayer/typescript-config": "workspace:*",
     "@nestjs/cli": "^10.4.0",
     "@nestjs/schematics": "^10.1.0",
     "@nestjs/testing": "^10.4.0",

@@ -1,5 +1,5 @@
 {
-  "name": "@myallocator/puck-components",
+  "name": "@staylayer/puck-components",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.cjs",
@@ -29,8 +29,8 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@myallocator/eslint-config": "workspace:*",
-    "@myallocator/typescript-config": "workspace:*",
+    "@staylayer/eslint-config": "workspace:*",
+    "@staylayer/typescript-config": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
   }

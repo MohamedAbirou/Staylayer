@@ -49,7 +49,7 @@ const PLATFORM_ROUTES: readonly RouteCheck[] = [
     name: "admin audit log",
     path: "/admin/audit",
     heading: "Audit Log",
-    readyTexts: ["No audit entries yet.", "superadmin@myallocator.com"],
+    readyTexts: ["No audit entries yet.", "superadmin@staylayer.com"],
   },
 ];
 

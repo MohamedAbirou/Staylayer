@@ -1773,7 +1773,7 @@ export const navbarConfig: ComponentConfig<NavbarProps> = {
                 subSections: [],
               },
               {
-                label: "MyAllocator Annual Report",
+                label: "StayLayer Annual Report",
                 href: "/annual-report",
                 icon: "MatrialIconsBarChart",
                 description: "",

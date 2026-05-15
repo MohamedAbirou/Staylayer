@@ -1,5 +1,5 @@
 {
-  "name": "@myallocator/dashboard",
+  "name": "@staylayer/dashboard",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@puckeditor/core": "^0.21.0",
-    "@myallocator/puck-components": "workspace:*",
+    "@staylayer/puck-components": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "axios": "^1.7.0",
     "lucide-react": "^0.468.0",

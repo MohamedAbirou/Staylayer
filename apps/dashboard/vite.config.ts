@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@myallocator/puck-components": path.resolve(
+      "@staylayer/puck-components": path.resolve(
         __dirname,
         "../../packages/puck-components/src/index.ts",
       ),

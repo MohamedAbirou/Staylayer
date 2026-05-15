@@ -1031,7 +1031,7 @@ function SiteSettingsTab() {
                 setGeneralDirty(true);
               }}
               className={inputCls}
-              placeholder="MyAllocator CMS"
+              placeholder="StayLayer CMS"
             />
           </SettingsField>
           <SettingsField
@@ -1650,7 +1650,7 @@ function SeoDefaultsTab() {
                 setDirty(true);
               }}
               className={inputCls}
-              placeholder="%s | MyAllocator"
+              placeholder="%s | StayLayer"
             />
           </SettingsField>
 

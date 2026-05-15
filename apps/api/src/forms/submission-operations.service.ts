@@ -602,11 +602,11 @@ export class SubmissionOperationsService
       delivery.submission.site.settings?.inquiryWebhookSecret?.trim();
     const headers: Record<string, string> = {
       "content-type": "application/json",
-      "x-myallocator-event": "form_submission.created",
+      "x-staylayer-event": "form_submission.created",
     };
 
     if (secret) {
-      headers["x-myallocator-signature"] = createHmac("sha256", secret)
+      headers["x-staylayer-signature"] = createHmac("sha256", secret)
         .update(body)
         .digest("hex");
     }

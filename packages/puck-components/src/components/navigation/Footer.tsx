@@ -836,7 +836,7 @@ export const footerConfig: ComponentConfig<FooterProps> = {
     logoImageWidth: 0,
     logoImageBorderRadius: "none",
     tagline:
-      "MyAllocator helps you build faster, scale better, and deliver modern web experiences with ease.",
+      "StayLayer helps you build faster, scale better, and deliver modern web experiences with ease.",
     taglineFontSize: 17,
     taglineOpacity: 80,
     taglineMaxWidth: 450,
@@ -855,7 +855,7 @@ export const footerConfig: ComponentConfig<FooterProps> = {
         links: [
           {
             label: "Documentation",
-            href: "https://docs.myallocator.com",
+            href: "https://docs.staylayer.com",
             openInNewTab: true,
           },
         ],
@@ -873,7 +873,7 @@ export const footerConfig: ComponentConfig<FooterProps> = {
     socialIconOpacity: 60,
     socialIconGap: 12,
     showBottomBar: true,
-    copyrightText: `© ${new Date().getFullYear()} MyAllocator. All rights reserved.`,
+    copyrightText: `© ${new Date().getFullYear()} StayLayer. All rights reserved.`,
     bottomLinks: [
       { label: "Privacy Policy", href: "/privacy-policy", openInNewTab: false },
       {

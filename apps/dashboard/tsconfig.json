@@ -7,10 +7,10 @@
     "jsx": "react-jsx",
     "rootDir": "../..",
     "paths": {
-      "@myallocator/puck-components": [
+      "@staylayer/puck-components": [
         "../../packages/puck-components/src/index.ts"
       ],
-      "@myallocator/puck-components/*": ["../../packages/puck-components/src/*"]
+      "@staylayer/puck-components/*": ["../../packages/puck-components/src/*"]
     },
     "outDir": "./dist",
     "noEmit": true

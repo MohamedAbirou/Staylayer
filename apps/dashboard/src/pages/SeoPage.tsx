@@ -49,6 +49,48 @@ export default function SeoPage() {
         </p>
       </div>
 
+      <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-5">
+        <h2 className="text-sm font-semibold text-gray-900">
+          Automatic Technical SEO
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Technical SEO resources are generated automatically for each live
+          tenant host. That includes robots.txt, sitemap.xml,
+          manifest.webmanifest, canonical URLs, hreflang alternates, analytics
+          tags, and Google site verification.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Site-wide
+            </p>
+            <p className="mt-1 text-sm text-gray-600">
+              Use Settings to manage the favicon, title template, default meta
+              description, default OG image, indexing, analytics, and Google
+              site verification.
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Per-page
+            </p>
+            <p className="mt-1 text-sm text-gray-600">
+              Use the Editor SEO panel for page title, description, keywords, OG
+              image, canonical overrides, and per-page noindex.
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/80 bg-white/80 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Domain & locale
+            </p>
+            <p className="mt-1 text-sm text-gray-600">
+              Domains and localization decide the canonical host, sitemap URLs,
+              and hreflang alternates that search engines receive.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
         <button
           onClick={() => setTab("redirects")}

@@ -25,6 +25,11 @@ export const metadata: Metadata = {
   title: "StayLayer",
   description:
     "Marketing, pricing, legal, and customer auth for StayLayer's inquiry-first hospitality platform.",
+  icons: {
+    icon: "/logo-icon.png",
+    shortcut: "/logo-icon.png",
+    apple: "/logo-icon.png",
+  },
 };
 
 export default async function RootLayout({

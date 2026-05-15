@@ -456,7 +456,7 @@ export class SitePublishedRevisionsService {
         : [];
 
     return {
-      siteName: asString(obj.siteName, "MyAllocator CMS"),
+      siteName: asString(obj.siteName, "StayLayer CMS"),
       siteSubtitle: asString(obj.siteSubtitle),
       supportEmail: asString(obj.supportEmail),
       publicPhone: asString(obj.publicPhone),
@@ -469,7 +469,7 @@ export class SitePublishedRevisionsService {
       inquiryWebhookSecret: asString(obj.inquiryWebhookSecret),
       logoUrl: asString(obj.logoUrl),
       faviconUrl: asString(obj.faviconUrl),
-      seoTitleTemplate: asString(obj.seoTitleTemplate, "%s | MyAllocator"),
+      seoTitleTemplate: asString(obj.seoTitleTemplate, "%s | StayLayer"),
       seoDefaultDesc: asString(obj.seoDefaultDesc),
       seoOgImage: asString(obj.seoOgImage),
       seoIndexingEnabled: asBool(obj.seoIndexingEnabled, true),

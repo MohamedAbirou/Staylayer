@@ -1,5 +1,5 @@
 {
-  "name": "myallocator-cms",
+  "name": "staylayer-cms",
   "private": true,
   "scripts": {
     "dev": "turbo dev",
@@ -7,13 +7,13 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
-    "test:e2e": "pnpm --filter @myallocator/api db:seed && playwright test",
+    "test:e2e": "pnpm --filter @staylayer/api db:seed && playwright test",
     "phase10:validate": "node scripts/phase10-validate.mjs",
     "local:mailpit": "docker compose -f docker-compose.local-tools.yml up -d mailpit",
     "local:mailpit:down": "docker compose -f docker-compose.local-tools.yml down",
     "local:webhooks": "node scripts/webhook-inspector.mjs",
-    "db:generate": "turbo db:generate --filter=@myallocator/api",
-    "db:migrate": "turbo db:migrate --filter=@myallocator/api",
+    "db:generate": "turbo db:generate --filter=@staylayer/api",
+    "db:migrate": "turbo db:migrate --filter=@staylayer/api",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {

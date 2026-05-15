@@ -27,7 +27,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "pnpm --filter @myallocator/api dev",
+      command: "pnpm --filter @staylayer/api dev",
       url: `http://localhost:${apiPort}/health`,
       timeout: 180_000,
       reuseExistingServer: !process.env.CI,
@@ -37,7 +37,7 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm --filter @myallocator/dashboard dev -- --port ${dashboardPort}`,
+      command: `pnpm --filter @staylayer/dashboard dev -- --port ${dashboardPort}`,
       url: `${baseURL}/login`,
       timeout: 180_000,
       reuseExistingServer: !process.env.CI,

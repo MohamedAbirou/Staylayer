@@ -13,7 +13,7 @@ const imageHosts = (process.env.PUBLIC_IMAGE_HOSTS || "")
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@myallocator/puck-components", "@puckeditor/core"],
+  transpilePackages: ["@staylayer/puck-components", "@puckeditor/core"],
   images: {
     remotePatterns: imageHosts.map((hostname) => ({
       protocol: "https",
@@ -21,7 +21,7 @@ const nextConfig = {
     })),
   },
   webpack(config) {
-    config.resolve.alias["@myallocator/puck-components"] = puckComponentsSrc;
+    config.resolve.alias["@staylayer/puck-components"] = puckComponentsSrc;
     return config;
   },
 };

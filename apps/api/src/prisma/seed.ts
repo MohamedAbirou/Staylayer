@@ -5,7 +5,7 @@
  * Safe to re-run — skips creation if the record already exists.
  *
  * Usage:
- *   pnpm --filter @myallocator/api db:seed
+ *   pnpm --filter @staylayer/api db:seed
  */
 
 import {
@@ -507,12 +507,12 @@ async function main(): Promise<void> {
 
   console.log("Users:");
   await upsertUser(
-    "superadmin@myallocator.com",
+    "superadmin@staylayer.com",
     "SuperAdmin123!",
     PlatformRole.PLATFORM_OWNER,
   );
   const opsAdmin = await upsertUser(
-    "admin@myallocator.com",
+    "admin@staylayer.com",
     "Admin123!",
     PlatformRole.SUPPORT_ADMIN,
   );
@@ -940,10 +940,10 @@ async function main(): Promise<void> {
     "  ├────────────────────────────────────────┼──────────────────┼─────────────┤",
   );
   console.log(
-    "  │ superadmin@myallocator.com             │ SuperAdmin123!   │ PLATFORM_OWNER │",
+    "  │ superadmin@staylayer.com             │ SuperAdmin123!   │ PLATFORM_OWNER │",
   );
   console.log(
-    "  │ admin@myallocator.com                  │ Admin123!        │ SUPPORT_ADMIN │",
+    "  │ admin@staylayer.com                  │ Admin123!        │ SUPPORT_ADMIN │",
   );
   console.log(
     "  │ owner@azurebayvillas.com               │ AzureBay123!     │ TENANT OWNER │",

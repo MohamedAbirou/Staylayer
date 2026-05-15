@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "MyAllocator CMS API",
+    "name": "StayLayer CMS API",
     "_postman_id": "ma-cms-api-v1",
-    "description": "Full API collection for the MyAllocator CMS backend.\n\nSetup:\n1. Set the `baseUrl` collection variable (default: http://localhost:3001)\n2. Call **POST /auth/login** — the test script automatically copies the accessToken into the collection variable.\n3. All subsequent requests use `{{accessToken}}` automatically.",
+    "description": "Full API collection for the StayLayer CMS backend.\n\nSetup:\n1. Set the `baseUrl` collection variable (default: http://localhost:3001)\n2. Call **POST /auth/login** — the test script automatically copies the accessToken into the collection variable.\n3. All subsequent requests use `{{accessToken}}` automatically.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -60,7 +60,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@myallocator.com\",\n  \"password\": \"Admin123!\"\n}",
+              "raw": "{\n  \"email\": \"admin@staylayer.com\",\n  \"password\": \"Admin123!\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -93,7 +93,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"superadmin@myallocator.com\",\n  \"password\": \"SuperAdmin123!\"\n}",
+              "raw": "{\n  \"email\": \"superadmin@staylayer.com\",\n  \"password\": \"SuperAdmin123!\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -123,7 +123,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"editor@myallocator.com\",\n  \"password\": \"Editor123!\"\n}",
+              "raw": "{\n  \"email\": \"editor@staylayer.com\",\n  \"password\": \"Editor123!\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -140,7 +140,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@myallocator.com\",\n  \"password\": \"WrongPassword!\"\n}",
+              "raw": "{\n  \"email\": \"admin@staylayer.com\",\n  \"password\": \"WrongPassword!\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -260,7 +260,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"neweditor@myallocator.com\",\n  \"password\": \"NewEditor123!\",\n  \"role\": \"EDITOR\"\n}",
+              "raw": "{\n  \"email\": \"neweditor@staylayer.com\",\n  \"password\": \"NewEditor123!\",\n  \"role\": \"EDITOR\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -441,7 +441,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"slug\": \"about\",\n  \"locale\": \"en\",\n  \"title\": \"About Us\",\n  \"puckData\": {\n    \"content\": [\n      {\n        \"type\": \"HeroSection\",\n        \"props\": {\n          \"id\": \"about-hero\",\n          \"headline\": \"About myallocator\",\n          \"subheadline\": \"Our story.\",\n          \"ctaLabel\": \"Contact Us\",\n          \"ctaHref\": \"/contact\",\n          \"imageUrl\": \"\"\n        }\n      }\n    ],\n    \"root\": { \"title\": \"About\" }\n  },\n  \"seoTitle\": \"About Us — myallocator\",\n  \"seoDescription\": \"Learn about the team behind myallocator.\"\n}",
+              "raw": "{\n  \"slug\": \"about\",\n  \"locale\": \"en\",\n  \"title\": \"About Us\",\n  \"puckData\": {\n    \"content\": [\n      {\n        \"type\": \"HeroSection\",\n        \"props\": {\n          \"id\": \"about-hero\",\n          \"headline\": \"About staylayer\",\n          \"subheadline\": \"Our story.\",\n          \"ctaLabel\": \"Contact Us\",\n          \"ctaHref\": \"/contact\",\n          \"imageUrl\": \"\"\n        }\n      }\n    ],\n    \"root\": { \"title\": \"About\" }\n  },\n  \"seoTitle\": \"About Us — staylayer\",\n  \"seoDescription\": \"Learn about the team behind staylayer.\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -472,7 +472,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"About Us (Updated)\",\n  \"seoTitle\": \"About myallocator — Channel Manager\"\n}",
+              "raw": "{\n  \"title\": \"About Us (Updated)\",\n  \"seoTitle\": \"About staylayer — Channel Manager\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {

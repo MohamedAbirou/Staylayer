@@ -476,7 +476,7 @@ export class DomainVerificationService
         redirect: "manual",
         signal: AbortSignal.timeout(this.getHttpTimeoutMs()),
         headers: {
-          "user-agent": "myallocator-domain-verifier/1.0",
+          "user-agent": "staylayer-domain-verifier/1.0",
         },
       });
 

@@ -4,7 +4,7 @@ const API_BASE_URL =
   process.env.PLAYWRIGHT_API_BASE_URL ?? "http://localhost:4000";
 
 export const PLATFORM_OWNER = {
-  email: "superadmin@myallocator.com",
+  email: "superadmin@staylayer.com",
   password: "SuperAdmin123!",
 };
 

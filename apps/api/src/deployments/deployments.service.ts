@@ -1347,7 +1347,7 @@ export class DeploymentsService {
 
   private buildProjectSettings(): DeploymentProjectSettings {
     const defaultBuildCommand =
-      "cd ../.. && corepack prepare pnpm@10.33.4 --activate && pnpm --filter @myallocator/website build";
+      "cd ../.. && corepack prepare pnpm@10.33.4 --activate && pnpm --filter @staylayer/website build";
     const defaultInstallCommand =
       "cd ../.. && corepack prepare pnpm@10.33.4 --activate && pnpm install --registry https://registry.npmjs.org --fetch-timeout=60000 --fetch-retries=3 --no-frozen-lockfile";
     const buildCommand = this.normalizeBuildCommand(
@@ -1447,9 +1447,9 @@ export class DeploymentsService {
 
     if (
       normalizedBuildCommand ===
-        "cd ../.. && pnpm install && pnpm --filter @myallocator/website build" ||
+        "cd ../.. && pnpm install && pnpm --filter @staylayer/website build" ||
       normalizedBuildCommand ===
-        "cd ../.. && pnpm --filter @myallocator/website build"
+        "cd ../.. && pnpm --filter @staylayer/website build"
     ) {
       return defaultBuildCommand;
     }
@@ -1478,7 +1478,7 @@ export class DeploymentsService {
   private buildProjectName(site: SiteProvisioningRecord): string {
     const prefix =
       this.configService.get<string>("DEPLOYMENTS_PROJECT_NAME_PREFIX") ??
-      "myallocator-site";
+      "staylayer-site";
     const suffix = site.id.slice(-8);
     const siteSlug = this.normalizeSiteSlug(site.slug, site.name);
     const candidate = `${prefix}-${siteSlug}-${suffix}`.toLowerCase();

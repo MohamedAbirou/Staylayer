@@ -60,7 +60,7 @@ describe("VercelDeploymentProvider", () => {
       projectSettings: {
         framework: "nextjs",
         rootDirectory: "apps/website",
-        buildCommand: "cd ../.. && pnpm --filter @myallocator/website build",
+        buildCommand: "cd ../.. && pnpm --filter @staylayer/website build",
         outputDirectory: ".next",
         installCommand: "cd ../.. && pnpm install --frozen-lockfile",
         nodeVersion: "20.x",
@@ -78,7 +78,7 @@ describe("VercelDeploymentProvider", () => {
         body: JSON.stringify({
           framework: "nextjs",
           rootDirectory: "apps/website",
-          buildCommand: "cd ../.. && pnpm --filter @myallocator/website build",
+          buildCommand: "cd ../.. && pnpm --filter @staylayer/website build",
           outputDirectory: ".next",
           installCommand: "cd ../.. && pnpm install --frozen-lockfile",
           nodeVersion: "20.x",
@@ -126,7 +126,7 @@ describe("VercelDeploymentProvider", () => {
         projectSettings: {
           framework: "nextjs",
           rootDirectory: "apps/website",
-          buildCommand: "cd ../.. && pnpm --filter @myallocator/website build",
+          buildCommand: "cd ../.. && pnpm --filter @staylayer/website build",
           outputDirectory: ".next",
           installCommand: "cd ../.. && pnpm install --frozen-lockfile",
           nodeVersion: "20.x",
@@ -157,7 +157,7 @@ describe("VercelDeploymentProvider", () => {
             framework: "nextjs",
             rootDirectory: "apps/website",
             buildCommand:
-              "cd ../.. && pnpm --filter @myallocator/website build",
+              "cd ../.. && pnpm --filter @staylayer/website build",
             outputDirectory: ".next",
             installCommand: "cd ../.. && pnpm install --frozen-lockfile",
           },

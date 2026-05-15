@@ -2,7 +2,7 @@
 
 `apps/website` is the shared public renderer for every customer hospitality site. It is one Next.js 15 App Router deployment on Vercel, not a per-customer project.
 
-The Website app never reads the database directly. It resolves the incoming hostname through the NestJS API, fetches a host-scoped published or preview payload, and renders that payload with `@myallocator/puck-components`.
+The Website app never reads the database directly. It resolves the incoming hostname through the NestJS API, fetches a host-scoped published or preview payload, and renders that payload with `@staylayer/puck-components`.
 
 ## Architecture
 
@@ -78,8 +78,8 @@ Every public-runtime API call must include `x-website-runtime-secret`. The Websi
 Run the API and Website in separate terminals:
 
 ```bash
-pnpm --filter @myallocator/api dev
-pnpm --filter @myallocator/website dev
+pnpm --filter @staylayer/api dev
+pnpm --filter @staylayer/website dev
 ```
 
 Use hostnames under `PLATFORM_ROOT_DOMAIN` for platform-subdomain testing, for example `sunset-villa.staylayer.localhost:3000` when your local DNS setup supports wildcard localhost names.
