@@ -6,9 +6,9 @@ import {
 } from "@myallocator/puck-components";
 import { Render } from "@puckeditor/core";
 import { useRouter } from "next/navigation";
-import { RuntimeSiteBrand } from "./RuntimeSiteBrand";
 
-const DEFAULT_NAVBAR_LOGO_URL = "/images/logo.png";
+const DEFAULT_BRAND_LOGO_URL = "/images/logo.png";
+const BRAND_COMPONENT_TYPES = new Set(["Navbar", "Footer"]);
 
 function isExternalHref(href) {
   return (
@@ -31,28 +31,26 @@ function buildAvailableForms(formsByKey) {
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function hasNavbar(puckData) {
-  return (puckData?.content || []).some((block) => block?.type === "Navbar");
-}
-
 function applyRuntimeTheme(puckData, site) {
   const logoUrl = site?.theme?.logoUrl;
 
-  if (!logoUrl || !hasNavbar(puckData)) {
+  if (!logoUrl) {
     return puckData;
   }
 
   return {
     ...puckData,
     content: (puckData.content || []).map((block) => {
-      if (block?.type !== "Navbar") {
+      if (!BRAND_COMPONENT_TYPES.has(block?.type)) {
         return block;
       }
 
       const props = block.props || {};
       const currentLogoUrl = String(props.logoImageUrl || "").trim();
+      const logoType = String(props.logoType || "").trim();
       const shouldUseRuntimeLogo =
-        !currentLogoUrl || currentLogoUrl === DEFAULT_NAVBAR_LOGO_URL;
+        (!currentLogoUrl || currentLogoUrl === DEFAULT_BRAND_LOGO_URL) &&
+        (!logoType || logoType === "image" || logoType === "both");
 
       if (!shouldUseRuntimeLogo) {
         return block;
@@ -65,8 +63,7 @@ function applyRuntimeTheme(puckData, site) {
           logoImageUrl: logoUrl,
           logoImageAlt: props.logoImageAlt || `${site?.name || "Site"} logo`,
           logoText: props.logoText || site?.name || "",
-          logoType:
-            props.logoType === "text" ? "both" : props.logoType || "image",
+          logoType: props.logoType || "image",
         },
       };
     }),
@@ -102,8 +99,6 @@ export function TenantPuckRenderer({ runtime }) {
   }
 
   const themedPuckData = applyRuntimeTheme(runtime.page.puckData, runtime.site);
-  const shouldRenderBrandHeader =
-    Boolean(runtime.site?.theme?.logoUrl) && !hasNavbar(themedPuckData);
 
   const availableForms = buildAvailableForms(runtime.forms?.byKey);
   const runtimeValue = {
@@ -170,9 +165,6 @@ export function TenantPuckRenderer({ runtime }) {
 
   return (
     <ContactSectionRuntimeProvider value={runtimeValue}>
-      {shouldRenderBrandHeader ? (
-        <RuntimeSiteBrand site={runtime.site} />
-      ) : null}
       <div className="puck-root" onClick={handleClick}>
         <Render config={puckConfig} data={themedPuckData} />
       </div>

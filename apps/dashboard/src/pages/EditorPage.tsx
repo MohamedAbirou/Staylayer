@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   useParams,
   useSearchParams,
   useNavigate,
   useBlocker,
 } from "react-router-dom";
-import { Puck, type Data } from "@puckeditor/core";
+import { Puck, type Config, type Data } from "@puckeditor/core";
 import {
   ContactSectionRuntimeProvider,
   puckConfig,
@@ -16,6 +16,7 @@ import { usePage } from "../hooks/usePage";
 import { useSavePage } from "../hooks/useSavePage";
 import { usePublishPage } from "../hooks/usePublishPage";
 import { useVersions } from "../hooks/useVersions";
+import { useSettings } from "../hooks/useSettings";
 import { canPublishContent } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
 import client from "../api/client";
@@ -45,9 +46,65 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import "@puckeditor/core/puck.css";
 
 const AUTOSAVE_INTERVAL = 3_000;
+const DEFAULT_BRAND_LOGO_URL = "/images/logo.png";
+const BRAND_COMPONENT_TYPES = ["Navbar", "Footer"] as const;
 
 function getDraftKey(slug: string, locale: string) {
   return `draft__${slug}__${locale}`;
+}
+
+function withSiteBrandingDefaults(
+  config: Config,
+  settings?: { logoUrl?: string; siteName?: string } | null,
+) {
+  const logoUrl = settings?.logoUrl?.trim();
+
+  if (!logoUrl) {
+    return config;
+  }
+
+  const siteName = settings?.siteName?.trim() || "Site";
+  const components = { ...config.components };
+
+  for (const componentType of BRAND_COMPONENT_TYPES) {
+    const componentConfig = components[componentType];
+    if (!componentConfig) {
+      continue;
+    }
+
+    const defaultProps = componentConfig.defaultProps || {};
+    const currentLogoUrl = String(defaultProps.logoImageUrl || "").trim();
+    const logoType = String(defaultProps.logoType || "").trim();
+    const shouldUseSiteLogo =
+      (!currentLogoUrl || currentLogoUrl === DEFAULT_BRAND_LOGO_URL) &&
+      (!logoType || logoType === "image" || logoType === "both");
+
+    if (!shouldUseSiteLogo) {
+      continue;
+    }
+
+    components[componentType] = {
+      ...componentConfig,
+      defaultProps: {
+        ...defaultProps,
+        logoImageUrl: logoUrl,
+        logoImageAlt:
+          defaultProps.logoImageAlt && defaultProps.logoImageAlt !== "Logo"
+            ? defaultProps.logoImageAlt
+            : `${siteName} logo`,
+        logoText:
+          defaultProps.logoText && defaultProps.logoText !== "Your Brand"
+            ? defaultProps.logoText
+            : siteName,
+        logoType: defaultProps.logoType || "image",
+      },
+    };
+  }
+
+  return {
+    ...config,
+    components,
+  };
 }
 
 export default function EditorPage() {
@@ -60,6 +117,7 @@ export default function EditorPage() {
   const queryClient = useQueryClient();
 
   const { data: page, isLoading, error } = usePage(slug, locale);
+  const { data: settings } = useSettings();
   const saveMutation = useSavePage();
   const publishMutation = usePublishPage();
   const formStudioQuery = useQuery({
@@ -179,6 +237,11 @@ export default function EditorPage() {
 
       return left.name.localeCompare(right.name);
     });
+
+  const editorPuckConfig = useMemo(
+    () => withSiteBrandingDefaults(puckConfig, settings),
+    [settings?.logoUrl, settings?.siteName],
+  );
 
   const contactSectionRuntime = {
     pageSlug: slug ?? null,
@@ -527,7 +590,7 @@ export default function EditorPage() {
             <ContactSectionRuntimeProvider value={contactSectionRuntime}>
               <Puck
                 key={puckKey}
-                config={puckConfig}
+                config={editorPuckConfig}
                 iframe={{ enabled: true }}
                 data={
                   (page.puckData as Data) || {
