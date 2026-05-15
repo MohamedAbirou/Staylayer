@@ -33,7 +33,10 @@ import { alertConfig } from "./components/content/Alert";
 import { iconBlockConfig } from "./components/content/IconBlock";
 import { featureTableConfig } from "./components/content/FeatureTable";
 import { dataTableConfig } from "./components/content/DataTable";
-import { contactSectionConfig } from "./components/content/ContactSection";
+import {
+  contactFormConfig,
+  contactSectionConfig,
+} from "./components/content/ContactSection";
 import { annualReportSectionConfig } from "./components/content/AnnualReportSection";
 
 // ─── Media ──────────────────────────────────────────────────────────────────
@@ -197,6 +200,7 @@ export const puckConfig: Config = {
         "DataTable",
         "Alert",
         "IconBlock",
+        "ContactForm",
         "ContactSection",
         "AnnualReportSection",
       ],
@@ -275,6 +279,7 @@ export const puckConfig: Config = {
     DataTable: dataTableConfig,
     Alert: alertConfig,
     IconBlock: iconBlockConfig,
+    ContactForm: contactFormConfig,
     ContactSection: contactSectionConfig,
     AnnualReportSection: annualReportSectionConfig,
 

@@ -5,13 +5,19 @@ import {
   type ContactRuntimeFormOption,
 } from "../../forms/contact-section-runtime";
 import { textColorField, backgroundColorField } from "../../lib/fields";
+import { cn } from "../../lib/cn";
 
 export interface ContactSectionProps {
   formKey?: string;
+  layout: "text-left" | "text-right" | "text-top" | "form-only";
+  showContent: boolean;
+  showEmailFallback: boolean;
   heading: string;
   description: string;
   bulletItems: { text: string }[];
   badgeText: string;
+  submitLabel: string;
+  successText: string;
   emailAddress: string;
   emailLabel: string;
   emailNote: string;
@@ -19,6 +25,27 @@ export interface ContactSectionProps {
   headingColor: string;
   descriptionColor: string;
 }
+
+export interface ContactFormProps {
+  formKey?: string;
+  submitLabel: string;
+  successText: string;
+  width: "narrow" | "medium" | "wide" | "full";
+  alignment: "left" | "center" | "right";
+}
+
+const formWidthClassMap: Record<ContactFormProps["width"], string> = {
+  narrow: "max-w-sm",
+  medium: "max-w-md",
+  wide: "max-w-2xl",
+  full: "max-w-none",
+};
+
+const formAlignmentClassMap: Record<ContactFormProps["alignment"], string> = {
+  left: "mr-auto",
+  center: "mx-auto",
+  right: "ml-auto",
+};
 
 function summarizeAssignment(form: ContactRuntimeFormOption) {
   const pageCount = form.assignment?.pageSlugs?.length ?? 0;
@@ -94,14 +121,9 @@ function FormKeyField({
   );
 }
 
-function StaticContactFormPreview({ formKey = "" }: { formKey?: string }) {
+function StaticContactFormPreview() {
   return (
     <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-6 sm:p-8 flex flex-col gap-6 border border-gray-100">
-      {formKey ? (
-        <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
-          Assigned form key: {formKey}
-        </div>
-      ) : null}
       <div className="h-11 rounded-lg border border-gray-200 bg-gray-50 px-4 flex items-center">
         <span className="text-gray-400 text-base">Your Name</span>
       </div>
@@ -117,8 +139,25 @@ function StaticContactFormPreview({ formKey = "" }: { formKey?: string }) {
     </div>
   );
 }
+export const ContactForm = ({
+  formKey = "",
+  submitLabel = "Send Message",
+  successText = "Thanks. We received your message and will follow up soon.",
+  width = "medium",
+  alignment = "center",
+}: ContactFormProps) => (
+  <ManagedContactForm
+    formKey={formKey}
+    submitLabel={submitLabel}
+    successText={successText}
+    className={cn(formWidthClassMap[width], formAlignmentClassMap[alignment])}
+  />
+);
 
 export const ContactSection = ({
+  layout = "text-left",
+  showContent = true,
+  showEmailFallback = true,
   formKey = "",
   heading = "Plan your stay",
   description = "Share your preferred dates, group size, and any special requests. The reservations team will reply with tailored availability.",
@@ -129,6 +168,8 @@ export const ContactSection = ({
     { text: "Special occasion support" },
   ],
   badgeText = "Direct booking assistance",
+  submitLabel = "Send Message",
+  successText = "Thanks. We received your message and will follow up soon.",
   emailAddress = "reservations@example.com",
   emailLabel = "reservations@example.com",
   emailNote = "Most inquiries receive a reply within one business day.",
@@ -138,72 +179,143 @@ export const ContactSection = ({
 }: ContactSectionProps) => {
   const runtime = useContactSectionRuntime();
   const hasLivePreview = Boolean(runtime?.resolveForm && runtime?.submitForm);
+  const shouldShowContent = showContent && layout !== "form-only";
+  const isStacked = layout === "text-top" || layout === "form-only";
+  const contentFirst = layout !== "text-right";
+
+  const contentPanel = shouldShowContent ? (
+    <div
+      className={cn(
+        isStacked ? "" : "md:col-span-1",
+        "flex flex-col justify-center",
+      )}
+    >
+      {heading && (
+        <h3 className="text-xl font-bold mb-4" style={{ color: headingColor }}>
+          {heading}
+        </h3>
+      )}
+      {description && (
+        <p
+          className="mb-2 text-base leading-relaxed"
+          style={{ color: descriptionColor }}
+        >
+          {description}
+        </p>
+      )}
+      {bulletItems.length > 0 && (
+        <ul
+          className="list-disc pl-5 space-y-1 mb-4 text-base"
+          style={{ color: descriptionColor }}
+        >
+          {bulletItems.map((item, i) => (
+            <li key={i}>{item.text}</li>
+          ))}
+        </ul>
+      )}
+      {badgeText && (
+        <div className="mt-4">
+          <span className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium text-sm">
+            {badgeText}
+          </span>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const formPanel = (
+    <div className={isStacked ? "" : "md:col-span-2"}>
+      {hasLivePreview ? (
+        <ManagedContactForm
+          formKey={formKey}
+          submitLabel={submitLabel}
+          successText={successText}
+        />
+      ) : (
+        <StaticContactFormPreview />
+      )}
+    </div>
+  );
 
   return (
     <section className="py-12" style={{ backgroundColor }}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          {/* ── Left: info panel ──────────────────────────────────────── */}
-          <div className="md:col-span-1 flex flex-col justify-center">
-            <h3
-              className="text-xl font-bold mb-4"
-              style={{ color: headingColor }}
-            >
-              {heading}
-            </h3>
-            <p
-              className="mb-2 text-base leading-relaxed"
-              style={{ color: descriptionColor }}
-            >
-              {description}
-            </p>
-            {bulletItems.length > 0 && (
-              <ul
-                className="list-disc pl-5 space-y-1 mb-4 text-base"
-                style={{ color: descriptionColor }}
-              >
-                {bulletItems.map((item, i) => (
-                  <li key={i}>{item.text}</li>
-                ))}
-              </ul>
-            )}
-            {badgeText && (
-              <div className="mt-4">
-                <span className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium text-sm">
-                  {badgeText}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* ── Right: live preview when runtime context is provided ───── */}
-          <div className="md:col-span-2">
-            {hasLivePreview ? (
-              <ManagedContactForm formKey={formKey} />
-            ) : (
-              <StaticContactFormPreview formKey={formKey} />
-            )}
-          </div>
-        </div>
-
-        {/* ── Email fallback ──────────────────────────────────────────── */}
-        <div className="mt-8 text-center text-slate-600">
-          <p className="text-base">
-            Prefer email? Reach us at{" "}
-            <a
-              href={`mailto:${emailAddress}`}
-              className="text-blue-700 underline font-medium"
-            >
-              {emailLabel}
-            </a>
-          </p>
-          {emailNote && (
-            <p className="mt-2 text-xs text-slate-400">{emailNote}</p>
+        <div
+          className={cn(
+            isStacked ? "flex flex-col" : "grid grid-cols-1 md:grid-cols-3",
+            "gap-8 items-start",
           )}
+        >
+          {contentFirst ? contentPanel : formPanel}
+          {contentFirst ? formPanel : contentPanel}
         </div>
+
+        {showEmailFallback && emailAddress && emailLabel && (
+          <div className="mt-8 text-center text-slate-600">
+            <p className="text-base">
+              Prefer email? Reach us at{" "}
+              <a
+                href={`mailto:${emailAddress}`}
+                className="text-blue-700 underline font-medium"
+              >
+                {emailLabel}
+              </a>
+            </p>
+            {emailNote && (
+              <p className="mt-2 text-xs text-slate-400">{emailNote}</p>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
+};
+
+export const contactFormConfig: ComponentConfig<ContactFormProps> = {
+  label: "Contact Form",
+  fields: {
+    formKey: {
+      type: "custom",
+      label: "Assigned Form",
+      render: FormKeyField,
+    },
+    submitLabel: {
+      type: "text",
+      label: "Submit Button Text",
+      contentEditable: true,
+    },
+    successText: {
+      type: "textarea",
+      label: "Success Message",
+    },
+    width: {
+      type: "radio",
+      label: "Width",
+      options: [
+        { label: "Narrow", value: "narrow" },
+        { label: "Medium", value: "medium" },
+        { label: "Wide", value: "wide" },
+        { label: "Full", value: "full" },
+      ],
+    },
+    alignment: {
+      type: "radio",
+      label: "Alignment",
+      options: [
+        { label: "Left", value: "left" },
+        { label: "Center", value: "center" },
+        { label: "Right", value: "right" },
+      ],
+    },
+  },
+  defaultProps: {
+    formKey: "",
+    submitLabel: "Send Message",
+    successText: "Thanks. We received your message and will follow up soon.",
+    width: "medium",
+    alignment: "center",
+  },
+  render: ContactForm,
 };
 
 export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
@@ -213,6 +325,32 @@ export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
       type: "custom",
       label: "Assigned Form",
       render: FormKeyField,
+    },
+    layout: {
+      type: "radio",
+      label: "Layout",
+      options: [
+        { label: "Text Left", value: "text-left" },
+        { label: "Text Right", value: "text-right" },
+        { label: "Text Above", value: "text-top" },
+        { label: "Form Only", value: "form-only" },
+      ],
+    },
+    showContent: {
+      type: "radio",
+      label: "Marketing Copy",
+      options: [
+        { label: "Show", value: true },
+        { label: "Hide", value: false },
+      ],
+    },
+    showEmailFallback: {
+      type: "radio",
+      label: "Email Fallback",
+      options: [
+        { label: "Show", value: true },
+        { label: "Hide", value: false },
+      ],
     },
     heading: {
       type: "text",
@@ -238,6 +376,15 @@ export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
       label: "Badge Text",
       contentEditable: true,
     },
+    submitLabel: {
+      type: "text",
+      label: "Submit Button Text",
+      contentEditable: true,
+    },
+    successText: {
+      type: "textarea",
+      label: "Success Message",
+    },
     emailAddress: {
       type: "text",
       label: "Email Address (href)",
@@ -261,6 +408,9 @@ export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
   },
   defaultProps: {
     formKey: "",
+    layout: "text-left",
+    showContent: true,
+    showEmailFallback: true,
     heading: "Plan your stay",
     description:
       "Share your preferred dates, group size, and any special requests. The reservations team will reply with tailored availability.",
@@ -271,6 +421,8 @@ export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
       { text: "Special occasion support" },
     ],
     badgeText: "Direct booking assistance",
+    submitLabel: "Send Message",
+    successText: "Thanks. We received your message and will follow up soon.",
     emailAddress: "reservations@example.com",
     emailLabel: "reservations@example.com",
     emailNote: "Most inquiries receive a reply within one business day.",

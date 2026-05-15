@@ -46,10 +46,15 @@ export {
 } from "./components/content/FeatureTable";
 export { DataTable, dataTableConfig } from "./components/content/DataTable";
 export {
+  ContactForm,
+  contactFormConfig,
   ContactSection,
   contactSectionConfig,
 } from "./components/content/ContactSection";
-export type { ContactSectionProps } from "./components/content/ContactSection";
+export type {
+  ContactFormProps,
+  ContactSectionProps,
+} from "./components/content/ContactSection";
 export {
   ContactSectionRuntimeProvider,
   useContactSectionRuntime,

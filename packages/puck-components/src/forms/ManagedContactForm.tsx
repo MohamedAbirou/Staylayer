@@ -4,6 +4,7 @@ import type {
   ContactRuntimeResolvedForm,
 } from "./contact-section-runtime";
 import { useContactSectionRuntime } from "./contact-section-runtime";
+import { cn } from "../lib/cn";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const nameRegex = /^[a-zA-Z\s]+$/;
@@ -46,6 +47,14 @@ const FALLBACK_FIELDS: ContactRuntimeFieldDefinition[] = [
 
 type FormState = Record<string, unknown>;
 type FormErrors = Record<string, string>;
+
+export interface ManagedContactFormProps {
+  formKey?: string;
+  submitLabel?: string;
+  submittingLabel?: string;
+  successText?: string;
+  className?: string;
+}
 
 function getSubmissionFields(
   resolvedForm: ContactRuntimeResolvedForm | null,
@@ -242,7 +251,13 @@ function extractErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
+export function ManagedContactForm({
+  formKey = "",
+  submitLabel = "Send Message",
+  submittingLabel = "Sending...",
+  successText = "Thanks. We received your message and will follow up soon.",
+  className = "mx-auto max-w-md",
+}: ManagedContactFormProps) {
   const runtime = useContactSectionRuntime();
   const pageSlug = runtime?.pageSlug ?? null;
   const locale = runtime?.locale ?? "en";
@@ -296,11 +311,7 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
         if (!form) {
           setResolvedForm(null);
           setFormData(buildInitialFormData(FALLBACK_FIELDS));
-          setResolutionError(
-            normalizedFormKey
-              ? `No published form is available for key "${normalizedFormKey}" yet.`
-              : "No published form is assigned to this page yet.",
-          );
+          setResolutionError("This form is not available yet.");
           return;
         }
 
@@ -311,10 +322,7 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
           setResolvedForm(null);
           setFormData(buildInitialFormData(FALLBACK_FIELDS));
           setResolutionError(
-            extractErrorMessage(
-              error,
-              "Failed to load the live form configuration.",
-            ),
+            extractErrorMessage(error, "Failed to load the inquiry form."),
           );
         }
       } finally {
@@ -408,8 +416,7 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
         _trap: normalizeString(formData.lastname),
       });
 
-      const nextMessage =
-        "Inquiry submitted. The reservations team will follow up soon.";
+      const nextMessage = successText;
       setFormData(buildInitialFormData(submissionFields));
       setSuccessMessage(nextMessage);
       runtime.notify?.({ type: "success", message: nextMessage });
@@ -427,9 +434,12 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
 
   return (
     <form
-      id="contact-form-preview"
+      id="contact-form"
       onSubmit={handleSubmit}
-      className="mx-auto flex max-w-md flex-col gap-5 rounded-2xl border border-gray-100 bg-white p-6 shadow-xl sm:p-8"
+      className={cn(
+        "flex w-full flex-col gap-5 rounded-2xl border border-gray-100 bg-white p-6 shadow-xl sm:p-8",
+        className,
+      )}
     >
       <input
         type="text"
@@ -440,10 +450,6 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
         tabIndex={-1}
         autoComplete="off"
       />
-
-      <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
-        Direct inquiry form
-      </div>
 
       {isLoadingForm && (
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -465,8 +471,7 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
 
       {renderableFields.length === 0 && !isLoadingForm ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-600">
-          Publish a form in Form Studio or select a live form key to make this
-          block interactive.
+          This form is not available yet.
         </div>
       ) : null}
 
@@ -626,7 +631,7 @@ export function ManagedContactForm({ formKey = "" }: { formKey?: string }) {
         disabled={!canSubmit || isSubmitting}
         className="flex h-11 items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? "Sending..." : "Send Message"}
+        {isSubmitting ? submittingLabel : submitLabel}
       </button>
     </form>
   );
