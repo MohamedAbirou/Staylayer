@@ -155,7 +155,7 @@ export default function EditorPage() {
     onSuccess: () => {
       toast.success(
         page?.published
-          ? "SEO settings saved. Published changes update automatically; no redeploy needed."
+          ? "SEO settings saved. Published changes update automatically."
           : "SEO settings saved to draft.",
       );
       setSeoDirty(false);
@@ -363,7 +363,7 @@ export default function EditorPage() {
             localStorage.removeItem(getDraftKey(slug, locale));
             toast.success(
               page?.published
-                ? "Page saved. Published changes update automatically; no redeploy needed."
+                ? "Page saved. Published changes update automatically."
                 : "Draft saved. Publish when ready.",
             );
           },
