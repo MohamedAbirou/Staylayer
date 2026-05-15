@@ -3,7 +3,7 @@ import { cn } from "../../lib/cn";
 import {
   backgroundColorField,
   textColorField,
-  imageField,
+  avatarImageField,
 } from "../../lib/fields";
 import { parseMarkup } from "../../lib/parse-markup";
 
@@ -163,7 +163,7 @@ export const testimonialConfig: ComponentConfig<TestimonialProps> = {
       contentEditable: true,
     },
     avatarUrl: {
-      ...imageField,
+      ...avatarImageField,
       label: "Avatar Image (optional)",
     },
     variant: {

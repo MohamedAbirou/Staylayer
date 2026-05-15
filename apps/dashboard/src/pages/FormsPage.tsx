@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ImageAssetField } from "@staylayer/puck-components";
 import toast from "react-hot-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth/useAuth";
@@ -314,8 +315,6 @@ const DELIVERY_INTEGRATION_PRESETS: DeliveryIntegrationPreset[] = [
 ];
 
 const DEFAULT_EMAIL_FIELD_KEYS = ["name", "email", "message"];
-const MAX_EMAIL_LOGO_FILE_SIZE = 120 * 1024;
-
 const STATUS_LABELS: Record<SubmissionStatus, string> = {
   RECEIVED: "New",
   REVIEWED: "Read",
@@ -2827,11 +2826,9 @@ function LogoUploader({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
   return (
     <div className="rounded-2xl border border-gray-200 p-4">
-      <div className="flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <div className="text-sm font-semibold text-gray-900">Logo</div>
           <div className="mt-1 text-xs text-gray-500">
@@ -2839,86 +2836,23 @@ function LogoUploader({
             URLs remain the safest option for inbox rendering.
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700"
-          >
-            Upload logo
-          </button>
-          {value ? (
-            <button
-              type="button"
-              onClick={() => onChange("")}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500"
-            >
-              Remove
-            </button>
-          ) : null}
-        </div>
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/svg+xml,image/webp"
-        className="hidden"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-
-          if (!file) {
-            return;
-          }
-
-          if (file.size > MAX_EMAIL_LOGO_FILE_SIZE) {
-            toast.error("Upload a logo smaller than 120 KB.");
-            event.target.value = "";
-            return;
-          }
-
-          const reader = new FileReader();
-          reader.onload = () => {
-            if (typeof reader.result === "string") {
-              onChange(reader.result);
-            }
-          };
-          reader.readAsDataURL(file);
-          event.target.value = "";
-        }}
+      <ImageAssetField
+        value={value}
+        onChange={onChange}
+        preset="email-logo"
+        placeholder="https://cdn.example.com/logo.svg"
+        previewAlt="Email logo preview"
+        uploadLabel="Upload logo"
+        removeLabel="Remove"
+        urlLabel="Hosted logo URL"
+        helperText="Hosted URLs remain the safest option for inbox rendering and keep payloads small."
+        emptyStateText="No logo selected yet. Upload a compact logo or paste a hosted URL."
+        rootClassName="border-none bg-transparent p-0"
+        previewWrapperClassName="min-h-24"
+        previewClassName="max-h-10 object-contain"
       />
-
-      {value ? (
-        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-5">
-          <img
-            src={value}
-            alt="Email logo preview"
-            className="h-10 max-w-[12rem] object-contain"
-            onError={(event) => {
-              (event.currentTarget as HTMLImageElement).style.display = "none";
-            }}
-          />
-        </div>
-      ) : (
-        <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-sm text-gray-500">
-          No logo selected yet.
-        </div>
-      )}
-
-      <label className="mt-4 block">
-        <span className="text-sm font-medium text-gray-700">
-          Hosted logo URL
-        </span>
-        <input
-          value={value.startsWith("data:") ? "" : value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="https://cdn.example.com/logo.svg"
-          className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-        />
-        <span className="mt-1 block text-xs text-gray-500">
-          Paste a hosted asset anytime to replace an uploaded file.
-        </span>
-      </label>
     </div>
   );
 }

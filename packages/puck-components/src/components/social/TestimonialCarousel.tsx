@@ -1,7 +1,11 @@
 import { useState, useRef } from "react";
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
-import { backgroundColorField, textColorField } from "../../lib/fields";
+import {
+  avatarImageField,
+  backgroundColorField,
+  textColorField,
+} from "../../lib/fields";
 import { parseMarkup } from "../../lib/parse-markup";
 
 interface TestimonialItem {
@@ -327,7 +331,7 @@ export const testimonialCarouselConfig: ComponentConfig<TestimonialCarouselProps
           author: { type: "text", label: "Author" },
           role: { type: "text", label: "Role", contentEditable: true },
           company: { type: "text", label: "Company", contentEditable: true },
-          avatarUrl: { type: "text", label: "Avatar URL" },
+          avatarUrl: { ...avatarImageField, label: "Avatar Image" },
           rating: {
             type: "number",
             label: "Rating (0-5, 0 = hidden)",

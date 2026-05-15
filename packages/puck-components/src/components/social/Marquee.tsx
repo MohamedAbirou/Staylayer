@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
+import { logoImageField } from "../../lib/fields";
 import { parseMarkup } from "../../lib/parse-markup";
 
 interface MarqueeItem {
@@ -300,7 +301,7 @@ export const marqueeConfig: ComponentConfig<MarqueeProps> = {
       type: "array",
       label: "Logos / Items",
       arrayFields: {
-        imageUrl: { type: "text", label: "Image URL" },
+        imageUrl: { ...logoImageField, label: "Image" },
         alt: { type: "text", label: "Alt Text" },
         link: { type: "text", label: "Link (optional)" },
       },

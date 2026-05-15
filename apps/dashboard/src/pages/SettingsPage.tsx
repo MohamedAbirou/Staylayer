@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useUsers } from "../hooks/useUsers";
 import { useSettings, useUpdateSettings } from "../hooks/useSettings";
@@ -9,6 +9,10 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { formatDate, formatRelativeTime } from "../lib/formatDate";
 import { LOCALES } from "../lib/constants";
+import {
+  ImageAssetField,
+  type ImageAssetPreset,
+} from "@staylayer/puck-components";
 import {
   PLATFORM_ROLES,
   type AuthUser,
@@ -1297,12 +1301,12 @@ function SiteSettingsTab() {
             hint="Hosted asset URL or compact uploaded image for site branding"
           >
             <AssetPickerField
-              id="logoUrl"
               value={general.logoUrl}
               onChange={(value) => {
                 setGeneral((p) => ({ ...p, logoUrl: value }));
                 setGeneralDirty(true);
               }}
+              preset="logo"
               placeholder="https://example.com/logo.png"
             />
           </SettingsField>
@@ -1312,13 +1316,12 @@ function SiteSettingsTab() {
             hint="Hosted icon URL or compact uploaded icon asset"
           >
             <AssetPickerField
-              id="faviconUrl"
               value={general.faviconUrl}
-              kind="icon"
               onChange={(value) => {
                 setGeneral((p) => ({ ...p, faviconUrl: value }));
                 setGeneralDirty(true);
               }}
+              preset="icon"
               placeholder="https://example.com/favicon.ico"
             />
           </SettingsField>
@@ -1890,12 +1893,12 @@ function SeoDefaultsTab() {
             hint="Recommended size: 1200×630px, used when no page-specific OG image is set"
           >
             <AssetPickerField
-              id="ogImage"
               value={form.seoOgImage}
               onChange={(value) => {
                 setForm((p) => ({ ...p, seoOgImage: value }));
                 setDirty(true);
               }}
+              preset="content"
               placeholder="https://example.com/og-default.jpg"
             />
           </SettingsField>
@@ -2432,107 +2435,30 @@ function LocalizationTab() {
 const inputCls =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-shadow";
 
-const MAX_SEO_ASSET_FILE_SIZE = 350 * 1024;
-
-function isAllowedSeoAsset(file: File, kind: "image" | "icon") {
-  const allowedTypes =
-    kind === "icon"
-      ? [
-          "image/png",
-          "image/jpeg",
-          "image/svg+xml",
-          "image/webp",
-          "image/x-icon",
-        ]
-      : ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
-
-  return allowedTypes.includes(file.type);
-}
-
 function AssetPickerField({
-  id,
   value,
   onChange,
   placeholder,
-  kind = "image",
+  preset = "content",
 }: {
-  id: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  kind?: "image" | "icon";
+  preset?: ImageAssetPreset;
 }) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <input
-          id={id}
-          type="url"
-          value={value.startsWith("data:") ? "" : value}
-          onChange={(event) => onChange(event.target.value)}
-          className={inputCls}
-          placeholder={placeholder}
-        />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="shrink-0 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          Upload
-        </button>
-        {value ? (
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="shrink-0 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
-          >
-            Clear
-          </button>
-        ) : null}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={
-          kind === "icon"
-            ? "image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon"
-            : "image/png,image/jpeg,image/svg+xml,image/webp"
-        }
-        className="hidden"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-
-          if (!file) return;
-
-          if (!isAllowedSeoAsset(file, kind)) {
-            toast.error("Choose a PNG, JPG, SVG, or WebP image asset.");
-            event.target.value = "";
-            return;
-          }
-
-          if (file.size > MAX_SEO_ASSET_FILE_SIZE) {
-            toast.error("Choose an image smaller than 350 KB.");
-            event.target.value = "";
-            return;
-          }
-
-          const reader = new FileReader();
-          reader.onload = () => {
-            if (typeof reader.result === "string") {
-              onChange(reader.result);
-            }
-          };
-          reader.readAsDataURL(file);
-          event.target.value = "";
-        }}
-      />
-      <p className="text-xs text-gray-400">
-        Paste a hosted asset URL or upload a compact image for validated
-        preview.
-      </p>
-    </div>
+    <ImageAssetField
+      value={value}
+      onChange={onChange}
+      preset={preset}
+      placeholder={placeholder}
+      uploadLabel="Upload"
+      removeLabel="Clear"
+      rootClassName="border-none bg-transparent p-0"
+      inputClassName={inputCls}
+      previewWrapperClassName="min-h-24"
+      previewAlt="Site asset preview"
+    />
   );
 }
 

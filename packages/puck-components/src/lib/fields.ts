@@ -1,5 +1,5 @@
-import type { ComponentConfig } from "@puckeditor/core";
 import { createElement, type ReactElement } from "react";
+import { ImageAssetField, type ImageAssetPreset } from "./image-asset-field";
 
 // ─── Color Picker Custom Field ──────────────────────────────────────────────
 export function colorFieldRender(
@@ -55,51 +55,36 @@ export function colorFieldRender(
 export function imageFieldRender(
   value: string | undefined,
   onChange: (v: string) => void,
+  label?: string,
+  preset: ImageAssetPreset = "content",
 ): ReactElement {
-  return createElement(
-    "div",
-    { className: "flex flex-col gap-2" },
-    value
-      ? createElement("img", {
-          src: value,
-          alt: "Preview",
-          className:
-            "w-full h-20 object-cover rounded-md border border-gray-200",
-          onError: (e: React.SyntheticEvent<HTMLImageElement>) => {
-            (e.currentTarget as HTMLImageElement).classList.add("hidden");
-          },
-        })
-      : null,
-    // ── File upload — converts to base64 data URL so it persists in saved JSON ──
-    createElement("input", {
-      type: "file",
-      accept: "image/*",
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === "string") {
-            onChange(reader.result);
-          }
-        };
-        reader.readAsDataURL(file);
-      },
-      className:
-        "w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-[13px]",
-    }),
-    // ── OR paste a URL directly ──
-    createElement("input", {
-      type: "text",
-      value: value?.startsWith("data:") ? "" : value || "",
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange(e.target.value);
-      },
-      placeholder: "…or paste image URL",
-      className:
-        "w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-[13px]",
-    }),
-  );
+  return createElement(ImageAssetField, {
+    value,
+    onChange,
+    label,
+    preset,
+    placeholder: "https://cdn.example.com/image.jpg",
+  });
+}
+
+type CustomFieldRenderProps = {
+  value: any;
+  onChange: (v: any) => void;
+  field?: { label?: string };
+};
+
+function createImageField(preset: ImageAssetPreset = "content") {
+  return {
+    type: "custom" as const,
+    label: "Image URL",
+    render: ({ value, onChange, field }: CustomFieldRenderProps) =>
+      imageFieldRender(
+        typeof value === "string" ? value : "",
+        onChange,
+        field?.label,
+        preset,
+      ),
+  };
 }
 
 // ─── Reusable Field Definitions ─────────────────────────────────────────────
@@ -131,12 +116,11 @@ export const textColorField = {
   }) => colorFieldRender(value, onChange, "#000000", field?.label),
 };
 
-export const imageField = {
-  type: "custom" as const,
-  label: "Image URL",
-  render: ({ value, onChange }: { value: any; onChange: (v: any) => void }) =>
-    imageFieldRender(value, onChange),
-};
+export const imageField = createImageField("content");
+export const logoImageField = createImageField("logo");
+export const avatarImageField = createImageField("avatar");
+export const iconImageField = createImageField("icon");
+export const emailLogoImageField = createImageField("email-logo");
 
 // ─── Tailwind Class Maps ────────────────────────────────────────────────────
 
@@ -239,7 +223,7 @@ function decorateMarkupField<T extends MarkupField>(field: T): T {
   return nextField;
 }
 
-export function withMarkupHints<T extends ComponentConfig<any>>(config: T): T {
+export function withMarkupHints(config: any) {
   if (!config.fields) {
     return config;
   }
@@ -251,13 +235,13 @@ export function withMarkupHints<T extends ComponentConfig<any>>(config: T): T {
         key,
         decorateMarkupField(field as MarkupField),
       ]),
-    ) as T["fields"],
-  } as T;
+    ),
+  };
 }
 
-export function withMarkupHintsForComponents<
-  T extends Record<string, ComponentConfig<any>>,
->(components: T): T {
+export function withMarkupHintsForComponents<T extends Record<string, any>>(
+  components: T,
+): T {
   return Object.fromEntries(
     Object.entries(components).map(([key, config]) => [
       key,

@@ -4,7 +4,7 @@ import { cn } from "../../lib/cn";
 import {
   backgroundColorField,
   textColorField,
-  imageField,
+  logoImageField,
   maxWidthMap,
   resolvePaddingClasses,
 } from "../../lib/fields";
@@ -496,7 +496,7 @@ export const footerConfig: ComponentConfig<FooterProps> = {
         { label: "Black", value: "black" },
       ],
     },
-    logoImageUrl: { ...imageField, label: "Logo Image" },
+    logoImageUrl: { ...logoImageField, label: "Logo Image" },
     logoImageAlt: { type: "text", label: "Logo Alt Text" },
     logoHref: { type: "text", label: "Logo Link URL" },
     logoImageHeight: {

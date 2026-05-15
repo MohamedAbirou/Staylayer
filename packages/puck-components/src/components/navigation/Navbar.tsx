@@ -5,7 +5,7 @@ import { cn } from "../../lib/cn";
 import {
   backgroundColorField,
   textColorField,
-  imageField,
+  logoImageField,
   maxWidthMap,
   resolvePaddingClasses,
 } from "../../lib/fields";
@@ -1239,7 +1239,7 @@ export const navbarConfig: ComponentConfig<NavbarProps> = {
       ],
     },
     textColor: { ...textColorField, label: "Text / Icon Color" },
-    logoImageUrl: { ...imageField, label: "Logo Image" },
+    logoImageUrl: { ...logoImageField, label: "Logo Image" },
     logoImageAlt: { type: "text", label: "Logo Image Alt Text" },
     logoImageHeight: {
       type: "number",

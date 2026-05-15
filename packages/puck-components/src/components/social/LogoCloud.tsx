@@ -1,6 +1,6 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
-import { textColorField } from "../../lib/fields";
+import { logoImageField, textColorField } from "../../lib/fields";
 import { parseMarkup } from "../../lib/parse-markup";
 
 interface LogoItem {
@@ -109,7 +109,7 @@ export const logoCloudConfig: ComponentConfig<LogoCloudProps> = {
       type: "array",
       label: "Logos",
       arrayFields: {
-        url: { type: "text", label: "Logo Image URL" },
+        url: { ...logoImageField, label: "Logo Image" },
         alt: { type: "text", label: "Alt Text" },
         link: { type: "text", label: "Link (optional)" },
       },

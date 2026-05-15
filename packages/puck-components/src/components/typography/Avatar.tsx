@@ -1,6 +1,6 @@
 import type { ComponentConfig } from "@puckeditor/core";
 import { cn } from "../../lib/cn";
-import { imageField } from "../../lib/fields";
+import { avatarImageField } from "../../lib/fields";
 
 export interface AvatarProps {
   src: string;
@@ -116,7 +116,7 @@ export const Avatar = ({
 export const avatarConfig: ComponentConfig<AvatarProps> = {
   label: "Avatar",
   fields: {
-    src: { ...imageField, label: "Image URL" },
+    src: { ...avatarImageField, label: "Avatar Image" },
     alt: { type: "text", label: "Alt Text" },
     fallback: { type: "text", label: "Fallback Initials" },
     size: {

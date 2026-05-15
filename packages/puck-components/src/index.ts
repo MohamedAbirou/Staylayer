@@ -189,6 +189,8 @@ export type { BreadcrumbProps } from "./components/navigation/Breadcrumb";
 
 // ─── Emoji Picker ─────────────────────────────────────────────────────────
 export { EmojiPickerField, emojiField, EMOJI_LIST } from "./lib/emoji-picker";
+export { ImageAssetField, IMAGE_ASSET_PRESETS } from "./lib/image-asset-field";
+export type { ImageAssetPreset } from "./lib/image-asset-field";
 
 // ─── Utility Exports ──────────────────────────────────────────────────────
 export { useScrollAnimation, AnimationWrapper } from "./lib/use-animation";
