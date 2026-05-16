@@ -172,9 +172,38 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
 };
 
 export const BILLING_DEFAULT_PLAN_KEY: BillingPlanKey = "free";
+export const BILLING_PLAN_ORDER: readonly BillingPlanKey[] = [
+  "free",
+  "starter_stay",
+  "boutique_growth",
+  "portfolio",
+] as const;
 
 export function getBillingPlan(planKey: BillingPlanKey): BillingPlanDefinition {
   return BILLING_PLANS[planKey];
+}
+
+export function getBillingPlanRank(planKey: BillingPlanKey): number {
+  const index = BILLING_PLAN_ORDER.indexOf(planKey);
+  return index === -1 ? 0 : index;
+}
+
+export function compareBillingPlanRank(
+  currentPlanKey: BillingPlanKey,
+  targetPlanKey: BillingPlanKey,
+): -1 | 0 | 1 {
+  const currentRank = getBillingPlanRank(currentPlanKey);
+  const targetRank = getBillingPlanRank(targetPlanKey);
+
+  if (targetRank > currentRank) {
+    return 1;
+  }
+
+  if (targetRank < currentRank) {
+    return -1;
+  }
+
+  return 0;
 }
 
 export function isBillingPlanKey(value: string): value is BillingPlanKey {

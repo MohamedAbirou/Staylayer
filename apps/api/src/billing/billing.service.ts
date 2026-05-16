@@ -26,12 +26,14 @@ import {
   BILLING_ENFORCEMENT_POLICY,
   BILLING_PLANS,
   BILLING_PROVIDER,
+  compareBillingPlanRank,
   getBillingPlan,
   isBillingPlanKey,
   isPaidPlanKey,
 } from "./billing-plans";
 import {
   AdminSubscriptionListItem,
+  BillingPlanChangeDirection,
   BillingPlanKey,
   BillingPlanLimits,
   BillingPublicStatus,
@@ -56,6 +58,8 @@ type StripeSubscriptionRecord = {
   status: string;
   items: {
     data: Array<{
+      id?: string | null;
+      quantity?: number | null;
       price?: {
         id?: string | null;
       } | null;
@@ -64,6 +68,7 @@ type StripeSubscriptionRecord = {
   current_period_start: number | null;
   current_period_end: number | null;
   cancel_at_period_end: boolean;
+  pending_update?: unknown;
 };
 
 type StripeCheckoutSessionRecord = {
@@ -91,7 +96,34 @@ type StripeInvoiceRecord = {
   hosted_invoice_url?: string | null;
   invoice_pdf?: string | null;
   amount_paid: number;
+  amount_due?: number | null;
+  total?: number | null;
   currency: string;
+};
+
+type StripeSubscriptionUpdateSource = {
+  id: string;
+  metadata?: Record<string, string>;
+  items: {
+    data: Array<{
+      id?: string | null;
+      quantity?: number | null;
+      price?: { id?: string | null } | null;
+    }>;
+  };
+};
+
+type StripeSubscriptionItemSource = {
+  id?: string | null;
+  quantity?: number | null;
+  price?: { id?: string | null } | null;
+};
+
+type SubscriptionWithPendingPlanChange = Subscription & {
+  pendingPlanKey?: string | null;
+  pendingPlanEffectiveAt?: Date | null;
+  pendingPlanDirection?: string | null;
+  providerScheduleId?: string | null;
 };
 
 type CheckoutUser = {
@@ -158,6 +190,9 @@ export class BillingService {
       this.parseLimitsSnapshot(resolvedSubscription.limitsSnapshot) ??
       plan.limits;
     const status = this.toPublicStatus(resolvedSubscription.status);
+    const pendingPlanChange = this.buildPendingPlanChange(
+      resolvedSubscription as SubscriptionWithPendingPlanChange,
+    );
 
     return {
       tenantId: tenant.id,
@@ -182,6 +217,7 @@ export class BillingService {
       lastWebhookAt: resolvedSubscription.lastWebhookAt,
       subscriptionId: resolvedSubscription.id,
       isFreePlan: plan.isFree,
+      pendingPlanChange,
     };
   }
 
@@ -301,9 +337,26 @@ export class BillingService {
       });
     }
 
+    if (snapshot.status === "past_due") {
+      throw new ConflictException({
+        code: "SUBSCRIPTION_PAYMENT_REQUIRED",
+        message:
+          "Resolve the past-due invoice before changing plans. This prevents accidental credits for unpaid time.",
+      });
+    }
+
     const stripe = this.getStripeClient();
     const priceId = this.getStripePriceId(planKey);
     const plan = getBillingPlan(planKey);
+    const direction = compareBillingPlanRank(snapshot.planKey, planKey);
+
+    if (direction === 0) {
+      throw new ConflictException({
+        code: "PLAN_ALREADY_ACTIVE",
+        message: "This hospitality plan is already active for the workspace.",
+      });
+    }
+
     const stripeSubscription = await stripe.subscriptions.retrieve(
       snapshot.providerSubscriptionId,
     );
@@ -315,6 +368,30 @@ export class BillingService {
         message:
           "Stripe did not return a subscription item that can be updated.",
       });
+    }
+
+    if (direction < 0) {
+      await this.scheduleSubscriptionDowngrade({
+        tenantId,
+        snapshot,
+        targetPlanKey: planKey,
+        targetPriceId: priceId,
+        stripeSubscription,
+        subscriptionItem,
+      });
+
+      this.logger.log(
+        `Scheduled tenant ${tenantId} subscription downgrade to ${plan.key}`,
+      );
+
+      return this.getTenantPlanSnapshot(tenantId);
+    }
+
+    if (snapshot.pendingPlanChange?.providerScheduleId) {
+      await this.releaseSubscriptionScheduleIfPresent(
+        snapshot.pendingPlanChange.providerScheduleId,
+        true,
+      );
     }
 
     const updatedSubscription = await stripe.subscriptions.update(
@@ -332,10 +409,29 @@ export class BillingService {
           ...(stripeSubscription.metadata ?? {}),
           tenantId,
           planKey,
+          pendingPlanKey: "",
+          pendingPlanEffectiveAt: "",
+          pendingPlanDirection: "",
         },
+        payment_behavior: "pending_if_incomplete",
         proration_behavior: "always_invoice",
       },
     );
+
+    if (this.hasStripePendingUpdate(updatedSubscription)) {
+      await this.notifyBillingPaymentActionRequired({
+        tenantId,
+        planKey,
+        reason:
+          "Stripe could not collect the prorated upgrade invoice, so the plan was not changed.",
+      });
+
+      throw new ConflictException({
+        code: "PLAN_CHANGE_PAYMENT_ACTION_REQUIRED",
+        message:
+          "Stripe could not collect the prorated upgrade invoice. Update the payment method or complete payment before the plan changes.",
+      });
+    }
 
     const updatedRecord = this.toStripeSubscriptionRecord(updatedSubscription);
 
@@ -352,11 +448,189 @@ export class BillingService {
       Math.floor(Date.now() / 1000),
     );
 
+    if (snapshot.subscriptionId) {
+      await this.prisma.subscription.update({
+        where: { id: snapshot.subscriptionId },
+        data: this.clearPendingPlanChangeData() as unknown as Prisma.SubscriptionUpdateInput,
+      });
+    }
+
     this.logger.log(
-      `Updated tenant ${tenantId} subscription to ${plan.key} with Stripe proration`,
+      `Updated tenant ${tenantId} subscription to ${plan.key} with immediate Stripe proration`,
     );
 
     return this.getTenantPlanSnapshot(tenantId);
+  }
+
+  async cancelPendingSubscriptionPlanChange(
+    tenantId: string,
+  ): Promise<TenantBillingSnapshot> {
+    const snapshot = await this.getTenantPlanSnapshot(tenantId);
+
+    if (!snapshot.subscriptionId || !snapshot.pendingPlanChange) {
+      throw new ConflictException({
+        code: "NO_PENDING_PLAN_CHANGE",
+        message: "There is no scheduled plan change to cancel.",
+      });
+    }
+
+    if (snapshot.pendingPlanChange.providerScheduleId) {
+      await this.releaseSubscriptionScheduleIfPresent(
+        snapshot.pendingPlanChange.providerScheduleId,
+        true,
+      );
+    }
+
+    await this.prisma.subscription.update({
+      where: { id: snapshot.subscriptionId },
+      data: this.clearPendingPlanChangeData() as unknown as Prisma.SubscriptionUpdateInput,
+    });
+
+    await this.createBillingPlanChangeNotification({
+      tenantId,
+      title: "Scheduled plan change canceled",
+      body: `${snapshot.planName} remains active for this workspace.`,
+      metadata: {
+        canceledPlanKey: snapshot.pendingPlanChange.planKey,
+      },
+    });
+
+    return this.getTenantPlanSnapshot(tenantId);
+  }
+
+  private async scheduleSubscriptionDowngrade(input: {
+    tenantId: string;
+    snapshot: TenantBillingSnapshot;
+    targetPlanKey: BillingPlanKey;
+    targetPriceId: string;
+    stripeSubscription: StripeSubscriptionUpdateSource;
+    subscriptionItem: StripeSubscriptionItemSource;
+  }): Promise<void> {
+    if (!input.snapshot.subscriptionId) {
+      throw new ConflictException({
+        code: "LOCAL_SUBSCRIPTION_REQUIRED",
+        message:
+          "The local subscription record is required to schedule a plan change.",
+      });
+    }
+
+    const currentPriceId = input.subscriptionItem.price?.id;
+    const currentPeriodStart = this.toUnixTime(
+      input.snapshot.currentPeriodStart,
+    );
+    const currentPeriodEnd = this.toUnixTime(input.snapshot.renewsAt);
+
+    if (!currentPriceId || !currentPeriodStart || !currentPeriodEnd) {
+      throw new ServiceUnavailableException({
+        code: "STRIPE_SUBSCRIPTION_PERIOD_MISSING",
+        message:
+          "Stripe did not return enough billing-period data to schedule this downgrade safely.",
+      });
+    }
+
+    if (input.snapshot.pendingPlanChange?.providerScheduleId) {
+      await this.releaseSubscriptionScheduleIfPresent(
+        input.snapshot.pendingPlanChange.providerScheduleId,
+        true,
+      );
+    }
+
+    const stripe = this.getStripeClient();
+    const schedule = await stripe.subscriptionSchedules.create({
+      from_subscription: input.snapshot.providerSubscriptionId!,
+    });
+    const quantity = input.subscriptionItem.quantity ?? 1;
+
+    await stripe.subscriptionSchedules.update(schedule.id, {
+      end_behavior: "release",
+      metadata: {
+        tenantId: input.tenantId,
+        pendingPlanKey: input.targetPlanKey,
+        pendingPlanDirection: "downgrade",
+      },
+      phases: [
+        {
+          start_date: currentPeriodStart,
+          end_date: currentPeriodEnd,
+          items: [{ price: currentPriceId, quantity }],
+          metadata: {
+            tenantId: input.tenantId,
+            planKey: input.snapshot.planKey,
+          },
+          proration_behavior: "none",
+        },
+        {
+          start_date: currentPeriodEnd,
+          iterations: 1,
+          items: [{ price: input.targetPriceId, quantity }],
+          metadata: {
+            tenantId: input.tenantId,
+            planKey: input.targetPlanKey,
+            previousPlanKey: input.snapshot.planKey,
+          },
+          proration_behavior: "none",
+        },
+      ],
+      proration_behavior: "none",
+    } as never);
+
+    const effectiveAt = input.snapshot.renewsAt;
+
+    if (!effectiveAt) {
+      throw new ServiceUnavailableException({
+        code: "STRIPE_SUBSCRIPTION_PERIOD_MISSING",
+        message: "Stripe did not return a renewal date for this downgrade.",
+      });
+    }
+
+    await this.prisma.subscription.update({
+      where: { id: input.snapshot.subscriptionId },
+      data: {
+        pendingPlanKey: input.targetPlanKey,
+        pendingPlanEffectiveAt: effectiveAt,
+        pendingPlanDirection: "downgrade",
+        providerScheduleId: schedule.id,
+      } as unknown as Prisma.SubscriptionUpdateInput,
+    });
+
+    const targetPlan = getBillingPlan(input.targetPlanKey);
+    await this.safeSendScheduledPlanChangeEmail({
+      tenantId: input.tenantId,
+      currentPlanName: input.snapshot.planName,
+      targetPlanName: targetPlan.name,
+      effectiveAt,
+    });
+    await this.createBillingPlanChangeNotification({
+      tenantId: input.tenantId,
+      title: `${targetPlan.name} scheduled`,
+      body: `${input.snapshot.planName} remains active until ${effectiveAt.toISOString().slice(0, 10)}. The lower plan starts at renewal with no immediate invoice.`,
+      metadata: {
+        planKey: input.targetPlanKey,
+        previousPlanKey: input.snapshot.planKey,
+        effectiveAt: effectiveAt.toISOString(),
+      },
+    });
+  }
+
+  private async releaseSubscriptionScheduleIfPresent(
+    scheduleId: string,
+    failClosed = false,
+  ): Promise<void> {
+    try {
+      await this.getStripeClient().subscriptionSchedules.release(scheduleId);
+    } catch (error) {
+      if (failClosed) {
+        throw new ServiceUnavailableException({
+          code: "STRIPE_SCHEDULE_RELEASE_FAILED",
+          message:
+            "The existing scheduled plan change could not be released safely. Try again before changing the plan.",
+        });
+      }
+
+      this.logger.warn(
+        `Stripe schedule release skipped for ${scheduleId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   async createPortalSession(
@@ -829,6 +1103,8 @@ export class BillingService {
         status: true,
         planKey: true,
         gracePeriodEndsAt: true,
+        pendingPlanKey: true,
+        providerScheduleId: true,
       },
     });
     const tenantId = await this.resolveTenantIdForStripeSubscription(
@@ -876,6 +1152,11 @@ export class BillingService {
       existingByProviderId?.status ?? existingIntent?.status ?? null;
     const previousPlanKey =
       existingByProviderId?.planKey ?? existingIntent?.planKey ?? null;
+    const shouldClearPendingPlanChange =
+      !existingByProviderId?.pendingPlanKey ||
+      existingByProviderId.pendingPlanKey === planKey ||
+      mappedStatus === SubscriptionStatus.CANCELED ||
+      mappedStatus === SubscriptionStatus.INACTIVE;
 
     const subscriptionId = existingByProviderId?.id ?? existingIntent?.id;
     const baseData = {
@@ -896,6 +1177,9 @@ export class BillingService {
       gracePeriodEndsAt,
       lastWebhookEventId: eventId,
       lastWebhookAt,
+      ...(shouldClearPendingPlanChange
+        ? this.clearPendingPlanChangeData()
+        : {}),
     };
 
     const subscription = subscriptionId
@@ -943,10 +1227,15 @@ export class BillingService {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
+      case "customer.subscription.pending_update_applied":
         return this.syncSubscriptionFromStripe(
           event.data.object as StripeSubscriptionRecord,
           event.id,
           event.created,
+        );
+      case "customer.subscription.pending_update_expired":
+        return this.handlePendingSubscriptionUpdateExpired(
+          event.data.object as StripeSubscriptionRecord,
         );
       case "checkout.session.completed":
         return this.recordCheckoutCompletion(
@@ -954,6 +1243,10 @@ export class BillingService {
         );
       case "invoice.payment_succeeded":
         return this.handleInvoicePaid(event.data.object as StripeInvoiceRecord);
+      case "invoice.payment_failed":
+        return this.handleInvoicePaymentFailed(
+          event.data.object as StripeInvoiceRecord,
+        );
       default:
         return {};
     }
@@ -1007,6 +1300,49 @@ export class BillingService {
       tenantId,
       amountPaid: invoice.amount_paid,
       currency: invoice.currency,
+    });
+
+    return { tenantId };
+  }
+
+  private async handleInvoicePaymentFailed(
+    invoice: StripeInvoiceRecord,
+  ): Promise<StripeSyncResult> {
+    const tenantId = await this.resolveTenantIdForInvoice(invoice);
+
+    if (!tenantId) {
+      return {};
+    }
+
+    await this.notifyBillingPaymentActionRequired({
+      tenantId,
+      reason:
+        "Stripe could not collect a subscription invoice. Ask the billing contact to update the payment method or complete authentication.",
+    });
+
+    return { tenantId };
+  }
+
+  private async handlePendingSubscriptionUpdateExpired(
+    stripeSubscription: StripeSubscriptionRecord,
+  ): Promise<StripeSyncResult> {
+    const providerCustomerId = this.extractCustomerId(
+      stripeSubscription.customer,
+    );
+    const tenantId = await this.resolveTenantIdForStripeSubscription(
+      stripeSubscription,
+      undefined,
+      providerCustomerId,
+    );
+
+    if (!tenantId) {
+      return {};
+    }
+
+    await this.notifyBillingPaymentActionRequired({
+      tenantId,
+      reason:
+        "A requested paid plan change expired because Stripe could not complete the payment in time. The current plan remains active.",
     });
 
     return { tenantId };
@@ -1194,6 +1530,7 @@ export class BillingService {
       lastWebhookAt: null,
       subscriptionId: null,
       isFreePlan: true,
+      pendingPlanChange: null,
     };
   }
 
@@ -1275,6 +1612,51 @@ export class BillingService {
       operatorOverrideAvailable:
         BILLING_ENFORCEMENT_POLICY.operatorOverrideAvailable,
       gracePeriodActive,
+    };
+  }
+
+  private clearPendingPlanChangeData(): Record<string, null> {
+    return {
+      pendingPlanKey: null,
+      pendingPlanEffectiveAt: null,
+      pendingPlanDirection: null,
+      providerScheduleId: null,
+    };
+  }
+
+  private hasStripePendingUpdate(subscription: unknown): boolean {
+    return Boolean(
+      subscription &&
+      typeof subscription === "object" &&
+      (subscription as { pending_update?: unknown }).pending_update,
+    );
+  }
+
+  private toUnixTime(value: Date | null): number | null {
+    return value ? Math.floor(value.getTime() / 1000) : null;
+  }
+
+  private buildPendingPlanChange(
+    subscription: SubscriptionWithPendingPlanChange,
+  ) {
+    if (
+      !subscription.pendingPlanKey ||
+      !subscription.pendingPlanEffectiveAt ||
+      !isBillingPlanKey(subscription.pendingPlanKey)
+    ) {
+      return null;
+    }
+
+    const plan = getBillingPlan(subscription.pendingPlanKey);
+    const direction: BillingPlanChangeDirection =
+      subscription.pendingPlanDirection === "upgrade" ? "upgrade" : "downgrade";
+
+    return {
+      planKey: plan.key,
+      planName: plan.name,
+      direction,
+      effectiveAt: subscription.pendingPlanEffectiveAt,
+      providerScheduleId: subscription.providerScheduleId ?? null,
     };
   }
 
@@ -1672,6 +2054,11 @@ export class BillingService {
       status: value.status,
       items: {
         data: (items ?? []).map((item) => ({
+          id: typeof item.id === "string" ? (item.id as string) : null,
+          quantity:
+            typeof item.quantity === "number"
+              ? (item.quantity as number)
+              : null,
           price:
             item.price && typeof item.price === "object"
               ? {
@@ -1692,6 +2079,7 @@ export class BillingService {
           ? value.current_period_end
           : null,
       cancel_at_period_end: value.cancel_at_period_end === true,
+      pending_update: value.pending_update,
     };
   }
 
@@ -1856,6 +2244,137 @@ export class BillingService {
     });
   }
 
+  private async safeSendScheduledPlanChangeEmail(input: {
+    tenantId: string;
+    currentPlanName: string;
+    targetPlanName: string;
+    effectiveAt: Date;
+  }): Promise<void> {
+    if (!this.transactionalEmailService.isConfigured()) {
+      return;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: input.tenantId },
+      select: { name: true },
+    });
+    const email = await this.findTenantBillingContactEmail(input.tenantId);
+
+    if (!tenant || !email) {
+      return;
+    }
+
+    const billingUrl = `${this.getDashboardBaseUrl()}/billing`;
+    const effectiveDate = input.effectiveAt.toISOString().slice(0, 10);
+
+    try {
+      await this.transactionalEmailService.send({
+        to: email,
+        subject: `StayLayer plan change scheduled for ${tenant.name}`,
+        text: [
+          `${tenant.name} stays on ${input.currentPlanName} until ${effectiveDate}.`,
+          `${input.targetPlanName} starts at renewal. There is no immediate charge or credit invoice for this downgrade.`,
+          `Manage billing: ${billingUrl}`,
+        ].join("\n\n"),
+        html: this.buildBillingEmailHtml({
+          eyebrow: "Plan change scheduled",
+          title: `${input.targetPlanName} starts on ${effectiveDate}`,
+          body: `${tenant.name} keeps ${input.currentPlanName} limits through the paid period. The lower plan begins at renewal, so there is no immediate charge or credit invoice for this downgrade.`,
+          ctaLabel: "Review billing",
+          ctaUrl: billingUrl,
+        }),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Scheduled plan change email skipped for tenant ${input.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  private async notifyBillingPaymentActionRequired(input: {
+    tenantId: string;
+    planKey?: BillingPlanKey;
+    reason: string;
+  }): Promise<void> {
+    await this.safeSendBillingActionRequiredEmail(input);
+    await this.createBillingPlanChangeNotification({
+      tenantId: input.tenantId,
+      title: "Billing needs payment attention",
+      body: input.reason,
+      metadata: {
+        planKey: input.planKey,
+        reason: input.reason,
+      },
+    });
+  }
+
+  private async safeSendBillingActionRequiredEmail(input: {
+    tenantId: string;
+    planKey?: BillingPlanKey;
+    reason: string;
+  }): Promise<void> {
+    if (!this.transactionalEmailService.isConfigured()) {
+      return;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: input.tenantId },
+      select: { name: true },
+    });
+    const email = await this.findTenantBillingContactEmail(input.tenantId);
+
+    if (!tenant || !email) {
+      return;
+    }
+
+    const billingUrl = `${this.getDashboardBaseUrl()}/billing`;
+    const planLine = input.planKey
+      ? `Requested plan: ${getBillingPlan(input.planKey).name}.`
+      : null;
+
+    try {
+      await this.transactionalEmailService.send({
+        to: email,
+        subject: `Billing attention needed for ${tenant.name}`,
+        text: [input.reason, planLine, `Manage billing: ${billingUrl}`]
+          .filter(Boolean)
+          .join("\n\n"),
+        html: this.buildBillingEmailHtml({
+          eyebrow: "Billing attention needed",
+          title: `Payment action required for ${tenant.name}`,
+          body: `${input.reason}${planLine ? ` ${planLine}` : ""} Review billing to keep the workspace in good standing.`,
+          ctaLabel: "Open billing",
+          ctaUrl: billingUrl,
+        }),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Billing action email skipped for tenant ${input.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  private async createBillingPlanChangeNotification(input: {
+    tenantId: string;
+    title: string;
+    body: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.notificationsService.createForTenantRoles({
+      tenantId: input.tenantId,
+      roles: [
+        TenantMembershipRole.OWNER,
+        TenantMembershipRole.ADMIN,
+        TenantMembershipRole.BILLING,
+      ],
+      category: NotificationCategory.BILLING,
+      title: input.title,
+      body: input.body,
+      actionUrl: "/billing",
+      metadata: input.metadata ?? null,
+    });
+  }
+
   private async safeSendInvoicePaidEmail(input: {
     tenantId: string;
     customerEmail: string | null;
@@ -1864,6 +2383,10 @@ export class BillingService {
     amountPaid: number;
     currency: string;
   }): Promise<void> {
+    if (input.amountPaid <= 0) {
+      return;
+    }
+
     if (!this.transactionalEmailService.isConfigured()) {
       return;
     }
@@ -1914,6 +2437,10 @@ export class BillingService {
     amountPaid: number;
     currency: string;
   }): Promise<void> {
+    if (input.amountPaid <= 0) {
+      return;
+    }
+
     const amount = this.formatMoney(input.amountPaid, input.currency);
 
     await this.notificationsService.createForTenantRoles({

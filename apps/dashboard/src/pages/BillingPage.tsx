@@ -22,6 +22,7 @@ import { useAuth } from "../auth/useAuth";
 import { BILLING_MEMBERSHIP_ROLES, hasMembershipRole } from "../auth/access";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
+  cancelPendingBillingPlanChange,
   createCheckoutSession,
   createPortalSession,
   getBillingPlan,
@@ -34,6 +35,13 @@ import {
   type BillingPlanStatus,
 } from "../api/billing";
 import { formatDate } from "../lib/formatDate";
+
+const BILLING_PLAN_ORDER: readonly BillingPlanKey[] = [
+  "free",
+  "starter_stay",
+  "boutique_growth",
+  "portfolio",
+] as const;
 
 const STATUS_META: Record<BillingPlanStatus, { label: string; color: string }> =
   {
@@ -178,6 +186,27 @@ export default function BillingPage() {
         (error as { response?: { data?: { message?: string } } })?.response
           ?.data?.message ??
         "Unable to change the subscription plan for this workspace.";
+      toast.error(message);
+    },
+  });
+
+  const cancelPendingChangeMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenantId) {
+        throw new Error("Select a tenant workspace before updating billing");
+      }
+
+      return cancelPendingBillingPlanChange(tenantId);
+    },
+    onSuccess: async (updatedPlan) => {
+      setSelectedPlanKey(updatedPlan.planKey);
+      await queryClient.invalidateQueries({ queryKey: ["billing", tenantId] });
+      toast.success("Scheduled plan change canceled");
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ?? "Unable to cancel the scheduled plan change.";
       toast.error(message);
     },
   });
@@ -356,13 +385,30 @@ export default function BillingPage() {
     (entry) => entry.key === selectedPlanKeyForAction,
   );
   const selectedPlanIsCurrent = selectedPlan?.key === plan.planKey;
+  const selectedPlanChangeDirection = selectedPlan
+    ? getPlanChangeDirection(plan.planKey, selectedPlan.key)
+    : "same";
+  const pendingChange = plan.pendingPlanChange;
+  const selectedPlanCheckoutEnabled = selectedPlan?.checkoutEnabled !== false;
   const canSubmitCheckout =
-    checkoutAllowed && selectedPlan && !selectedPlan.isFree;
+    checkoutAllowed &&
+    selectedPlan &&
+    !selectedPlan.isFree &&
+    selectedPlanCheckoutEnabled;
   const canSubmitPlanChange =
     planChangeAllowed &&
     selectedPlan &&
     !selectedPlan.isFree &&
-    !selectedPlanIsCurrent;
+    !selectedPlanIsCurrent &&
+    selectedPlanCheckoutEnabled;
+  const planChangeConfirmTitle =
+    selectedPlanChangeDirection === "downgrade"
+      ? "Schedule downgrade?"
+      : "Upgrade subscription now?";
+  const planChangeConfirmMessage =
+    selectedPlanChangeDirection === "downgrade"
+      ? `You are scheduling ${session?.activeTenant?.name} to move from ${plan.planName} to ${selectedPlan?.name ?? "the selected plan"} at renewal. Current limits stay available until ${plan.renewsAt ? formatDate(plan.renewsAt) : "the current period ends"}, and Stripe will not create an immediate downgrade invoice.`
+      : `You are upgrading ${session?.activeTenant?.name} from ${plan.planName} to ${selectedPlan?.name ?? "the selected plan"}. Stripe will immediately invoice the prorated difference and the plan only changes if payment succeeds.`;
 
   return (
     <div className="space-y-6">
@@ -474,6 +520,28 @@ export default function BillingPage() {
           tone="warning"
           title="Subscription set to cancel"
           message={`Your subscription will not renew after ${formatDate(plan.renewsAt)}. Publishing access stops at that date unless you reactivate.`}
+        />
+      )}
+
+      {pendingChange && (
+        <StatusBanner
+          icon={Clock}
+          tone="info"
+          title={`${pendingChange.planName} scheduled`}
+          message={`${plan.planName} remains active until ${formatDate(pendingChange.effectiveAt)}. The scheduled downgrade starts at renewal, with no immediate credit or $0 invoice.`}
+          action={
+            <button
+              type="button"
+              onClick={() => cancelPendingChangeMutation.mutate()}
+              disabled={cancelPendingChangeMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+            >
+              {cancelPendingChangeMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : null}
+              Keep current plan
+            </button>
+          }
         />
       )}
 
@@ -619,6 +687,7 @@ export default function BillingPage() {
           <PlanSelector
             plans={plans}
             currentPlanKey={plan.planKey}
+            pendingPlanKey={pendingChange?.planKey ?? null}
             selected={selectedPlanKeyForAction}
             onSelect={setSelectedPlanKey}
           />
@@ -630,12 +699,16 @@ export default function BillingPage() {
                   {selectedPlan
                     ? selectedPlanIsCurrent
                       ? `${selectedPlan.name} is your current plan`
-                      : `Change to ${selectedPlan.name}`
+                      : selectedPlanChangeDirection === "downgrade"
+                        ? `Schedule downgrade to ${selectedPlan.name}`
+                        : `Upgrade to ${selectedPlan.name}`
                     : "Choose a paid plan"}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                   {planChangeAllowed
-                    ? "Stripe calculates prorated credits and charges from the current billing period before applying the new plan."
+                    ? selectedPlanChangeDirection === "downgrade"
+                      ? "Downgrades take effect at renewal so customers keep paid access for the full period and avoid confusing $0 invoices."
+                      : "Upgrades apply immediately. Stripe invoices the prorated difference and the plan changes only if payment succeeds."
                     : "Choose a paid hospitality plan before opening Stripe Checkout."}
                 </p>
               </div>
@@ -668,7 +741,9 @@ export default function BillingPage() {
                   ) : (
                     <Zap className="h-4 w-4" />
                   )}
-                  Change plan
+                  {selectedPlanChangeDirection === "downgrade"
+                    ? "Schedule downgrade"
+                    : "Upgrade now"}
                 </button>
               ) : manageBillingAllowed ? (
                 <button
@@ -743,9 +818,13 @@ export default function BillingPage() {
 
       <ConfirmDialog
         open={planChangeConfirmOpen}
-        title="Change subscription plan?"
-        message={`You are about to change ${session?.activeTenant?.name} from ${plan.planName} to ${selectedPlan?.name ?? "the selected plan"}. Stripe will apply prorated credits and charges for the current billing period.`}
-        confirmLabel="Change plan"
+        title={planChangeConfirmTitle}
+        message={planChangeConfirmMessage}
+        confirmLabel={
+          selectedPlanChangeDirection === "downgrade"
+            ? "Schedule downgrade"
+            : "Upgrade now"
+        }
         isPending={planChangeMutation.isPending}
         onConfirm={() => planChangeMutation.mutate()}
         onCancel={() => setPlanChangeConfirmOpen(false)}
@@ -767,15 +846,35 @@ function canChangePlan(plan: BillingPlanSnapshot): boolean {
   return (
     plan.source === "stripe" &&
     Boolean(plan.providerSubscriptionId) &&
-    ["active", "trialing", "past_due"].includes(plan.status)
+    ["active", "trialing"].includes(plan.status)
   );
+}
+
+function getPlanChangeDirection(
+  currentPlanKey: BillingPlanKey,
+  selectedPlanKey: BillingPlanKey,
+): "upgrade" | "downgrade" | "same" {
+  const currentRank = BILLING_PLAN_ORDER.indexOf(currentPlanKey);
+  const selectedRank = BILLING_PLAN_ORDER.indexOf(selectedPlanKey);
+
+  if (selectedRank > currentRank) {
+    return "upgrade";
+  }
+
+  if (selectedRank < currentRank) {
+    return "downgrade";
+  }
+
+  return "same";
 }
 
 function getDefaultPlanSelection(
   plan: BillingPlanSnapshot,
   plans: BillingPlanCatalogEntry[],
 ): BillingPlanKey {
-  const paidPlans = plans.filter((entry) => !entry.isFree);
+  const paidPlans = plans.filter(
+    (entry) => !entry.isFree && entry.checkoutEnabled !== false,
+  );
 
   if (plan.source === "stripe") {
     const currentPaidPlan = paidPlans.find(
@@ -798,24 +897,34 @@ function getPaidPlanSelection(
     ? plans.find((entry) => entry.key === selectedPlanKey)
     : null;
 
-  if (selectedPlan && !selectedPlan.isFree) {
+  if (
+    selectedPlan &&
+    !selectedPlan.isFree &&
+    selectedPlan.checkoutEnabled !== false
+  ) {
     return selectedPlan.key;
   }
 
   const defaultPlanKey = getDefaultPlanSelection(plan, plans);
   const defaultPlan = plans.find((entry) => entry.key === defaultPlanKey);
 
-  return defaultPlan && !defaultPlan.isFree ? defaultPlan.key : null;
+  return defaultPlan &&
+    !defaultPlan.isFree &&
+    defaultPlan.checkoutEnabled !== false
+    ? defaultPlan.key
+    : null;
 }
 
 function PlanSelector({
   plans,
   currentPlanKey,
+  pendingPlanKey,
   selected,
   onSelect,
 }: {
   plans: BillingPlanCatalogEntry[];
   currentPlanKey: BillingPlanKey;
+  pendingPlanKey: BillingPlanKey | null;
   selected: BillingPlanKey;
   onSelect: (key: BillingPlanKey) => void;
 }) {
@@ -832,13 +941,15 @@ function PlanSelector({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {plans.map((p) => {
           const isCurrent = p.key === currentPlanKey;
+          const isPending = p.key === pendingPlanKey;
           const isSelected = selected === p.key;
+          const disabled = p.isFree || p.checkoutEnabled === false;
 
           return (
             <button
               key={p.key}
               type="button"
-              disabled={p.isFree}
+              disabled={disabled}
               onClick={() => onSelect(p.key)}
               className={`rounded-lg border-2 p-4 text-left transition-colors ${
                 isSelected
@@ -852,9 +963,18 @@ function PlanSelector({
                   <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
                     Current
                   </span>
+                ) : isPending ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                    Scheduled
+                  </span>
                 ) : null}
               </div>
               <p className="mt-1 text-xs text-gray-500">{p.description}</p>
+              {p.checkoutEnabled === false ? (
+                <p className="mt-2 text-xs font-semibold text-amber-700">
+                  Checkout is not configured for this plan yet.
+                </p>
+              ) : null}
               <p className="mt-3 text-xs font-medium text-gray-600">
                 {formatPlanHighlights(p)}
               </p>

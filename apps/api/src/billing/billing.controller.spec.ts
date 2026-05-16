@@ -2,6 +2,7 @@
 
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { Request } from "express";
+import { ConfigService } from "@nestjs/config";
 import { BillingController } from "./billing.controller";
 import { BillingService } from "./billing.service";
 import { WorkspaceAccessService } from "../auth/workspace-access.service";
@@ -27,6 +28,7 @@ describe("BillingController", () => {
     getTenantPlanSnapshot: jest.Mock;
     createCheckoutSession: jest.Mock;
     updateSubscriptionPlan: jest.Mock;
+    cancelPendingSubscriptionPlanChange: jest.Mock;
     createPortalSession: jest.Mock;
   };
   let workspaceAccessService: {
@@ -38,6 +40,7 @@ describe("BillingController", () => {
       getTenantPlanSnapshot: jest.fn(),
       createCheckoutSession: jest.fn(),
       updateSubscriptionPlan: jest.fn(),
+      cancelPendingSubscriptionPlanChange: jest.fn(),
       createPortalSession: jest.fn(),
     };
     workspaceAccessService = {
@@ -47,6 +50,9 @@ describe("BillingController", () => {
     controller = new BillingController(
       billingService as unknown as BillingService,
       workspaceAccessService as unknown as WorkspaceAccessService,
+      {
+        get: jest.fn().mockReturnValue("price_test"),
+      } as unknown as ConfigService,
     );
   });
 
@@ -86,6 +92,8 @@ describe("BillingController", () => {
       lastWebhookAt: null,
       source: "trial",
       subscriptionId: null,
+      isFreePlan: false,
+      pendingPlanChange: null,
     });
 
     await controller.getPlan("tenant-b", buildRequest());
@@ -210,6 +218,7 @@ describe("BillingController", () => {
       source: "stripe",
       subscriptionId: "db-sub-1",
       isFreePlan: false,
+      pendingPlanChange: null,
     });
 
     await controller.updateSubscriptionPlan(
@@ -222,5 +231,39 @@ describe("BillingController", () => {
       "tenant-a",
       "boutique_growth",
     );
+  });
+
+  it("uses the resolved tenant scope when canceling a pending plan change", async () => {
+    workspaceAccessService.ensureTenantAccess.mockResolvedValue("tenant-a");
+    billingService.cancelPendingSubscriptionPlanChange.mockResolvedValue({
+      planKey: "portfolio",
+      planName: "Portfolio",
+      description: "Portfolio plan",
+      status: "active",
+      renewsAt: null,
+      currentPeriodStart: null,
+      gracePeriodEndsAt: null,
+      limits: {},
+      usage: {},
+      provider: "stripe",
+      providerCustomerId: "cus_test_123",
+      providerSubscriptionId: "sub_test_123",
+      cancelAtPeriodEnd: false,
+      actions: {},
+      lastWebhookAt: null,
+      source: "stripe",
+      subscriptionId: "db-sub-1",
+      isFreePlan: false,
+      pendingPlanChange: null,
+    });
+
+    await controller.cancelPendingSubscriptionPlanChange(
+      "tenant-b",
+      buildRequest(),
+    );
+
+    expect(
+      billingService.cancelPendingSubscriptionPlanChange,
+    ).toHaveBeenCalledWith("tenant-a");
   });
 });

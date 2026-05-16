@@ -96,6 +96,10 @@ function buildSubscription(overrides: Partial<Record<string, unknown>> = {}) {
     currentPeriodStart: new Date("2026-05-01T00:00:00.000Z"),
     currentPeriodEnd: new Date("2026-06-01T00:00:00.000Z"),
     cancelAtPeriodEnd: false,
+    pendingPlanKey: null,
+    pendingPlanEffectiveAt: null,
+    pendingPlanDirection: null,
+    providerScheduleId: null,
     limitsSnapshot: null,
     gracePeriodEndsAt: null,
     lastWebhookEventId: null,
@@ -489,10 +493,168 @@ describe("BillingService", () => {
     expect(update).toHaveBeenCalledWith("sub_live_123", {
       cancel_at_period_end: false,
       items: [{ id: "si_123", price: "price_boutique", quantity: 1 }],
-      metadata: { tenantId: "tenant-1", planKey: "boutique_growth" },
+      metadata: {
+        tenantId: "tenant-1",
+        planKey: "boutique_growth",
+        pendingPlanKey: "",
+        pendingPlanEffectiveAt: "",
+        pendingPlanDirection: "",
+      },
+      payment_behavior: "pending_if_incomplete",
       proration_behavior: "always_invoice",
     });
     expect(snapshot.planKey).toBe("boutique_growth");
+  });
+
+  it("schedules downgrades at period end without immediate invoicing", async () => {
+    const currentSnapshot = {
+      tenantId: "tenant-1",
+      planKey: "portfolio",
+      planName: "Portfolio",
+      description: "Portfolio plan",
+      provider: "stripe",
+      status: "active",
+      renewsAt: new Date("2026-06-01T00:00:00.000Z"),
+      currentPeriodStart: new Date("2026-05-01T00:00:00.000Z"),
+      gracePeriodEndsAt: null,
+      limits: {},
+      usage: {},
+      source: "stripe",
+      providerCustomerId: "cus_123",
+      providerSubscriptionId: "sub_live_123",
+      cancelAtPeriodEnd: false,
+      actions: {},
+      lastWebhookAt: null,
+      subscriptionId: "db-sub-1",
+      isFreePlan: false,
+      pendingPlanChange: null,
+    };
+    const scheduledSnapshot = {
+      ...currentSnapshot,
+      pendingPlanChange: {
+        planKey: "boutique_growth",
+        planName: "Boutique Growth",
+        direction: "downgrade",
+        effectiveAt: new Date("2026-06-01T00:00:00.000Z"),
+        providerScheduleId: "sub_sched_123",
+      },
+    };
+    const retrieve = jest.fn().mockResolvedValue({
+      id: "sub_live_123",
+      metadata: { tenantId: "tenant-1", planKey: "portfolio" },
+      items: {
+        data: [{ id: "si_123", quantity: 1, price: { id: "price_portfolio" } }],
+      },
+    });
+    const createSchedule = jest.fn().mockResolvedValue({ id: "sub_sched_123" });
+    const updateSchedule = jest.fn().mockResolvedValue({ id: "sub_sched_123" });
+
+    jest
+      .spyOn(service, "getTenantPlanSnapshot")
+      .mockResolvedValueOnce(currentSnapshot as never)
+      .mockResolvedValueOnce(scheduledSnapshot as never);
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        subscriptions: { retrieve },
+        subscriptionSchedules: {
+          create: createSchedule,
+          update: updateSchedule,
+        },
+      });
+
+    const snapshot = await service.updateSubscriptionPlan(
+      "tenant-1",
+      "boutique_growth",
+    );
+
+    expect(createSchedule).toHaveBeenCalledWith({
+      from_subscription: "sub_live_123",
+    });
+    expect(updateSchedule).toHaveBeenCalledWith(
+      "sub_sched_123",
+      expect.objectContaining({
+        end_behavior: "release",
+        proration_behavior: "none",
+        phases: expect.arrayContaining([
+          expect.objectContaining({
+            items: [{ price: "price_portfolio", quantity: 1 }],
+            proration_behavior: "none",
+          }),
+          expect.objectContaining({
+            items: [{ price: "price_boutique", quantity: 1 }],
+            proration_behavior: "none",
+          }),
+        ]),
+      }),
+    );
+    expect(prisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "db-sub-1" },
+        data: expect.objectContaining({
+          pendingPlanKey: "boutique_growth",
+          pendingPlanDirection: "downgrade",
+          providerScheduleId: "sub_sched_123",
+        }),
+      }),
+    );
+    expect(snapshot.pendingPlanChange?.planKey).toBe("boutique_growth");
+  });
+
+  it("cancels a scheduled downgrade by releasing the Stripe schedule", async () => {
+    const currentSnapshot = {
+      tenantId: "tenant-1",
+      planKey: "portfolio",
+      planName: "Portfolio",
+      description: "Portfolio plan",
+      provider: "stripe",
+      status: "active",
+      renewsAt: new Date("2026-06-01T00:00:00.000Z"),
+      currentPeriodStart: new Date("2026-05-01T00:00:00.000Z"),
+      gracePeriodEndsAt: null,
+      limits: {},
+      usage: {},
+      source: "stripe",
+      providerCustomerId: "cus_123",
+      providerSubscriptionId: "sub_live_123",
+      cancelAtPeriodEnd: false,
+      actions: {},
+      lastWebhookAt: null,
+      subscriptionId: "db-sub-1",
+      isFreePlan: false,
+      pendingPlanChange: {
+        planKey: "boutique_growth",
+        planName: "Boutique Growth",
+        direction: "downgrade",
+        effectiveAt: new Date("2026-06-01T00:00:00.000Z"),
+        providerScheduleId: "sub_sched_123",
+      },
+    };
+    const releaseSchedule = jest
+      .fn()
+      .mockResolvedValue({ id: "sub_sched_123" });
+
+    jest
+      .spyOn(service, "getTenantPlanSnapshot")
+      .mockResolvedValueOnce(currentSnapshot as never)
+      .mockResolvedValueOnce({
+        ...currentSnapshot,
+        pendingPlanChange: null,
+      } as never);
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        subscriptionSchedules: { release: releaseSchedule },
+      });
+
+    const snapshot =
+      await service.cancelPendingSubscriptionPlanChange("tenant-1");
+
+    expect(releaseSchedule).toHaveBeenCalledWith("sub_sched_123");
+    expect(prisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "db-sub-1" },
+      }),
+    );
+    expect(snapshot.pendingPlanChange).toBeNull();
   });
 
   // ── Launch checklist: "billing webhooks are reliable and idempotent" ──────────

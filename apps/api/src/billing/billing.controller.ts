@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Request } from "express";
 import { TenantMembershipRole } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -29,6 +30,7 @@ export class BillingController {
   constructor(
     private readonly billingService: BillingService,
     private readonly workspaceAccessService: WorkspaceAccessService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get("plan")
@@ -56,6 +58,10 @@ export class BillingController {
       name: plan.name,
       description: plan.description,
       isFree: plan.isFree,
+      checkoutEnabled:
+        !plan.isFree && plan.stripePriceIdEnvVar
+          ? Boolean(this.configService.get<string>(plan.stripePriceIdEnvVar))
+          : false,
       limits: plan.limits,
     }));
   }
@@ -129,6 +135,30 @@ export class BillingController {
     return this.serializeSnapshot(snapshot);
   }
 
+  @Post("subscription-plan/cancel-pending")
+  async cancelPendingSubscriptionPlanChange(
+    @Param("tenantId") tenantId: string,
+    @Req() req: Request,
+  ) {
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+
+    const snapshot =
+      await this.billingService.cancelPendingSubscriptionPlanChange(
+        resolvedTenantId,
+      );
+
+    return this.serializeSnapshot(snapshot);
+  }
+
   @Post("portal-session")
   async createPortalSession(
     @Param("tenantId") tenantId: string,
@@ -173,6 +203,15 @@ export class BillingController {
       source: snapshot.source,
       subscriptionId: snapshot.subscriptionId,
       isFreePlan: snapshot.isFreePlan,
+      pendingPlanChange: snapshot.pendingPlanChange
+        ? {
+            planKey: snapshot.pendingPlanChange.planKey,
+            planName: snapshot.pendingPlanChange.planName,
+            direction: snapshot.pendingPlanChange.direction,
+            effectiveAt: snapshot.pendingPlanChange.effectiveAt.toISOString(),
+            providerScheduleId: snapshot.pendingPlanChange.providerScheduleId,
+          }
+        : null,
     };
   }
 }

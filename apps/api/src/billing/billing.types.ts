@@ -20,6 +20,8 @@ export type BillingSalesMotion =
   | "workspace_checkout"
   | "contact_sales";
 
+export type BillingPlanChangeDirection = "upgrade" | "downgrade";
+
 export interface BillingPlanLimits {
   sites: number;
   locales: number;
@@ -95,6 +97,14 @@ export interface BillingPlanDefinition {
   limits: BillingPlanLimits;
 }
 
+export interface BillingPendingPlanChange {
+  planKey: BillingPlanKey;
+  planName: string;
+  direction: BillingPlanChangeDirection;
+  effectiveAt: Date;
+  providerScheduleId: string | null;
+}
+
 export interface TenantBillingSnapshot {
   tenantId: string;
   planKey: BillingPlanKey;
@@ -115,6 +125,7 @@ export interface TenantBillingSnapshot {
   lastWebhookAt: Date | null;
   subscriptionId: string | null;
   isFreePlan: boolean;
+  pendingPlanChange: BillingPendingPlanChange | null;
 }
 
 export interface CreateCheckoutSessionResult {

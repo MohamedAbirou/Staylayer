@@ -14,6 +14,7 @@ export type BillingPlanStatus =
   | "inactive";
 
 export type BillingSupportTier = "docs" | "email" | "priority" | "white_glove";
+export type BillingPlanChangeDirection = "upgrade" | "downgrade";
 
 export interface BillingPlanLimits {
   sites: number;
@@ -42,6 +43,7 @@ export interface BillingUsageTotals {
   pages: number;
   domains: number;
   translationCharactersThisMonth: number;
+  psiAuditsThisMonth: number;
 }
 
 export interface PlanCatalogEntry {
@@ -49,6 +51,7 @@ export interface PlanCatalogEntry {
   name: string;
   description: string;
   isFree: boolean;
+  checkoutEnabled: boolean;
   limits: BillingPlanLimits;
 }
 
@@ -91,6 +94,13 @@ export interface BillingPlanSnapshot {
   source: "stripe" | "default_trial" | "free";
   subscriptionId: string | null;
   isFreePlan: boolean;
+  pendingPlanChange: {
+    planKey: BillingPlanKey;
+    planName: string;
+    direction: BillingPlanChangeDirection;
+    effectiveAt: string;
+    providerScheduleId: string | null;
+  } | null;
 }
 
 export interface BillingCheckoutSession {
@@ -112,6 +122,7 @@ export interface BillingPlanCatalogEntry {
   name: string;
   description: string;
   isFree: boolean;
+  checkoutEnabled: boolean;
   limits: BillingPlanLimits;
 }
 
@@ -155,6 +166,15 @@ export async function updateBillingPlan(
   const { data } = await client.post<BillingPlanSnapshot>(
     `/tenants/${tenantId}/billing/subscription-plan`,
     payload,
+  );
+  return data;
+}
+
+export async function cancelPendingBillingPlanChange(
+  tenantId: string,
+): Promise<BillingPlanSnapshot> {
+  const { data } = await client.post<BillingPlanSnapshot>(
+    `/tenants/${tenantId}/billing/subscription-plan/cancel-pending`,
   );
   return data;
 }
