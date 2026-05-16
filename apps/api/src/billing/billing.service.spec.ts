@@ -491,7 +491,6 @@ describe("BillingService", () => {
     );
 
     expect(update).toHaveBeenCalledWith("sub_live_123", {
-      cancel_at_period_end: false,
       items: [{ id: "si_123", price: "price_boutique", quantity: 1 }],
       metadata: {
         tenantId: "tenant-1",

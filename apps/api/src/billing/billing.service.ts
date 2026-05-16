@@ -397,7 +397,6 @@ export class BillingService {
     const updatedSubscription = await stripe.subscriptions.update(
       snapshot.providerSubscriptionId,
       {
-        cancel_at_period_end: false,
         items: [
           {
             id: subscriptionItem.id,
