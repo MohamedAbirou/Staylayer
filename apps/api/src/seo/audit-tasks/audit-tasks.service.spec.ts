@@ -228,9 +228,11 @@ describe("SeoAuditTasksService", () => {
       send: jest.fn().mockResolvedValue({ messageId: "msg-1" }),
     };
     configMock = {
-      get: jest.fn().mockImplementation((key: string) =>
-        key === "DASHBOARD_APP_URL" ? "https://dashboard.example.com" : null,
-      ),
+      get: jest
+        .fn()
+        .mockImplementation((key: string) =>
+          key === "DASHBOARD_APP_URL" ? "https://dashboard.example.com" : null,
+        ),
     };
     const moduleRef = await Test.createTestingModule({
       providers: [
