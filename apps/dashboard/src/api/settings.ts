@@ -5,6 +5,9 @@ export interface SiteSettings {
   siteName: string;
   supportEmail: string;
   defaultInquiryRoutingEmail: string;
+  inquiryIntegrationProvider: string;
+  inquiryIntegrationConfig: Record<string, unknown>;
+  inquiryIntegrationSecretConfigured: boolean;
   inquiryWebhookUrl: string;
   inquiryWebhookSecretConfigured: boolean;
   logoUrl: string;
@@ -41,6 +44,9 @@ export interface UpdateSettingsPayload {
   siteName?: string;
   supportEmail?: string;
   defaultInquiryRoutingEmail?: string;
+  inquiryIntegrationProvider?: string;
+  inquiryIntegrationConfig?: Record<string, unknown>;
+  inquiryIntegrationSecret?: string;
   inquiryWebhookUrl?: string;
   inquiryWebhookSecret?: string;
   logoUrl?: string;

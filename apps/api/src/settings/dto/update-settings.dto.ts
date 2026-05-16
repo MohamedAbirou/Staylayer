@@ -15,6 +15,7 @@ import {
 } from "class-validator";
 import { Transform } from "class-transformer";
 import { SUPPORTED_LOCALES } from "../../common/supported-locales";
+import { INQUIRY_INTEGRATION_PROVIDERS } from "../../forms/inquiry-integration";
 
 // Coerce empty string → undefined so @IsOptional() skips validation for "clear" values
 const emptyToUndefined = () =>
@@ -45,6 +46,20 @@ export class UpdateSettingsDto {
   @IsEmail()
   @IsOptional()
   defaultInquiryRoutingEmail?: string;
+
+  @IsString()
+  @IsIn(INQUIRY_INTEGRATION_PROVIDERS)
+  @IsOptional()
+  inquiryIntegrationProvider?: string;
+
+  @IsObject()
+  @IsOptional()
+  inquiryIntegrationConfig?: Record<string, unknown>;
+
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  inquiryIntegrationSecret?: string;
 
   @ValidateIf((_, value) => value !== "")
   @IsUrl({ require_protocol: true })

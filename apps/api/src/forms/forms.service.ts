@@ -22,6 +22,10 @@ import {
 import { UpdateFormEmailStudioDto } from "./dto/update-form-email-studio.dto";
 import { UpsertFormDefinitionDto } from "./dto/upsert-form-definition.dto";
 import { FormEmailRendererService } from "./form-email-renderer.service";
+import {
+  normalizeInquiryIntegrationProvider,
+  readIntegrationConfig,
+} from "./inquiry-integration";
 import { SubmissionOperationsService } from "./submission-operations.service";
 
 /** Honeypot score assigned when the trap field is non-empty. */
@@ -328,7 +332,9 @@ export class FormsService {
           isPlatformManaged: field.isPlatformManaged,
           visibilityRules: this.asRecord(field.visibilityRules),
         })),
-        routingRules: definition.routingRules,
+        routingRules: definition.routingRules.map((rule) =>
+          this.toRoutingRuleDto(rule),
+        ),
         activeSchemaVersion: definition.activeSchemaVersion
           ? {
               id: definition.activeSchemaVersion.id,
@@ -346,7 +352,9 @@ export class FormsService {
         })),
         emailTemplates: definition.emailTemplates,
       })),
-      siteRoutingRules,
+      siteRoutingRules: siteRoutingRules.map((rule) =>
+        this.toRoutingRuleDto(rule),
+      ),
     };
   }
 
@@ -448,7 +456,7 @@ export class FormsService {
         defaultName: `${dto.name.trim()} route`,
       });
 
-      return tx.formDefinition.findUniqueOrThrow({
+      const saved = await tx.formDefinition.findUniqueOrThrow({
         where: { id: definition.id },
         include: {
           draftFields: { orderBy: { sortOrder: "asc" } },
@@ -465,6 +473,13 @@ export class FormsService {
           },
         },
       });
+
+      return {
+        ...saved,
+        routingRules: saved.routingRules.map((rule) =>
+          this.toRoutingRuleDto(rule),
+        ),
+      };
     });
   }
 
@@ -476,12 +491,14 @@ export class FormsService {
     await this.ensureStudioDefaults(siteId);
 
     return this.prisma.$transaction(async (tx) => {
-      return this.syncRoutingRules(tx, {
+      const saved = await this.syncRoutingRules(tx, {
         siteId,
         formDefinitionId: null,
         rules: routingRules,
         defaultName: "Site fallback route",
       });
+
+      return saved.map((rule) => this.toRoutingRuleDto(rule));
     });
   }
 
@@ -536,6 +553,8 @@ export class FormsService {
         isActive: rule.isActive,
         saveToInbox: rule.saveToInbox,
         emailRecipients: rule.emailRecipients,
+        integrationProvider: rule.integrationProvider,
+        integrationConfig: rule.integrationConfig,
         webhookUrl: rule.webhookUrl,
         sendConfirmationEmail: rule.sendConfirmationEmail,
         confirmationReplyToFieldKey: rule.confirmationReplyToFieldKey,
@@ -563,7 +582,7 @@ export class FormsService {
         },
       });
 
-      return tx.formDefinition.update({
+      const published = await tx.formDefinition.update({
         where: { id: definition.id },
         data: {
           status: "ACTIVE",
@@ -584,6 +603,13 @@ export class FormsService {
           },
         },
       });
+
+      return {
+        ...published,
+        routingRules: published.routingRules.map((rule) =>
+          this.toRoutingRuleDto(rule),
+        ),
+      };
     });
   }
 
@@ -901,6 +927,9 @@ export class FormsService {
           select: {
             supportEmail: true,
             defaultInquiryRoutingEmail: true,
+            inquiryIntegrationProvider: true,
+            inquiryIntegrationConfig: true,
+            inquiryIntegrationSecret: true,
             inquiryWebhookUrl: true,
             inquiryWebhookSecret: true,
           },
@@ -1049,6 +1078,15 @@ export class FormsService {
           isActive: true,
           saveToInbox: true,
           emailRecipients,
+          integrationProvider: normalizeInquiryIntegrationProvider(
+            site.settings?.inquiryIntegrationProvider,
+            Boolean(site.settings?.inquiryWebhookUrl?.trim()),
+          ),
+          integrationConfig: readIntegrationConfig(
+            site.settings?.inquiryIntegrationConfig,
+          ) as Prisma.InputJsonValue,
+          integrationSecret:
+            site.settings?.inquiryIntegrationSecret?.trim() ?? "",
           webhookUrl: site.settings?.inquiryWebhookUrl?.trim() ?? "",
           webhookSecret: site.settings?.inquiryWebhookSecret?.trim() ?? "",
           sendConfirmationEmail: false,
@@ -1189,6 +1227,7 @@ export class FormsService {
     const retainedRuleIds = new Set<string>();
 
     for (const rule of incomingRules) {
+      const existingRule = rule.id ? existingById.get(rule.id) : null;
       const data = {
         siteId: params.siteId,
         formDefinitionId: params.formDefinitionId,
@@ -1205,8 +1244,22 @@ export class FormsService {
               .filter(Boolean),
           ),
         ),
+        integrationProvider: normalizeInquiryIntegrationProvider(
+          rule.integrationProvider,
+          Boolean(rule.webhookUrl?.trim()),
+        ),
+        integrationConfig: readIntegrationConfig(
+          rule.integrationConfig,
+        ) as Prisma.InputJsonValue,
+        integrationSecret:
+          rule.integrationSecret === undefined
+            ? (existingRule?.integrationSecret ?? "")
+            : rule.integrationSecret.trim(),
         webhookUrl: rule.webhookUrl?.trim() ?? "",
-        webhookSecret: rule.webhookSecret?.trim() ?? "",
+        webhookSecret:
+          rule.webhookSecret === undefined
+            ? (existingRule?.webhookSecret ?? "")
+            : rule.webhookSecret.trim(),
         sendConfirmationEmail: rule.sendConfirmationEmail ?? false,
         confirmationReplyToFieldKey:
           rule.confirmationReplyToFieldKey?.trim() || "email",
@@ -1246,6 +1299,21 @@ export class FormsService {
       },
       orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
     });
+  }
+
+  private toRoutingRuleDto<
+    T extends {
+      webhookSecret: string;
+      integrationSecret?: string | null;
+    },
+  >(rule: T) {
+    return {
+      ...rule,
+      webhookSecret: "",
+      integrationSecret: "",
+      webhookSecretConfigured: Boolean(rule.webhookSecret),
+      integrationSecretConfigured: Boolean(rule.integrationSecret),
+    };
   }
 
   private buildSchemaSnapshot(definition: {

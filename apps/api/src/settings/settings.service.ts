@@ -9,6 +9,7 @@ import {
   DeploymentStatus,
   DomainStatus,
   FormEmailTemplateType,
+  Prisma,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateSettingsDto } from "./dto/update-settings.dto";
@@ -19,6 +20,11 @@ import {
   getPlatformRootDomainIssue,
   isUsablePlatformRootDomain,
 } from "../public-runtime/platform-root-domain";
+import {
+  isIntegrationProviderConfigured,
+  normalizeInquiryIntegrationProvider,
+  requiresIntegrationSecret,
+} from "../forms/inquiry-integration";
 
 type ReadinessSeverity = "ready" | "warning" | "blocking";
 
@@ -84,6 +90,10 @@ export class SettingsService {
       seoOgImage: settings.seoOgImage,
       seoIndexingEnabled: settings.seoIndexingEnabled,
       seoLocaleDefaults: settings.seoLocaleDefaults,
+      inquiryIntegrationProvider: settings.inquiryIntegrationProvider,
+      inquiryIntegrationConfig: settings.inquiryIntegrationConfig,
+      inquiryIntegrationSecretConfigured:
+        settings.inquiryIntegrationSecretConfigured,
       googleSiteVerify: settings.googleSiteVerify,
       bingSiteVerify: settings.bingSiteVerify,
       yandexSiteVerify: settings.yandexSiteVerify,
@@ -141,6 +151,14 @@ export class SettingsService {
       );
     }
 
+    const settingsData = {
+      ...dto,
+      inquiryIntegrationConfig:
+        dto.inquiryIntegrationConfig === undefined
+          ? undefined
+          : (dto.inquiryIntegrationConfig as Prisma.InputJsonValue),
+    };
+
     return this.prisma
       .$transaction(async (tx) => {
         if (dto.activeLocales || dto.defaultLocale) {
@@ -157,13 +175,13 @@ export class SettingsService {
           where: { siteId },
           create: {
             siteId,
-            ...dto,
+            ...settingsData,
             activeLocales: dto.activeLocales ? nextActiveLocales : undefined,
             defaultLocale: dto.defaultLocale ?? undefined,
             updatedBy,
           },
           update: {
-            ...dto,
+            ...settingsData,
             activeLocales: dto.activeLocales ? nextActiveLocales : undefined,
             defaultLocale: dto.defaultLocale ?? undefined,
             updatedBy,
@@ -234,6 +252,9 @@ export class SettingsService {
             id: true,
             isActive: true,
             emailRecipients: true,
+            integrationProvider: true,
+            integrationConfig: true,
+            integrationSecret: true,
             webhookUrl: true,
             webhookSecret: true,
           },
@@ -286,13 +307,28 @@ export class SettingsService {
     const hasEmailRoute = activeRoutingRules.some(
       (rule) => rule.emailRecipients.length > 0,
     );
-    const hasWebhookRoute = activeRoutingRules.some((rule) =>
-      Boolean(rule.webhookUrl.trim()),
+    const integrationRoutes = activeRoutingRules.map((rule) => ({
+      provider: normalizeInquiryIntegrationProvider(
+        rule.integrationProvider,
+        Boolean(rule.webhookUrl.trim()),
+      ),
+      destination: rule.webhookUrl.trim(),
+      secret: (rule.integrationSecret || rule.webhookSecret).trim(),
+    }));
+    const activeNonEmailIntegrations = integrationRoutes.filter(
+      (route) => route.provider !== "email",
+    );
+    const hasIntegrationRoute = activeNonEmailIntegrations.length > 0;
+    const incompleteNativeRoutes = activeNonEmailIntegrations.filter(
+      (route) => !isIntegrationProviderConfigured(route),
+    );
+    const unsignedEndpointRoutes = activeNonEmailIntegrations.filter(
+      (route) =>
+        !requiresIntegrationSecret(route.provider) &&
+        Boolean(route.destination) &&
+        !route.secret,
     );
     const smtpConfigured = this.isSmtpConfigured();
-    const webhookSecretConfigured = activeRoutingRules
-      .filter((rule) => Boolean(rule.webhookUrl.trim()))
-      .every((rule) => Boolean(rule.webhookSecret.trim()));
     const hasPublishedForms = site.formDefinitions.some((definition) =>
       Boolean(definition.activeSchemaVersionId),
     );
@@ -421,11 +457,11 @@ export class SettingsService {
       this.makeCheck(
         "form_routing",
         "Inquiry routing",
-        hasEmailRoute || hasWebhookRoute ? "ready" : "blocking",
-        hasEmailRoute || hasWebhookRoute
-          ? `${this.describeRouting(hasEmailRoute, hasWebhookRoute)} ${activeRoutingRules.length} active routing rule${activeRoutingRules.length === 1 ? " is" : "s are"} configured.`
+        hasEmailRoute || hasIntegrationRoute ? "ready" : "blocking",
+        hasEmailRoute || hasIntegrationRoute
+          ? `${this.describeRouting(hasEmailRoute, hasIntegrationRoute)} ${activeRoutingRules.length} active routing rule${activeRoutingRules.length === 1 ? " is" : "s are"} configured.`
           : "No email recipient or webhook destination is configured for inquiry delivery.",
-        hasEmailRoute || hasWebhookRoute
+        hasEmailRoute || hasIntegrationRoute
           ? null
           : "Configure at least one inquiry destination before accepting submissions.",
       ),
@@ -465,16 +501,28 @@ export class SettingsService {
     checks.push(
       this.makeCheck(
         "webhook_delivery",
-        "Webhook delivery",
-        !hasWebhookRoute || webhookSecretConfigured ? "ready" : "warning",
-        !hasWebhookRoute
-          ? "Webhook forwarding is not configured."
-          : webhookSecretConfigured
-            ? "Webhook forwarding is configured with signing enabled."
-            : "Webhook forwarding is configured, but at least one active route is missing a signing secret.",
-        !hasWebhookRoute || webhookSecretConfigured
+        "Native integration delivery",
+        !hasIntegrationRoute
+          ? "ready"
+          : incompleteNativeRoutes.length > 0
+            ? "blocking"
+            : unsignedEndpointRoutes.length > 0
+              ? "warning"
+              : "ready",
+        !hasIntegrationRoute
+          ? "External inquiry integrations are not configured."
+          : incompleteNativeRoutes.length > 0
+            ? `${incompleteNativeRoutes.length} active native integration route${incompleteNativeRoutes.length === 1 ? " is" : "s are"} missing a required endpoint, access token, or API key.`
+            : unsignedEndpointRoutes.length > 0
+              ? "Integration forwarding is configured, but at least one webhook-style route is unsigned."
+              : "Native integration forwarding is configured with required credentials.",
+        !hasIntegrationRoute ||
+          (incompleteNativeRoutes.length === 0 &&
+            unsignedEndpointRoutes.length === 0)
           ? null
-          : "Add a webhook signing secret to every active webhook route before sending production traffic.",
+          : incompleteNativeRoutes.length > 0
+            ? "Complete the native integration endpoint and credential fields before sending production traffic."
+            : "Add a signing secret to every webhook-style route before sending production traffic.",
       ),
     );
 
@@ -504,6 +552,9 @@ export class SettingsService {
     defaultInquiryRoutingEmail: string;
     inquiryWebhookUrl: string;
     inquiryWebhookSecret: string;
+    inquiryIntegrationProvider: string;
+    inquiryIntegrationConfig: unknown;
+    inquiryIntegrationSecret: string;
     logoUrl: string;
     faviconUrl: string;
     seoTitleTemplate: string;
@@ -535,6 +586,11 @@ export class SettingsService {
       siteName: settings.siteName,
       supportEmail: settings.supportEmail,
       defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+      inquiryIntegrationProvider: settings.inquiryIntegrationProvider,
+      inquiryIntegrationConfig: settings.inquiryIntegrationConfig,
+      inquiryIntegrationSecretConfigured: Boolean(
+        settings.inquiryIntegrationSecret,
+      ),
       inquiryWebhookUrl: settings.inquiryWebhookUrl,
       inquiryWebhookSecretConfigured: Boolean(settings.inquiryWebhookSecret),
       logoUrl: settings.logoUrl,
@@ -685,16 +741,19 @@ export class SettingsService {
     return "Finish domain setup and verify it again before launch.";
   }
 
-  private describeRouting(hasEmailRoute: boolean, hasWebhookRoute: boolean) {
-    if (hasEmailRoute && hasWebhookRoute) {
-      return "Inquiry routing is configured for both email and webhook delivery.";
+  private describeRouting(
+    hasEmailRoute: boolean,
+    hasIntegrationRoute: boolean,
+  ) {
+    if (hasEmailRoute && hasIntegrationRoute) {
+      return "Inquiry routing is configured for both email and native integration delivery.";
     }
 
     if (hasEmailRoute) {
       return "Inquiry routing is configured for email delivery.";
     }
 
-    return "Inquiry routing is configured for webhook delivery.";
+    return "Inquiry routing is configured for native integration delivery.";
   }
 
   private getOverallSeverity(checks: ReadinessCheck[]): ReadinessSeverity {

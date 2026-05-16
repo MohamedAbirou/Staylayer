@@ -292,6 +292,7 @@ export class PublicRuntimeService {
       puckData: page.puckData,
       logoUrl: this.toNullableString(site.settings?.logoUrl),
       sameAs: [
+        this.normalizeTwitterProfileUrl(site.settings?.twitterHandle),
         this.toNullableString(site.settings?.facebookUrl),
         this.toNullableString(site.settings?.linkedinUrl),
         this.toNullableString(site.settings?.instagramUrl),
@@ -1136,6 +1137,14 @@ export class PublicRuntimeService {
     const stripped = normalized.replace(/^@+/, "");
     if (!stripped) return null;
     return `@${stripped}`;
+  }
+
+  private normalizeTwitterProfileUrl(
+    value: string | null | undefined,
+  ): string | null {
+    const normalized = this.normalizeTwitterHandle(value);
+    if (!normalized) return null;
+    return `https://x.com/${normalized.replace(/^@/, "")}`;
   }
 
   private parseKeywords(value: string | null | undefined): string[] {

@@ -28,6 +28,9 @@ type SettingsSnapshotEntry = {
   region: string;
   primaryCtaLabel: string;
   defaultInquiryRoutingEmail: string;
+  inquiryIntegrationProvider: string;
+  inquiryIntegrationConfig: Prisma.JsonValue;
+  inquiryIntegrationSecret: string;
   inquiryWebhookUrl: string;
   inquiryWebhookSecret: string;
   logoUrl: string;
@@ -142,6 +145,9 @@ export class SitePublishedRevisionsService {
             region: settings.region,
             primaryCtaLabel: settings.primaryCtaLabel,
             defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+            inquiryIntegrationProvider: settings.inquiryIntegrationProvider,
+            inquiryIntegrationConfig: settings.inquiryIntegrationConfig,
+            inquiryIntegrationSecret: settings.inquiryIntegrationSecret,
             inquiryWebhookUrl: settings.inquiryWebhookUrl,
             inquiryWebhookSecret: settings.inquiryWebhookSecret,
             logoUrl: settings.logoUrl,
@@ -326,6 +332,10 @@ export class SitePublishedRevisionsService {
               region: settings.region,
               primaryCtaLabel: settings.primaryCtaLabel,
               defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+              inquiryIntegrationProvider: settings.inquiryIntegrationProvider,
+              inquiryIntegrationConfig:
+                settings.inquiryIntegrationConfig as Prisma.InputJsonValue,
+              inquiryIntegrationSecret: settings.inquiryIntegrationSecret,
               inquiryWebhookUrl: settings.inquiryWebhookUrl,
               inquiryWebhookSecret: settings.inquiryWebhookSecret,
               logoUrl: settings.logoUrl,
@@ -364,6 +374,10 @@ export class SitePublishedRevisionsService {
               region: settings.region,
               primaryCtaLabel: settings.primaryCtaLabel,
               defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
+              inquiryIntegrationProvider: settings.inquiryIntegrationProvider,
+              inquiryIntegrationConfig:
+                settings.inquiryIntegrationConfig as Prisma.InputJsonValue,
+              inquiryIntegrationSecret: settings.inquiryIntegrationSecret,
               inquiryWebhookUrl: settings.inquiryWebhookUrl,
               inquiryWebhookSecret: settings.inquiryWebhookSecret,
               logoUrl: settings.logoUrl,
@@ -512,6 +526,13 @@ export class SitePublishedRevisionsService {
       region: asString(obj.region),
       primaryCtaLabel: asString(obj.primaryCtaLabel, "Send inquiry"),
       defaultInquiryRoutingEmail: asString(obj.defaultInquiryRoutingEmail),
+      inquiryIntegrationProvider: asString(
+        obj.inquiryIntegrationProvider,
+        asString(obj.inquiryWebhookUrl) ? "custom_webhook" : "email",
+      ),
+      inquiryIntegrationConfig: (obj.inquiryIntegrationConfig ??
+        {}) as Prisma.JsonValue,
+      inquiryIntegrationSecret: asString(obj.inquiryIntegrationSecret),
       inquiryWebhookUrl: asString(obj.inquiryWebhookUrl),
       inquiryWebhookSecret: asString(obj.inquiryWebhookSecret),
       logoUrl: asString(obj.logoUrl),

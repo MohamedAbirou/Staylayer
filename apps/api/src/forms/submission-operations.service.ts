@@ -11,11 +11,17 @@ import {
   OperationalAlertType,
   Prisma,
 } from "@prisma/client";
-import { createHmac } from "node:crypto";
 import { type Transporter } from "nodemailer";
 import { buildSmtpTransport } from "../mail/smtp-transport";
 import { PrismaService } from "../prisma/prisma.service";
 import { FormEmailRendererService } from "./form-email-renderer.service";
+import {
+  buildInquiryEnvelope,
+  deliverInquiryIntegration,
+  InquiryIntegrationDeliveryError,
+  normalizeInquiryIntegrationProvider,
+  readIntegrationConfig,
+} from "./inquiry-integration";
 
 const DELIVERY_FAILURE_FINGERPRINT = "delivery-failed";
 const ROUTING_MISSING_FINGERPRINT = "routing-missing";
@@ -62,6 +68,9 @@ type QueuedDelivery = Prisma.FormDeliveryGetPayload<{
               select: {
                 supportEmail: true;
                 defaultInquiryRoutingEmail: true;
+                inquiryIntegrationProvider: true;
+                inquiryIntegrationConfig: true;
+                inquiryIntegrationSecret: true;
                 inquiryWebhookUrl: true;
                 inquiryWebhookSecret: true;
               };
@@ -151,6 +160,9 @@ export class SubmissionOperationsService
               select: {
                 supportEmail: true,
                 defaultInquiryRoutingEmail: true,
+                inquiryIntegrationProvider: true,
+                inquiryIntegrationConfig: true,
+                inquiryIntegrationSecret: true,
                 inquiryWebhookUrl: true,
                 inquiryWebhookSecret: true,
               },
@@ -211,6 +223,7 @@ export class SubmissionOperationsService
         purpose: target.purpose,
         channel: target.channel,
         destination: target.destination,
+        metadata: target.metadata as Prisma.InputJsonValue | undefined,
         nextAttemptAt: new Date(),
       }));
 
@@ -270,6 +283,9 @@ export class SubmissionOperationsService
                     select: {
                       supportEmail: true,
                       defaultInquiryRoutingEmail: true,
+                      inquiryIntegrationProvider: true,
+                      inquiryIntegrationConfig: true,
+                      inquiryIntegrationSecret: true,
                       inquiryWebhookUrl: true,
                       inquiryWebhookSecret: true,
                     },
@@ -438,7 +454,11 @@ export class SubmissionOperationsService
     payload: Prisma.JsonValue;
     routingRule: {
       emailRecipients: string[];
+      integrationProvider: string;
+      integrationConfig: Prisma.JsonValue;
+      integrationSecret: string;
       webhookUrl: string;
+      webhookSecret: string;
       sendConfirmationEmail: boolean;
       confirmationReplyToFieldKey: string;
     } | null;
@@ -446,7 +466,11 @@ export class SubmissionOperationsService
       settings: {
         supportEmail: string;
         defaultInquiryRoutingEmail: string;
+        inquiryIntegrationProvider: string;
+        inquiryIntegrationConfig: Prisma.JsonValue;
+        inquiryIntegrationSecret: string;
         inquiryWebhookUrl: string;
+        inquiryWebhookSecret: string;
       } | null;
     };
   }) {
@@ -458,14 +482,32 @@ export class SubmissionOperationsService
           submission.site.settings?.defaultInquiryRoutingEmail?.trim() || "",
           submission.site.settings?.supportEmail?.trim() || "",
         ].filter(Boolean);
+    const integrationProvider = normalizeInquiryIntegrationProvider(
+      routingRule?.integrationProvider ??
+        submission.site.settings?.inquiryIntegrationProvider,
+      Boolean(
+        routingRule?.webhookUrl?.trim() ||
+        submission.site.settings?.inquiryWebhookUrl?.trim(),
+      ),
+    );
+    const integrationConfig = readIntegrationConfig(
+      routingRule?.integrationConfig ??
+        submission.site.settings?.inquiryIntegrationConfig,
+    );
     const webhookDestination =
       routingRule?.webhookUrl?.trim() ||
       submission.site.settings?.inquiryWebhookUrl?.trim() ||
-      null;
+      "";
+    const integrationDestination = this.resolveIntegrationDestination(
+      integrationProvider,
+      webhookDestination,
+      integrationConfig,
+    );
     const targets: Array<{
       purpose: FormDeliveryPurpose;
       channel: FormDeliveryChannel;
       destination: string;
+      metadata?: Record<string, unknown>;
     }> = [];
 
     for (const destination of Array.from(new Set(emailRecipients))) {
@@ -476,11 +518,15 @@ export class SubmissionOperationsService
       });
     }
 
-    if (webhookDestination) {
+    if (integrationProvider !== "email") {
       targets.push({
         purpose: FormDeliveryPurpose.WEBHOOK_FORWARD,
         channel: FormDeliveryChannel.WEBHOOK,
-        destination: webhookDestination,
+        destination: integrationDestination,
+        metadata: {
+          integrationProvider,
+          integrationConfig,
+        },
       });
     }
 
@@ -576,8 +622,14 @@ export class SubmissionOperationsService
 
   private async sendWebhook(delivery: QueuedDelivery) {
     const payload = this.payloadAsRecord(delivery.submission.payload);
-    const body = JSON.stringify({
-      event: "form_submission.created",
+    const metadata = readIntegrationConfig(delivery.metadata);
+    const provider = normalizeInquiryIntegrationProvider(
+      metadata.integrationProvider,
+      Boolean(delivery.destination?.trim()),
+    );
+    const config = readIntegrationConfig(metadata.integrationConfig);
+    const envelope = buildInquiryEnvelope({
+      provider,
       submission: {
         id: delivery.submission.id,
         siteId: delivery.submission.siteId,
@@ -590,52 +642,65 @@ export class SubmissionOperationsService
         locale: delivery.submission.locale,
         status: delivery.submission.status,
         createdAt: delivery.submission.createdAt.toISOString(),
-        fields: payload,
       },
-      site: {
-        name: delivery.submission.site.name,
-      },
+      fields: payload,
+      siteName: delivery.submission.site.name,
     });
+    const secret = this.resolveIntegrationSecret(delivery, provider);
 
-    const secret =
-      delivery.submission.routingRule?.webhookSecret?.trim() ||
-      delivery.submission.site.settings?.inquiryWebhookSecret?.trim();
-    const headers: Record<string, string> = {
-      "content-type": "application/json",
-      "x-staylayer-event": "form_submission.created",
-    };
-
-    if (secret) {
-      headers["x-staylayer-signature"] = createHmac("sha256", secret)
-        .update(body)
-        .digest("hex");
-    }
-
-    const response = await fetch(delivery.destination, {
-      method: "POST",
-      headers,
-      body,
-      signal: AbortSignal.timeout(
-        this.getNumber("FORM_WEBHOOK_TIMEOUT_MS", DEFAULT_WEBHOOK_TIMEOUT_MS),
+    return deliverInquiryIntegration({
+      provider,
+      destination: delivery.destination,
+      secret,
+      config,
+      envelope,
+      timeoutMs: this.getNumber(
+        "FORM_WEBHOOK_TIMEOUT_MS",
+        DEFAULT_WEBHOOK_TIMEOUT_MS,
       ),
     });
+  }
 
-    if (!response.ok) {
-      const excerpt = (await response.text()).slice(0, 500);
-      throw new DeliveryFailure(
-        `Webhook responded with ${response.status}`,
-        response.status >= 500 || response.status === 429,
-        response.status,
-        excerpt ? { responseBody: excerpt } : undefined,
+  private resolveIntegrationDestination(
+    provider: string,
+    webhookDestination: string,
+    config: Record<string, unknown>,
+  ) {
+    const configuredEndpoint =
+      typeof config.endpointUrl === "string"
+        ? config.endpointUrl.trim()
+        : typeof config.apiBaseUrl === "string"
+          ? config.apiBaseUrl.trim()
+          : "";
+
+    if (provider === "hubspot") {
+      return "hubspot";
+    }
+
+    return webhookDestination || configuredEndpoint || provider;
+  }
+
+  private resolveIntegrationSecret(delivery: QueuedDelivery, provider: string) {
+    const routingRule = delivery.submission.routingRule;
+    const settings = delivery.submission.site.settings;
+
+    if (provider === "custom_webhook" || provider === "zapier") {
+      return (
+        routingRule?.webhookSecret?.trim() ||
+        routingRule?.integrationSecret?.trim() ||
+        settings?.inquiryWebhookSecret?.trim() ||
+        settings?.inquiryIntegrationSecret?.trim() ||
+        null
       );
     }
 
-    return {
-      responseCode: response.status,
-      metadata: {
-        responseStatus: response.status,
-      },
-    };
+    return (
+      routingRule?.integrationSecret?.trim() ||
+      routingRule?.webhookSecret?.trim() ||
+      settings?.inquiryIntegrationSecret?.trim() ||
+      settings?.inquiryWebhookSecret?.trim() ||
+      null
+    );
   }
 
   private async refreshDeliveryFailureAlert(siteId: string) {
@@ -779,6 +844,15 @@ export class SubmissionOperationsService
   private toDeliveryFailure(error: unknown): DeliveryFailure {
     if (error instanceof DeliveryFailure) {
       return error;
+    }
+
+    if (error instanceof InquiryIntegrationDeliveryError) {
+      return new DeliveryFailure(
+        error.message,
+        error.retryable,
+        error.responseCode,
+        error.metadata,
+      );
     }
 
     if (error instanceof Error) {

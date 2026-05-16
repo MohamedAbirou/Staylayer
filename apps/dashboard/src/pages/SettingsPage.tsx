@@ -117,7 +117,17 @@ function normalizeSeoLocaleDefaults(
   }, {});
 }
 
-type InquiryDeliveryPresetId = "none" | "automation" | "crm" | "pms" | "custom";
+type InquiryDeliveryPresetId =
+  | "email"
+  | "custom_webhook"
+  | "zapier"
+  | "make"
+  | "n8n"
+  | "hubspot"
+  | "salesforce"
+  | "pipedrive"
+  | "zoho"
+  | "pms_api";
 
 type InquiryDeliveryPreset = {
   id: InquiryDeliveryPresetId;
@@ -133,7 +143,7 @@ type InquiryDeliveryPreset = {
 
 const INQUIRY_DELIVERY_PRESETS: InquiryDeliveryPreset[] = [
   {
-    id: "none",
+    id: "email",
     label: "Email only",
     description:
       "Keep delivery simple and send inquiries only to the routing inbox.",
@@ -145,48 +155,104 @@ const INQUIRY_DELIVERY_PRESETS: InquiryDeliveryPreset[] = [
     secretHelp: "",
   },
   {
-    id: "automation",
-    label: "Automation workflow",
+    id: "hubspot",
+    label: "HubSpot",
+    description: "Create or update contacts and open inquiry tickets.",
+    endpointLabel: "HubSpot API base",
+    endpointPlaceholder: "https://api.hubapi.com",
+    endpointHelp:
+      "Optional. StayLayer uses HubSpot's public CRM API by default.",
+    secretLabel: "Private app access token",
+    secretPlaceholder: "pat-na1-...",
+    secretHelp:
+      "Required. Use a HubSpot private app token with CRM object scopes.",
+  },
+  {
+    id: "salesforce",
+    label: "Salesforce",
+    description: "Create native Salesforce Leads from inquiries.",
+    endpointLabel: "Instance URL",
+    endpointPlaceholder: "https://your-domain.my.salesforce.com",
+    endpointHelp:
+      "Required. Use the Salesforce instance URL for REST API calls.",
+    secretLabel: "OAuth access token",
+    secretPlaceholder: "00D...",
+    secretHelp:
+      "Required. Token must allow Lead creation through the REST API.",
+  },
+  {
+    id: "pipedrive",
+    label: "Pipedrive",
+    description: "Create people and leads in Pipedrive.",
+    endpointLabel: "Company domain",
+    endpointPlaceholder: "your-company",
+    endpointHelp: "Enter the Pipedrive company domain, without .pipedrive.com.",
+    secretLabel: "API token",
+    secretPlaceholder: "Pipedrive API token",
+    secretHelp: "Required. Use a token allowed to create people and leads.",
+  },
+  {
+    id: "zoho",
+    label: "Zoho CRM",
+    description: "Create native Zoho CRM Leads from inquiries.",
+    endpointLabel: "Zoho API domain",
+    endpointPlaceholder: "https://www.zohoapis.com",
+    endpointHelp:
+      "Required for non-US data centers; otherwise the US API is used.",
+    secretLabel: "OAuth access token",
+    secretPlaceholder: "1000....",
+    secretHelp: "Required. Token must allow Leads create access in Zoho CRM.",
+  },
+  {
+    id: "zapier",
+    label: "Zapier",
     description:
-      "Send inquiries into Zapier, Make, n8n, or another workflow tool.",
-    endpointLabel: "Workflow endpoint",
+      "Send a Zapier catch-hook payload shaped for workflow triggers.",
+    endpointLabel: "Zapier catch hook",
     endpointPlaceholder: "https://hooks.zapier.com/hooks/catch/...",
-    endpointHelp: "Paste the catch-hook URL from your automation platform.",
+    endpointHelp: "Paste the hook URL from your Zap trigger.",
     secretLabel: "Verification token",
     secretPlaceholder: "Optional token or shared secret",
     secretHelp:
-      "Optional. Use this when your workflow expects a token outside the URL.",
+      "Optional. StayLayer signs the payload when a token is provided.",
   },
   {
-    id: "crm",
-    label: "CRM handoff",
-    description:
-      "Forward structured inquiries into HubSpot, Salesforce, or another pipeline.",
-    endpointLabel: "CRM intake endpoint",
-    endpointPlaceholder: "https://crm.example.com/api/inquiries",
-    endpointHelp:
-      "Paste the CRM workflow or middleware endpoint for new inquiries.",
-    secretLabel: "CRM signing secret",
-    secretPlaceholder: "Optional HMAC or shared secret",
-    secretHelp:
-      "Use this when your CRM bridge validates signed inquiry traffic.",
-  },
-  {
-    id: "pms",
-    label: "PMS / reservations",
-    description:
-      "Route inquiries into a PMS, reservations desk workflow, or hospitality ops service.",
-    endpointLabel: "Reservations endpoint",
-    endpointPlaceholder: "https://ops.example.com/pms/inquiries",
-    endpointHelp:
-      "Paste the endpoint that should receive reservation-ready inquiry data.",
-    secretLabel: "Shared signing secret",
+    id: "make",
+    label: "Make",
+    description: "Send a Make custom webhook payload shaped for scenarios.",
+    endpointLabel: "Make webhook URL",
+    endpointPlaceholder: "https://hook.us1.make.com/...",
+    endpointHelp: "Paste the custom webhook URL from your Make scenario.",
+    secretLabel: "Signing secret",
     secretPlaceholder: "Optional shared secret",
-    secretHelp:
-      "Add a secret if the PMS or middleware verifies signed requests.",
+    secretHelp: "Optional. Adds a StayLayer HMAC signature header.",
   },
   {
-    id: "custom",
+    id: "n8n",
+    label: "n8n",
+    description: "Send a structured payload to an n8n production webhook.",
+    endpointLabel: "n8n webhook URL",
+    endpointPlaceholder: "https://n8n.example.com/webhook/...",
+    endpointHelp: "Paste the production webhook URL from n8n.",
+    secretLabel: "Signing secret",
+    secretPlaceholder: "Optional shared secret",
+    secretHelp: "Optional. Adds a StayLayer HMAC signature header.",
+  },
+  {
+    id: "pms_api",
+    label: "PMS / reservations API",
+    description: "Send a reservation-inquiry handoff to a PMS API endpoint.",
+    endpointLabel: "PMS API endpoint",
+    endpointPlaceholder: "https://pms.example.com/api/reservation-inquiries",
+    endpointHelp:
+      "Required. Use the PMS endpoint that accepts reservation inquiries.",
+    secretLabel: "API key or bearer token",
+    secretPlaceholder: "PMS API credential",
+    secretHelp:
+      "Required. StayLayer sends it as a bearer token and signing secret.",
+  },
+  {
+    id: "custom_webhook",
     label: "Custom webhook",
     description:
       "Bring your own endpoint when none of the named presets match your stack.",
@@ -209,54 +275,66 @@ function getInquiryDeliveryPreset(
   );
 }
 
-function inferInquiryDeliveryPresetId(
+function normalizeInquiryDeliveryPresetId(
+  provider: string | undefined,
   webhookUrl: string,
 ): InquiryDeliveryPresetId {
+  const normalized = (provider || "").trim().toLowerCase().replace(/-/g, "_");
+
+  if (INQUIRY_DELIVERY_PRESETS.some((preset) => preset.id === normalized)) {
+    return normalized as InquiryDeliveryPresetId;
+  }
+  if (normalized === "none") return "email";
+  if (normalized === "custom") return "custom_webhook";
+  if (normalized === "automation") return "zapier";
+  if (normalized === "crm") return "hubspot";
+  if (normalized === "pms") return "pms_api";
+
   const trimmedUrl = webhookUrl.trim();
 
   if (!trimmedUrl) {
-    return "none";
+    return "email";
   }
 
   try {
     const hostname = new URL(trimmedUrl).hostname.toLowerCase();
 
-    if (
-      hostname.includes("zapier") ||
-      hostname.includes("make.com") ||
-      hostname.includes("n8n") ||
-      hostname.includes("pipedream") ||
-      hostname.includes("workato")
-    ) {
-      return "automation";
-    }
-
-    if (
-      hostname.includes("hubspot") ||
-      hostname.includes("salesforce") ||
-      hostname.includes("zoho") ||
-      hostname.includes("pipedrive") ||
-      hostname.includes("crm")
-    ) {
-      return "crm";
-    }
-
-    if (
-      hostname.includes("cloudbeds") ||
-      hostname.includes("guesty") ||
-      hostname.includes("mews") ||
-      hostname.includes("apaleo") ||
-      hostname.includes("opera") ||
-      hostname.includes("siteminder") ||
-      hostname.includes("pms")
-    ) {
-      return "pms";
-    }
+    if (hostname.includes("zapier")) return "zapier";
+    if (hostname.includes("make.com")) return "make";
+    if (hostname.includes("n8n")) return "n8n";
+    if (hostname.includes("hubspot")) return "hubspot";
+    if (hostname.includes("salesforce")) return "salesforce";
+    if (hostname.includes("zoho")) return "zoho";
+    if (hostname.includes("pipedrive")) return "pipedrive";
+    if (hostname.includes("pms")) return "pms_api";
   } catch {
-    return "custom";
+    return "custom_webhook";
   }
 
-  return "custom";
+  return "custom_webhook";
+}
+
+function usesInquiryWebhookSecret(provider: InquiryDeliveryPresetId) {
+  return ["custom_webhook", "zapier", "make", "n8n"].includes(provider);
+}
+
+function parseIntegrationConfigText(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return {};
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    throw new Error("Integration config must be valid JSON.");
+  }
+}
+
+function formatIntegrationConfig(value: Record<string, unknown> | undefined) {
+  if (!value || Object.keys(value).length === 0) return "{}";
+  return JSON.stringify(value, null, 2);
 }
 
 // ─── Main Page ─────────────────────────────────────────────
@@ -928,7 +1006,11 @@ function SiteSettingsTab() {
     siteName: "",
     supportEmail: "",
     defaultInquiryRoutingEmail: "",
-    inquiryWebhookPresetId: "none" as InquiryDeliveryPresetId,
+    inquiryWebhookPresetId: "email" as InquiryDeliveryPresetId,
+    inquiryIntegrationConfigText: "{}",
+    inquiryIntegrationSecret: "",
+    inquiryIntegrationSecretConfigured: false,
+    clearInquiryIntegrationSecret: false,
     inquiryWebhookUrl: "",
     inquiryWebhookSecret: "",
     inquiryWebhookSecretConfigured: false,
@@ -964,9 +1046,17 @@ function SiteSettingsTab() {
         siteName: settings.siteName,
         supportEmail: settings.supportEmail,
         defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
-        inquiryWebhookPresetId: inferInquiryDeliveryPresetId(
+        inquiryWebhookPresetId: normalizeInquiryDeliveryPresetId(
+          settings.inquiryIntegrationProvider,
           settings.inquiryWebhookUrl,
         ),
+        inquiryIntegrationConfigText: formatIntegrationConfig(
+          settings.inquiryIntegrationConfig,
+        ),
+        inquiryIntegrationSecret: "",
+        inquiryIntegrationSecretConfigured:
+          settings.inquiryIntegrationSecretConfigured,
+        clearInquiryIntegrationSecret: false,
         inquiryWebhookUrl: settings.inquiryWebhookUrl,
         inquiryWebhookSecret: "",
         inquiryWebhookSecretConfigured: settings.inquiryWebhookSecretConfigured,
@@ -1005,24 +1095,56 @@ function SiteSettingsTab() {
     });
   };
 
-  const buildGeneralPayload = (): UpdateSettingsPayload => ({
-    ...(general.inquiryWebhookPresetId === "none"
-      ? { inquiryWebhookUrl: "", inquiryWebhookSecret: "" }
-      : { inquiryWebhookUrl: general.inquiryWebhookUrl }),
-    siteName: general.siteName,
-    supportEmail: general.supportEmail,
-    defaultInquiryRoutingEmail: general.defaultInquiryRoutingEmail,
-    ...(general.inquiryWebhookPresetId === "none" ||
-    general.clearInquiryWebhookSecret
-      ? { inquiryWebhookSecret: "" }
-      : general.inquiryWebhookSecret.trim()
-        ? { inquiryWebhookSecret: general.inquiryWebhookSecret.trim() }
-        : {}),
-    logoUrl: general.logoUrl,
-    faviconUrl: general.faviconUrl,
-  });
+  const buildGeneralPayload = (): UpdateSettingsPayload => {
+    const isEmailOnly = general.inquiryWebhookPresetId === "email";
+    const usesWebhookCredential = usesInquiryWebhookSecret(
+      general.inquiryWebhookPresetId,
+    );
+
+    return {
+      siteName: general.siteName,
+      supportEmail: general.supportEmail,
+      defaultInquiryRoutingEmail: general.defaultInquiryRoutingEmail,
+      inquiryIntegrationProvider: general.inquiryWebhookPresetId,
+      inquiryIntegrationConfig: parseIntegrationConfigText(
+        general.inquiryIntegrationConfigText,
+      ),
+      inquiryWebhookUrl: isEmailOnly ? "" : general.inquiryWebhookUrl,
+      ...(isEmailOnly ||
+      !usesWebhookCredential ||
+      general.clearInquiryWebhookSecret
+        ? { inquiryWebhookSecret: "" }
+        : general.inquiryWebhookSecret.trim()
+          ? { inquiryWebhookSecret: general.inquiryWebhookSecret.trim() }
+          : {}),
+      ...(isEmailOnly ||
+      usesWebhookCredential ||
+      general.clearInquiryIntegrationSecret
+        ? { inquiryIntegrationSecret: "" }
+        : general.inquiryIntegrationSecret.trim()
+          ? {
+              inquiryIntegrationSecret: general.inquiryIntegrationSecret.trim(),
+            }
+          : {}),
+      logoUrl: general.logoUrl,
+      faviconUrl: general.faviconUrl,
+    };
+  };
 
   if (isLoading) return <LoadingSpinner />;
+
+  const selectedUsesWebhookSecret = usesInquiryWebhookSecret(
+    general.inquiryWebhookPresetId,
+  );
+  const selectedSecretValue = selectedUsesWebhookSecret
+    ? general.inquiryWebhookSecret
+    : general.inquiryIntegrationSecret;
+  const selectedSecretConfigured = selectedUsesWebhookSecret
+    ? general.inquiryWebhookSecretConfigured
+    : general.inquiryIntegrationSecretConfigured;
+  const selectedSecretCleared = selectedUsesWebhookSecret
+    ? general.clearInquiryWebhookSecret
+    : general.clearInquiryIntegrationSecret;
 
   return (
     <div className="space-y-6">
@@ -1033,25 +1155,41 @@ function SiteSettingsTab() {
         description="Basic site identity shown across the CMS and published website"
         dirty={generalDirty}
         saving={updateMutation.isPending}
-        onSave={() =>
-          save(buildGeneralPayload(), () => {
-            setGeneralDirty(false);
-            setGeneral((previous) => ({
-              ...previous,
-              inquiryWebhookSecret: "",
-              clearInquiryWebhookSecret: false,
-            }));
-          })
-        }
+        onSave={() => {
+          try {
+            save(buildGeneralPayload(), () => {
+              setGeneralDirty(false);
+              setGeneral((previous) => ({
+                ...previous,
+                inquiryWebhookSecret: "",
+                inquiryIntegrationSecret: "",
+                clearInquiryWebhookSecret: false,
+                clearInquiryIntegrationSecret: false,
+              }));
+            });
+          } catch (error) {
+            toast.error(
+              error instanceof Error ? error.message : "Invalid settings",
+            );
+          }
+        }}
         onReset={() => {
           if (settings)
             setGeneral({
               siteName: settings.siteName,
               supportEmail: settings.supportEmail,
               defaultInquiryRoutingEmail: settings.defaultInquiryRoutingEmail,
-              inquiryWebhookPresetId: inferInquiryDeliveryPresetId(
+              inquiryWebhookPresetId: normalizeInquiryDeliveryPresetId(
+                settings.inquiryIntegrationProvider,
                 settings.inquiryWebhookUrl,
               ),
+              inquiryIntegrationConfigText: formatIntegrationConfig(
+                settings.inquiryIntegrationConfig,
+              ),
+              inquiryIntegrationSecret: "",
+              inquiryIntegrationSecretConfigured:
+                settings.inquiryIntegrationSecretConfigured,
+              clearInquiryIntegrationSecret: false,
               inquiryWebhookUrl: settings.inquiryWebhookUrl,
               inquiryWebhookSecret: "",
               inquiryWebhookSecretConfigured:
@@ -1129,18 +1267,32 @@ function SiteSettingsTab() {
                   <button
                     key={preset.id}
                     id={
-                      preset.id === "none" ? "inquiryDeliveryPreset" : undefined
+                      preset.id === "email"
+                        ? "inquiryDeliveryPreset"
+                        : undefined
                     }
                     type="button"
                     onClick={() => {
+                      const nextUsesWebhookSecret = usesInquiryWebhookSecret(
+                        preset.id,
+                      );
                       setGeneral((p) => ({
                         ...p,
                         inquiryWebhookPresetId: preset.id,
                         inquiryWebhookUrl:
-                          preset.id === "none" ? "" : p.inquiryWebhookUrl,
+                          preset.id === "email" ? "" : p.inquiryWebhookUrl,
                         inquiryWebhookSecret:
-                          preset.id === "none" ? "" : p.inquiryWebhookSecret,
-                        clearInquiryWebhookSecret: preset.id === "none",
+                          preset.id === "email" || !nextUsesWebhookSecret
+                            ? ""
+                            : p.inquiryWebhookSecret,
+                        inquiryIntegrationSecret:
+                          preset.id === "email" || nextUsesWebhookSecret
+                            ? ""
+                            : p.inquiryIntegrationSecret,
+                        clearInquiryWebhookSecret:
+                          preset.id === "email" || !nextUsesWebhookSecret,
+                        clearInquiryIntegrationSecret:
+                          preset.id === "email" || nextUsesWebhookSecret,
                       }));
                       setGeneralDirty(true);
                     }}
@@ -1160,7 +1312,7 @@ function SiteSettingsTab() {
                 ))}
               </div>
 
-              {general.inquiryWebhookPresetId === "none" ? (
+              {general.inquiryWebhookPresetId === "email" ? (
                 <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
                   Site-level inquiry delivery will stay email-only until you
                   pick a named integration.
@@ -1196,7 +1348,7 @@ function SiteSettingsTab() {
                       </label>
                       <input
                         id="inquiryWebhookUrl"
-                        type="url"
+                        type="text"
                         value={general.inquiryWebhookUrl}
                         onChange={(e) => {
                           setGeneral((p) => ({
@@ -1235,19 +1387,25 @@ function SiteSettingsTab() {
                       <input
                         id="inquiryWebhookSecret"
                         type="password"
-                        value={general.inquiryWebhookSecret}
+                        value={selectedSecretValue}
                         onChange={(e) => {
                           setGeneral((p) => ({
                             ...p,
-                            inquiryWebhookSecret: e.target.value,
-                            clearInquiryWebhookSecret: false,
+                            ...(selectedUsesWebhookSecret
+                              ? {
+                                  inquiryWebhookSecret: e.target.value,
+                                  clearInquiryWebhookSecret: false,
+                                }
+                              : {
+                                  inquiryIntegrationSecret: e.target.value,
+                                  clearInquiryIntegrationSecret: false,
+                                }),
                           }));
                           setGeneralDirty(true);
                         }}
                         className={inputCls}
                         placeholder={
-                          general.inquiryWebhookSecretConfigured &&
-                          !general.clearInquiryWebhookSecret
+                          selectedSecretConfigured && !selectedSecretCleared
                             ? "Stored secret configured"
                             : getInquiryDeliveryPreset(
                                 general.inquiryWebhookPresetId,
@@ -1261,34 +1419,62 @@ function SiteSettingsTab() {
                           ).secretHelp
                         }
                       </p>
-                      {general.inquiryWebhookSecretConfigured &&
-                        !general.clearInquiryWebhookSecret && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setGeneral((p) => ({
-                                ...p,
-                                inquiryWebhookSecret: "",
-                                clearInquiryWebhookSecret: true,
-                              }));
-                              setGeneralDirty(true);
-                            }}
-                            className="mt-2 text-xs font-medium text-amber-700 hover:text-amber-800"
-                          >
-                            Clear stored secret on next save
-                          </button>
-                        )}
+                      {selectedSecretConfigured && !selectedSecretCleared && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGeneral((p) => ({
+                              ...p,
+                              ...(selectedUsesWebhookSecret
+                                ? {
+                                    inquiryWebhookSecret: "",
+                                    clearInquiryWebhookSecret: true,
+                                  }
+                                : {
+                                    inquiryIntegrationSecret: "",
+                                    clearInquiryIntegrationSecret: true,
+                                  }),
+                            }));
+                            setGeneralDirty(true);
+                          }}
+                          className="mt-2 text-xs font-medium text-amber-700 hover:text-amber-800"
+                        >
+                          Clear stored secret on next save
+                        </button>
+                      )}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                        Provider config JSON
+                      </label>
+                      <textarea
+                        value={general.inquiryIntegrationConfigText}
+                        onChange={(event) => {
+                          setGeneral((p) => ({
+                            ...p,
+                            inquiryIntegrationConfigText: event.target.value,
+                          }));
+                          setGeneralDirty(true);
+                        }}
+                        rows={4}
+                        className={`${inputCls} font-mono text-xs`}
+                        placeholder={'{"leadSource":"StayLayer"}'}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Optional provider options such as Salesforce apiVersion,
+                        HubSpot ticketPipeline, or Zoho leadSource.
+                      </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {general.clearInquiryWebhookSecret ||
-              general.inquiryWebhookPresetId === "none" ? (
+              {selectedSecretCleared ||
+              general.inquiryWebhookPresetId === "email" ? (
                 <p className="text-xs text-amber-700">
-                  The stored webhook secret will be removed when you save.
+                  The stored integration secret will be removed when you save.
                 </p>
-              ) : general.inquiryWebhookSecretConfigured ? (
+              ) : selectedSecretConfigured ? (
                 <p className="text-xs text-gray-500">
                   A secret is already stored. Leave this field blank to keep it.
                 </p>

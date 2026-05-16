@@ -49,8 +49,13 @@ export interface FormRoutingRule {
   isActive: boolean;
   saveToInbox: boolean;
   emailRecipients: string[];
+  integrationProvider: string;
+  integrationConfig: Record<string, unknown>;
+  integrationSecret?: string;
+  integrationSecretConfigured?: boolean;
   webhookUrl: string;
   webhookSecret: string;
+  webhookSecretConfigured?: boolean;
   sendConfirmationEmail: boolean;
   confirmationReplyToFieldKey: string;
 }
@@ -156,6 +161,9 @@ export interface SaveFormDefinitionPayload {
     isActive?: boolean;
     saveToInbox?: boolean;
     emailRecipients?: string[];
+    integrationProvider?: string;
+    integrationConfig?: Record<string, unknown>;
+    integrationSecret?: string;
     webhookUrl?: string;
     webhookSecret?: string;
     sendConfirmationEmail?: boolean;

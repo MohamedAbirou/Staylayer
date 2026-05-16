@@ -972,7 +972,7 @@ function PlanSelector({
               <p className="mt-1 text-xs text-gray-500">{p.description}</p>
               {p.checkoutEnabled === false ? (
                 <p className="mt-2 text-xs font-semibold text-amber-700">
-                  Checkout is not configured for this plan yet.
+                  Checkout is not available for this plan.
                 </p>
               ) : null}
               <p className="mt-3 text-xs font-medium text-gray-600">

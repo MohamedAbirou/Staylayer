@@ -67,11 +67,16 @@ type FieldEditor = {
 };
 
 type DeliveryIntegrationPresetId =
-  | "none"
-  | "automation"
-  | "crm"
-  | "pms"
-  | "custom";
+  | "email"
+  | "custom_webhook"
+  | "zapier"
+  | "make"
+  | "n8n"
+  | "hubspot"
+  | "salesforce"
+  | "pipedrive"
+  | "zoho"
+  | "pms_api";
 
 type RoutingRuleEditor = {
   id?: string;
@@ -81,8 +86,12 @@ type RoutingRuleEditor = {
   priority: number;
   emailRecipientsText: string;
   integrationPresetId: DeliveryIntegrationPresetId;
+  integrationConfigText: string;
+  integrationSecret: string;
+  integrationSecretConfigured: boolean;
   webhookUrl: string;
   webhookSecret: string;
+  webhookSecretConfigured: boolean;
   sendConfirmationEmail: boolean;
   confirmationReplyToFieldKey: string;
   saveToInbox: boolean;
@@ -247,7 +256,7 @@ const EMAIL_LAYOUT_PRESETS: EmailLayoutPreset[] = [
 
 const DELIVERY_INTEGRATION_PRESETS: DeliveryIntegrationPreset[] = [
   {
-    id: "none",
+    id: "email",
     label: "Email only",
     description:
       "Keep delivery simple and send inquiries only to the inboxes above.",
@@ -259,48 +268,105 @@ const DELIVERY_INTEGRATION_PRESETS: DeliveryIntegrationPreset[] = [
     secretHelp: "",
   },
   {
-    id: "automation",
-    label: "Automation workflow",
+    id: "hubspot",
+    label: "HubSpot",
+    description: "Create or update a HubSpot contact and open a ticket.",
+    endpointLabel: "HubSpot API base",
+    endpointPlaceholder: "https://api.hubapi.com",
+    endpointHelp:
+      "Optional. StayLayer uses HubSpot's public CRM API by default.",
+    secretLabel: "Private app access token",
+    secretPlaceholder: "pat-na1-...",
+    secretHelp:
+      "Required. Use a HubSpot private app token with CRM object scopes.",
+  },
+  {
+    id: "salesforce",
+    label: "Salesforce",
+    description: "Create a native Salesforce Lead from each inquiry.",
+    endpointLabel: "Instance URL",
+    endpointPlaceholder: "https://your-domain.my.salesforce.com",
+    endpointHelp:
+      "Required. Use the Salesforce instance URL for REST API calls.",
+    secretLabel: "OAuth access token",
+    secretPlaceholder: "00D...",
+    secretHelp:
+      "Required. Token must allow Lead creation through the REST API.",
+  },
+  {
+    id: "pipedrive",
+    label: "Pipedrive",
+    description: "Create a person and lead in Pipedrive.",
+    endpointLabel: "Company domain",
+    endpointPlaceholder: "your-company",
+    endpointHelp: "Enter the Pipedrive company domain, without .pipedrive.com.",
+    secretLabel: "API token",
+    secretPlaceholder: "Pipedrive API token",
+    secretHelp:
+      "Required. Use a user API token allowed to create people and leads.",
+  },
+  {
+    id: "zoho",
+    label: "Zoho CRM",
+    description: "Create a native Zoho CRM Lead.",
+    endpointLabel: "Zoho API domain",
+    endpointPlaceholder: "https://www.zohoapis.com",
+    endpointHelp:
+      "Required for non-US data centers; otherwise the US API is used.",
+    secretLabel: "OAuth access token",
+    secretPlaceholder: "1000....",
+    secretHelp: "Required. Token must allow Leads create access in Zoho CRM.",
+  },
+  {
+    id: "zapier",
+    label: "Zapier",
     description:
-      "Send inquiries into Zapier, Make, n8n, Pipedream, or another workflow tool.",
-    endpointLabel: "Workflow endpoint",
+      "Send a Zapier catch-hook payload shaped for workflow triggers.",
+    endpointLabel: "Zapier catch hook",
     endpointPlaceholder: "https://hooks.zapier.com/hooks/catch/...",
-    endpointHelp: "Paste the catch-hook URL from your automation platform.",
+    endpointHelp: "Paste the hook URL from your Zap trigger.",
     secretLabel: "Verification token",
     secretPlaceholder: "Optional token or shared secret",
     secretHelp:
-      "Optional. Use this when your workflow expects a token outside the URL.",
+      "Optional. StayLayer signs the payload when a token is provided.",
   },
   {
-    id: "crm",
-    label: "CRM handoff",
-    description:
-      "Forward structured inquiries into HubSpot, Salesforce, or another sales pipeline.",
-    endpointLabel: "CRM intake endpoint",
-    endpointPlaceholder: "https://crm.example.com/api/inquiries",
-    endpointHelp:
-      "Paste the CRM workflow or middleware endpoint that accepts inquiry payloads.",
-    secretLabel: "CRM signing secret",
-    secretPlaceholder: "Optional HMAC or shared secret",
-    secretHelp:
-      "Use this when your CRM bridge validates signed inquiry traffic.",
-  },
-  {
-    id: "pms",
-    label: "PMS / reservations",
-    description:
-      "Route inquiries into a PMS, reservations desk workflow, or hospitality ops service.",
-    endpointLabel: "Reservations endpoint",
-    endpointPlaceholder: "https://ops.example.com/pms/inquiries",
-    endpointHelp:
-      "Paste the endpoint that should receive reservation-ready inquiry data.",
-    secretLabel: "Shared signing secret",
+    id: "make",
+    label: "Make",
+    description: "Send a Make custom webhook payload shaped for scenarios.",
+    endpointLabel: "Make webhook URL",
+    endpointPlaceholder: "https://hook.us1.make.com/...",
+    endpointHelp: "Paste the custom webhook URL from your Make scenario.",
+    secretLabel: "Signing secret",
     secretPlaceholder: "Optional shared secret",
-    secretHelp:
-      "Add a secret if the PMS or middleware verifies signed requests.",
+    secretHelp: "Optional. Adds a StayLayer HMAC signature header.",
   },
   {
-    id: "custom",
+    id: "n8n",
+    label: "n8n",
+    description: "Send a structured payload to an n8n production webhook.",
+    endpointLabel: "n8n webhook URL",
+    endpointPlaceholder: "https://n8n.example.com/webhook/...",
+    endpointHelp: "Paste the production webhook URL from n8n.",
+    secretLabel: "Signing secret",
+    secretPlaceholder: "Optional shared secret",
+    secretHelp: "Optional. Adds a StayLayer HMAC signature header.",
+  },
+  {
+    id: "pms_api",
+    label: "PMS / reservations API",
+    description: "Send a reservation-inquiry handoff to a PMS API endpoint.",
+    endpointLabel: "PMS API endpoint",
+    endpointPlaceholder: "https://pms.example.com/api/reservation-inquiries",
+    endpointHelp:
+      "Required. Use the PMS endpoint that accepts reservation inquiries.",
+    secretLabel: "API key or bearer token",
+    secretPlaceholder: "PMS API credential",
+    secretHelp:
+      "Required. StayLayer sends it as a bearer token and signing secret.",
+  },
+  {
+    id: "custom_webhook",
     label: "Custom webhook",
     description:
       "Bring your own endpoint when none of the presets match your delivery flow.",
@@ -1643,9 +1709,13 @@ function createBlankRoutingRuleEditor(): RoutingRuleEditor {
     locale: "",
     priority: 0,
     emailRecipientsText: "",
-    integrationPresetId: "none",
+    integrationPresetId: "email",
+    integrationConfigText: "{}",
+    integrationSecret: "",
+    integrationSecretConfigured: false,
     webhookUrl: "",
     webhookSecret: "",
+    webhookSecretConfigured: false,
     sendConfirmationEmail: false,
     confirmationReplyToFieldKey: "email",
     saveToInbox: true,
@@ -1818,9 +1888,16 @@ function mapRoutingRuleToEditor(rule: FormRoutingRule): RoutingRuleEditor {
     locale: rule.locale ?? "",
     priority: rule.priority,
     emailRecipientsText: rule.emailRecipients.join(", "),
-    integrationPresetId: inferDeliveryIntegrationPresetId(rule.webhookUrl),
+    integrationPresetId: normalizeDeliveryIntegrationProvider(
+      rule.integrationProvider,
+      rule.webhookUrl,
+    ),
+    integrationConfigText: formatIntegrationConfig(rule.integrationConfig),
+    integrationSecret: "",
+    integrationSecretConfigured: Boolean(rule.integrationSecretConfigured),
     webhookUrl: rule.webhookUrl,
     webhookSecret: rule.webhookSecret,
+    webhookSecretConfigured: Boolean(rule.webhookSecretConfigured),
     sendConfirmationEmail: rule.sendConfirmationEmail,
     confirmationReplyToFieldKey: rule.confirmationReplyToFieldKey,
     saveToInbox: rule.saveToInbox,
@@ -2181,6 +2258,9 @@ function serializeFormEditor(formEditor: FormEditorState) {
 }
 
 function serializeRoutingRuleEditor(rule: RoutingRuleEditor) {
+  const isEmailOnly = rule.integrationPresetId === "email";
+  const usesWebhookCredential = usesWebhookSecret(rule.integrationPresetId);
+
   return {
     id: rule.id,
     name: rule.name.trim(),
@@ -2190,13 +2270,16 @@ function serializeRoutingRuleEditor(rule: RoutingRuleEditor) {
     isActive: rule.isActive,
     saveToInbox: rule.saveToInbox,
     emailRecipients: splitCommaList(rule.emailRecipientsText),
-    webhookUrl:
-      rule.integrationPresetId === "none"
-        ? undefined
-        : rule.webhookUrl.trim() || undefined,
+    integrationProvider: rule.integrationPresetId,
+    integrationConfig: parseIntegrationConfigText(rule.integrationConfigText),
+    integrationSecret:
+      isEmailOnly || usesWebhookCredential
+        ? ""
+        : rule.integrationSecret.trim() || undefined,
+    webhookUrl: isEmailOnly ? undefined : rule.webhookUrl.trim() || undefined,
     webhookSecret:
-      rule.integrationPresetId === "none"
-        ? undefined
+      isEmailOnly || !usesWebhookCredential
+        ? ""
         : rule.webhookSecret.trim() || undefined,
     sendConfirmationEmail: rule.sendConfirmationEmail,
     confirmationReplyToFieldKey:
@@ -2213,64 +2296,63 @@ function getDeliveryIntegrationPreset(
   );
 }
 
-function inferDeliveryIntegrationPresetId(
+function normalizeDeliveryIntegrationProvider(
+  provider: string | undefined,
   webhookUrl: string,
 ): DeliveryIntegrationPresetId {
-  const trimmedUrl = webhookUrl.trim();
+  const normalized = (provider || "").trim().toLowerCase().replace(/-/g, "_");
 
-  if (!trimmedUrl) {
-    return "none";
+  if (DELIVERY_INTEGRATION_PRESETS.some((preset) => preset.id === normalized)) {
+    return normalized as DeliveryIntegrationPresetId;
   }
+
+  if (normalized === "none") {
+    return "email";
+  }
+  if (normalized === "custom") {
+    return "custom_webhook";
+  }
+  if (normalized === "automation") {
+    return "zapier";
+  }
+  if (normalized === "crm") {
+    return "hubspot";
+  }
+  if (normalized === "pms") {
+    return "pms_api";
+  }
+
+  const trimmedUrl = webhookUrl.trim();
+  if (!trimmedUrl) return "email";
 
   try {
     const hostname = new URL(trimmedUrl).hostname.toLowerCase();
 
-    if (
-      hostname.includes("zapier") ||
-      hostname.includes("make.com") ||
-      hostname.includes("n8n") ||
-      hostname.includes("pipedream") ||
-      hostname.includes("workato")
-    ) {
-      return "automation";
-    }
-
-    if (
-      hostname.includes("hubspot") ||
-      hostname.includes("salesforce") ||
-      hostname.includes("zoho") ||
-      hostname.includes("pipedrive") ||
-      hostname.includes("crm")
-    ) {
-      return "crm";
-    }
-
-    if (
-      hostname.includes("cloudbeds") ||
-      hostname.includes("guesty") ||
-      hostname.includes("mews") ||
-      hostname.includes("apaleo") ||
-      hostname.includes("opera") ||
-      hostname.includes("siteminder") ||
-      hostname.includes("pms")
-    ) {
-      return "pms";
-    }
+    if (hostname.includes("zapier")) return "zapier";
+    if (hostname.includes("make.com")) return "make";
+    if (hostname.includes("n8n")) return "n8n";
+    if (hostname.includes("hubspot")) return "hubspot";
+    if (hostname.includes("salesforce")) return "salesforce";
+    if (hostname.includes("zoho")) return "zoho";
+    if (hostname.includes("pipedrive")) return "pipedrive";
+    if (hostname.includes("pms")) return "pms_api";
   } catch {
-    return "custom";
+    return "custom_webhook";
   }
 
-  return "custom";
+  return "custom_webhook";
 }
 
 function applyDeliveryIntegrationPreset(
   rule: RoutingRuleEditor,
   presetId: DeliveryIntegrationPresetId,
 ): RoutingRuleEditor {
-  if (presetId === "none") {
+  if (presetId === "email") {
     return {
       ...rule,
       integrationPresetId: presetId,
+      integrationConfigText: "{}",
+      integrationSecret: "",
       webhookUrl: "",
       webhookSecret: "",
     };
@@ -2280,6 +2362,29 @@ function applyDeliveryIntegrationPreset(
     ...rule,
     integrationPresetId: presetId,
   };
+}
+
+function usesWebhookSecret(provider: DeliveryIntegrationPresetId) {
+  return ["custom_webhook", "zapier", "make", "n8n"].includes(provider);
+}
+
+function parseIntegrationConfigText(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return {};
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    throw new Error("Integration config must be valid JSON.");
+  }
+}
+
+function formatIntegrationConfig(value: Record<string, unknown> | undefined) {
+  if (!value || Object.keys(value).length === 0) return "{}";
+  return JSON.stringify(value, null, 2);
 }
 
 function splitCommaList(value: string) {
@@ -2573,7 +2678,7 @@ function EmailLayoutPresetCard({
                 <div className="min-w-0 flex-1">
                   <div className="h-2 w-14 rounded-full bg-gray-200" />
                   <div
-                    className="mt-2 h-3 w-[6.5rem] rounded-full"
+                    className="mt-2 h-3 w-26 rounded-full"
                     style={{ backgroundColor: accent, opacity: 0.2 }}
                   />
                   <div className="mt-2 h-2 w-20 rounded-full bg-gray-200" />
@@ -2582,7 +2687,7 @@ function EmailLayoutPresetCard({
             </div>
             <div className="mt-3 grid gap-2">
               <div className="rounded-xl border border-gray-100 bg-white p-2">
-                <div className="h-2 w-[4.5rem] rounded-full bg-gray-200" />
+                <div className="h-2 w-18 rounded-full bg-gray-200" />
                 <div className="mt-2 h-2 w-full rounded-full bg-gray-100" />
               </div>
               <div className="rounded-xl border border-gray-100 bg-white p-2">
@@ -2594,7 +2699,7 @@ function EmailLayoutPresetCard({
         ) : preset.id === "minimal" ? (
           <>
             <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-              <div className="h-2 w-[4.5rem] rounded-full bg-gray-300" />
+              <div className="h-2 w-18 rounded-full bg-gray-300" />
               <div
                 className="h-2 w-10 rounded-full"
                 style={{ backgroundColor: primary, opacity: 0.35 }}
@@ -2633,7 +2738,7 @@ function EmailLayoutPresetCard({
                   style={{ backgroundColor: primary, opacity: 0.12 }}
                 />
                 <div className="h-6 w-12 rounded-full bg-gray-200" />
-                <div className="h-6 w-[4.5rem] rounded-full bg-gray-100" />
+                <div className="h-6 w-18 rounded-full bg-gray-100" />
               </div>
             </div>
             <div className="mt-3 grid gap-2">
@@ -2869,6 +2974,16 @@ function RoutingRuleEditorCard({
   const integrationPreset = getDeliveryIntegrationPreset(
     rule.integrationPresetId,
   );
+  const secretValue = usesWebhookSecret(rule.integrationPresetId)
+    ? rule.webhookSecret
+    : rule.integrationSecret;
+  const secretConfigured = usesWebhookSecret(rule.integrationPresetId)
+    ? rule.webhookSecretConfigured
+    : rule.integrationSecretConfigured;
+  const updateSecret = (value: string) =>
+    usesWebhookSecret(rule.integrationPresetId)
+      ? onChange({ ...rule, webhookSecret: value })
+      : onChange({ ...rule, integrationSecret: value });
 
   return (
     <div className="rounded-2xl border border-gray-200 p-4">
@@ -2956,15 +3071,15 @@ function RoutingRuleEditorCard({
           </label>
         </div>
         <details
-          open={rule.integrationPresetId !== "none"}
+          open={rule.integrationPresetId !== "email"}
           className="md:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-4"
         >
           <summary className="cursor-pointer list-none text-sm font-semibold text-gray-900">
             Advanced delivery
           </summary>
           <p className="mt-1 text-xs text-gray-500">
-            Choose a delivery preset first. Raw webhook fields stay tucked away
-            behind the custom option instead of being the default customer path.
+            Choose a native provider, workflow trigger, PMS API, or a custom
+            webhook for this route.
           </p>
           <div className="mt-4 space-y-4">
             <div>
@@ -3005,7 +3120,7 @@ function RoutingRuleEditorCard({
               </div>
             </div>
 
-            {rule.integrationPresetId === "none" ? (
+            {rule.integrationPresetId === "email" ? (
               <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-4 text-sm text-gray-500">
                 This route will deliver only to the inboxes above. Add an
                 integration later if your CRM, PMS, or automation workflow needs
@@ -3030,13 +3145,36 @@ function RoutingRuleEditorCard({
                 />
                 <LabeledInput
                   label={integrationPreset.secretLabel}
-                  value={rule.webhookSecret}
-                  onChange={(value) =>
-                    onChange({ ...rule, webhookSecret: value })
+                  value={secretValue}
+                  onChange={updateSecret}
+                  placeholder={
+                    secretConfigured && !secretValue
+                      ? "Stored secret configured"
+                      : integrationPreset.secretPlaceholder
                   }
-                  placeholder={integrationPreset.secretPlaceholder}
                   help={integrationPreset.secretHelp}
                 />
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Provider config JSON
+                  </span>
+                  <textarea
+                    value={rule.integrationConfigText}
+                    onChange={(event) =>
+                      onChange({
+                        ...rule,
+                        integrationConfigText: event.target.value,
+                      })
+                    }
+                    rows={4}
+                    className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-mono text-xs text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    placeholder={'{"leadSource":"StayLayer"}'}
+                  />
+                  <span className="mt-1 block text-xs text-gray-500">
+                    Optional provider options such as Salesforce apiVersion,
+                    HubSpot ticketPipeline, or Zoho leadSource.
+                  </span>
+                </label>
               </div>
             )}
 

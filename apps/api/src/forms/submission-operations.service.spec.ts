@@ -122,6 +122,62 @@ describe("SubmissionOperationsService", () => {
     });
   });
 
+  it("queues native CRM integration deliveries with provider metadata but without secrets", async () => {
+    prisma.formSubmission.findUnique.mockResolvedValue({
+      id: "submission-1",
+      siteId: "site-1",
+      formDefinitionId: "form-1",
+      formType: FormType.CONTACT,
+      status: FormSubmissionStatus.RECEIVED,
+      payload: {
+        name: "Guest Example",
+        email: "guest@example.com",
+        message: "Hello",
+      },
+      routingRule: {
+        emailRecipients: [],
+        integrationProvider: "hubspot",
+        integrationConfig: { pipelineId: "0" },
+        integrationSecret: "hubspot-private-app-token",
+        webhookUrl: "",
+        webhookSecret: "legacy-secret",
+        sendConfirmationEmail: false,
+        confirmationReplyToFieldKey: "email",
+      },
+      site: {
+        name: "Harbor House",
+        settings: {
+          supportEmail: "",
+          defaultInquiryRoutingEmail: "",
+          inquiryIntegrationProvider: "email",
+          inquiryIntegrationConfig: {},
+          inquiryIntegrationSecret: "",
+          inquiryWebhookUrl: "",
+          inquiryWebhookSecret: "",
+        },
+      },
+    });
+    prisma.formDelivery.findMany.mockResolvedValue([]);
+
+    await service.queueSubmissionDelivery("submission-1");
+
+    expect(prisma.formDelivery.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          submissionId: "submission-1",
+          siteId: "site-1",
+          purpose: FormDeliveryPurpose.WEBHOOK_FORWARD,
+          channel: FormDeliveryChannel.WEBHOOK,
+          destination: "hubspot",
+          metadata: {
+            integrationProvider: "hubspot",
+            integrationConfig: { pipelineId: "0" },
+          },
+        }),
+      ],
+    });
+  });
+
   it("creates a guest confirmation delivery when the route and template both allow it", async () => {
     formEmailRendererService.isTemplateEnabled.mockResolvedValue(true);
     prisma.formSubmission.findUnique.mockResolvedValue({

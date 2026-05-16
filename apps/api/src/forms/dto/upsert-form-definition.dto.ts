@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsObject,
   IsOptional,
@@ -15,6 +16,7 @@ import {
   ValidateNested,
 } from "class-validator";
 import { FormFieldType, FormType } from "@prisma/client";
+import { INQUIRY_INTEGRATION_PROVIDERS } from "../inquiry-integration";
 
 export class FormFieldDraftDto {
   @IsString()
@@ -105,6 +107,20 @@ export class FormRoutingRuleDraftDto {
   @IsOptional()
   @IsArray()
   emailRecipients?: string[];
+
+  @IsOptional()
+  @IsString()
+  @IsIn(INQUIRY_INTEGRATION_PROVIDERS)
+  integrationProvider?: string;
+
+  @IsOptional()
+  @IsObject()
+  integrationConfig?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  integrationSecret?: string;
 
   @IsOptional()
   @IsUrl({ require_protocol: true })

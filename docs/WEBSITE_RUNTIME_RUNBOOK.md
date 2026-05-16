@@ -37,7 +37,7 @@ end-to-end SEO / analytics / inquiry contract.
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | `API_URL` / `API_INTERNAL_URL` | Base URL of the API. `API_INTERNAL_URL` is preferred when the runtime is co-located with the API and can avoid the public edge. |
 | `WEBSITE_RUNTIME_SECRET`       | **Required.** Must match the API value. Sent on every public-runtime call.                                                      |
-| `REVALIDATE_SECRET`            | Optional legacy alias accepted by `app/api/revalidate/route.js`. Prefer `WEBSITE_RUNTIME_SECRET`.                              |
+| `REVALIDATE_SECRET`            | Optional legacy alias accepted by `app/api/revalidate/route.js`. Prefer `WEBSITE_RUNTIME_SECRET`.                               |
 | `NEXT_PUBLIC_*`                | Anything safe to expose to the browser (none required by the runtime today).                                                    |
 
 ### 1.3 Dashboard (`apps/dashboard/.env.local`)
@@ -111,10 +111,10 @@ metadata.
 
 ### When rollback is **not** possible
 
-| Condition                   | Symptom                                              | Recovery                                                               |
-| --------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- |
-| Snapshot row missing        | API returns `ROLLBACK_TARGET_HAS_NO_SNAPSHOT`        | Publish the desired state again to create a new revision.              |
-| In-flight deployment        | API returns `DEPLOYMENT_IN_PROGRESS`                 | Wait for the in-flight deployment to settle or cancel it.              |
+| Condition                   | Symptom                                              | Recovery                                                            |
+| --------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
+| Snapshot row missing        | API returns `ROLLBACK_TARGET_HAS_NO_SNAPSHOT`        | Publish the desired state again to create a new revision.           |
+| In-flight deployment        | API returns `DEPLOYMENT_IN_PROGRESS`                 | Wait for the in-flight deployment to settle or cancel it.           |
 | Revalidation upstream fails | Deployment row updated to FAILED; database untouched | Investigate `WEBSITE_APP_ORIGIN` / `WEBSITE_RUNTIME_SECRET`; retry. |
 
 ---
@@ -196,22 +196,29 @@ Visitor submits form → POST /api/forms/submit (Next.js route)
                                           ↓ queueSubmissionDelivery()
 
 Background worker (SubmissionOperationsService)
-   • renders FormDelivery rows for email + webhook channels
-   • email   → SMTP (nodemailer)            with exponential retries up to
-                                              FORM_DELIVERY_MAX_ATTEMPTS (5)
-   • webhook → POST with HMAC-SHA256 sig    in x-staylayer-signature
-                                              using inquiryWebhookSecret
-   • on persistent failure → OperationalAlert (severity HIGH) for the workspace
+  • renders FormDelivery rows for email + integration channels
+  • email       → SMTP (nodemailer) with exponential retries up to
+                            FORM_DELIVERY_MAX_ATTEMPTS (5)
+  • integration → provider adapter selected by integrationProvider:
+              custom_webhook, Zapier, Make, n8n, HubSpot, Salesforce,
+              Pipedrive, Zoho, or PMS/reservations API
+  • webhooks/workflows include x-staylayer-event and optional
+    x-staylayer-signature HMAC-SHA256 when a signing secret is configured
+  • native CRM/PMS adapters use the stored integration access token/API key
+  • on persistent failure → OperationalAlert (severity HIGH) for the workspace
 ```
 
 Settings that drive delivery:
 
-| Setting                      | Effect                                                 |
-| ---------------------------- | ------------------------------------------------------ |
-| `defaultInquiryRoutingEmail` | Fallback inbox when a routing rule has no recipient.   |
-| `inquiryWebhookUrl`          | Optional outbound webhook URL.                         |
-| `inquiryWebhookSecret`       | HMAC secret; required when `inquiryWebhookUrl` is set. |
-| `supportEmail`               | Used as the Reply-To header on outbound emails.        |
+| Setting                      | Effect                                                    |
+| ---------------------------- | --------------------------------------------------------- |
+| `defaultInquiryRoutingEmail` | Fallback inbox when a routing rule has no recipient.      |
+| `inquiryIntegrationProvider` | Site fallback native provider (`email`, `hubspot`, etc.). |
+| `inquiryIntegrationConfig`   | Provider-specific non-secret options.                     |
+| `inquiryIntegrationSecret`   | Provider access token/API key, never returned raw.        |
+| `inquiryWebhookUrl`          | Optional outbound webhook URL.                            |
+| `inquiryWebhookSecret`       | HMAC secret; required when `inquiryWebhookUrl` is set.    |
+| `supportEmail`               | Used as the Reply-To header on outbound emails.           |
 
 ---
 

@@ -60,6 +60,25 @@ function buildLocalizedUrl(hostname, slug, locale, defaultLocale) {
   )}`;
 }
 
+function buildSocialProfileUrls(site) {
+  const social = site.social || {};
+  const urls = [
+    social.twitterHandle
+      ? `https://x.com/${String(social.twitterHandle).replace(/^@+/, "")}`
+      : null,
+    social.facebookUrl,
+    social.linkedinUrl,
+    social.instagramUrl,
+    social.youtubeUrl,
+    social.tiktokUrl,
+    social.pinterestUrl,
+  ];
+
+  return Array.from(
+    new Set(urls.filter((url) => typeof url === "string" && url.trim())),
+  );
+}
+
 async function getRuntimePayload(route) {
   const headerList = await headers();
 
@@ -186,6 +205,7 @@ export async function generateMetadata({ params }) {
     twitter.site = site.social.twitterHandle;
     twitter.creator = site.social.twitterHandle;
   }
+  const socialProfileUrls = buildSocialProfileUrls(site);
 
   const metadata = {
     title: seo.title,
@@ -214,6 +234,9 @@ export async function generateMetadata({ params }) {
       images: ogImages,
     },
     twitter,
+    ...(socialProfileUrls.length > 0
+      ? { other: { "og:see_also": socialProfileUrls } }
+      : {}),
     robots: seo.noindex
       ? {
           index: false,
@@ -298,6 +321,17 @@ export default async function TenantPage({ params }) {
 
   return (
     <>
+      {payload.site.analytics?.gtmContainerId ? (
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${payload.site.analytics.gtmContainerId}`}
+            title="Google Tag Manager"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+      ) : null}
       <GoogleTagScript
         gaId={payload.site.analytics?.gaTrackingId || ""}
         gtmId={payload.site.analytics?.gtmContainerId || ""}

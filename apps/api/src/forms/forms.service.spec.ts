@@ -476,6 +476,85 @@ describe("FormsService", () => {
     });
   });
 
+  it("preserves stored integration secrets and never returns them in routing DTOs", async () => {
+    prisma.site.findUnique.mockResolvedValue({ id: "site-1" });
+    prisma.formRoutingRule.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "rule-1",
+          siteId: "site-1",
+          formDefinitionId: null,
+          name: "Native CRM",
+          pageSlug: null,
+          locale: null,
+          priority: 0,
+          isActive: true,
+          saveToInbox: true,
+          emailRecipients: [],
+          integrationProvider: "hubspot",
+          integrationConfig: { pipelineId: "0" },
+          integrationSecret: "stored-hubspot-token",
+          webhookUrl: "",
+          webhookSecret: "stored-webhook-secret",
+          sendConfirmationEmail: false,
+          confirmationReplyToFieldKey: "email",
+          createdAt: new Date("2026-05-05T10:00:00.000Z"),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "rule-1",
+          siteId: "site-1",
+          formDefinitionId: null,
+          name: "Native CRM",
+          pageSlug: null,
+          locale: null,
+          priority: 0,
+          isActive: true,
+          saveToInbox: true,
+          emailRecipients: [],
+          integrationProvider: "hubspot",
+          integrationConfig: { pipelineId: "0" },
+          integrationSecret: "stored-hubspot-token",
+          webhookUrl: "",
+          webhookSecret: "stored-webhook-secret",
+          sendConfirmationEmail: false,
+          confirmationReplyToFieldKey: "email",
+          createdAt: new Date("2026-05-05T10:00:00.000Z"),
+        },
+      ]);
+    prisma.formRoutingRule.update.mockResolvedValue({ id: "rule-1" });
+
+    await expect(
+      service.updateSiteRoutingRules("site-1", [
+        {
+          id: "rule-1",
+          name: "Native CRM",
+          integrationProvider: "hubspot",
+          integrationConfig: { pipelineId: "0" },
+          emailRecipients: [],
+        },
+      ]),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: "rule-1",
+        integrationProvider: "hubspot",
+        integrationSecret: "",
+        integrationSecretConfigured: true,
+        webhookSecret: "",
+        webhookSecretConfigured: true,
+      }),
+    ]);
+
+    expect(prisma.formRoutingRule.update).toHaveBeenCalledWith({
+      where: { id: "rule-1" },
+      data: expect.objectContaining({
+        integrationSecret: "stored-hubspot-token",
+        webhookSecret: "stored-webhook-secret",
+      }),
+    });
+  });
+
   it("reports admin totals with spam included in the denominator", async () => {
     prisma.site.findMany.mockResolvedValue([
       {
