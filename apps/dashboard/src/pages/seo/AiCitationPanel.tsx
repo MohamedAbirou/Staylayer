@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { getPages } from "../../api/pages";
 import {
   analyzeAiCitation,
   getAiCitationOverview,
@@ -21,6 +22,9 @@ import {
   type AiCitationReport,
   type AiCitationSeverity,
 } from "../../api/seo";
+import { SITE_ADMIN_MEMBERSHIP_ROLES, hasMembershipRole } from "../../auth/access";
+import { useAuth } from "../../auth/useAuth";
+import type { PageListItem } from "../../lib/constants";
 
 interface Props {
   siteId: string;
@@ -43,10 +47,13 @@ const SEVERITY_ICON: Record<AiCitationSeverity, React.ReactElement> = {
 
 export function AiCitationPanel({ siteId }: Props): React.ReactElement {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const canReanalyze = hasMembershipRole(session, SITE_ADMIN_MEMBERSHIP_ROLES);
   const [selected, setSelected] = useState<{
     slug: string;
     locale: string;
   } | null>(null);
+  const [pageKey, setPageKey] = useState("");
 
   const overviewQuery = useQuery({
     queryKey: ["seo", "ai-citation", "overview", siteId],
@@ -66,6 +73,12 @@ export function AiCitationPanel({ siteId }: Props): React.ReactElement {
     queryFn: () =>
       getAiCitationReport(siteId, selected!.slug, selected!.locale),
     enabled: !!siteId && !!selected,
+  });
+
+  const pagesQuery = useQuery({
+    queryKey: ["seo", "ai-citation", "pages", siteId],
+    queryFn: () => getPages({ limit: 200 }),
+    enabled: !!siteId,
   });
 
   const analyzeMutation = useMutation({
@@ -91,6 +104,38 @@ export function AiCitationPanel({ siteId }: Props): React.ReactElement {
   const rows = overviewQuery.data?.rows ?? [];
   const averageScore = overviewQuery.data?.averageScore ?? null;
   const pageCount = overviewQuery.data?.pageCount ?? 0;
+  const pageOptions = useMemo(
+    () =>
+      (pagesQuery.data?.data ?? [])
+        .filter((page) => !page.deletedAt)
+        .sort((a, b) => {
+          if (a.locale !== b.locale) return a.locale.localeCompare(b.locale);
+          return a.slug.localeCompare(b.slug);
+        }),
+    [pagesQuery.data?.data],
+  );
+  const selectedPageKey = pageKey || toPageKey(pageOptions[0]);
+  const selectedPage = pageOptions.find(
+    (page) => toPageKey(page) === selectedPageKey,
+  );
+
+  useEffect(() => {
+    if (reportQuery.data) {
+      queryClient.invalidateQueries({
+        queryKey: ["seo", "ai-citation", "overview", siteId],
+      });
+    }
+  }, [queryClient, reportQuery.data, siteId]);
+
+  const openPageReport = (page: PageListItem) => {
+    const next = { slug: page.slug, locale: page.locale };
+    const isAlreadySelected =
+      selected?.slug === next.slug && selected?.locale === next.locale;
+    setSelected(next);
+    if (isAlreadySelected) {
+      void reportQuery.refetch();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -117,6 +162,15 @@ export function AiCitationPanel({ siteId }: Props): React.ReactElement {
         rows={rows}
       />
 
+      <PageAnalysisLauncher
+        pages={pageOptions}
+        isLoading={pagesQuery.isLoading}
+        selectedKey={selectedPageKey}
+        onSelectedKeyChange={setPageKey}
+        onAnalyze={() => selectedPage && openPageReport(selectedPage)}
+        disabled={!selectedPage || reportQuery.isLoading}
+      />
+
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <OverviewTable
           rows={rows}
@@ -131,6 +185,7 @@ export function AiCitationPanel({ siteId }: Props): React.ReactElement {
               ? `${analyzeMutation.variables?.slug}|${analyzeMutation.variables?.locale}`
               : null
           }
+          canReanalyze={canReanalyze}
         />
 
         <ReportPane
@@ -146,7 +201,64 @@ export function AiCitationPanel({ siteId }: Props): React.ReactElement {
             })
           }
           isAnalyzing={analyzeMutation.isPending}
+          canReanalyze={canReanalyze}
         />
+      </div>
+    </div>
+  );
+}
+
+function toPageKey(page: Pick<PageListItem, "slug" | "locale"> | undefined) {
+  return page ? `${page.slug}|${page.locale}` : "";
+}
+
+function PageAnalysisLauncher({
+  pages,
+  isLoading,
+  selectedKey,
+  onSelectedKeyChange,
+  onAnalyze,
+  disabled,
+}: {
+  pages: PageListItem[];
+  isLoading: boolean;
+  selectedKey: string;
+  onSelectedKeyChange: (value: string) => void;
+  onAnalyze: () => void;
+  disabled: boolean;
+}): React.ReactElement {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <label className="block text-sm">
+          <span className="font-medium text-gray-700">Page to analyze</span>
+          <select
+            value={selectedKey}
+            onChange={(event) => onSelectedKeyChange(event.target.value)}
+            disabled={isLoading || pages.length === 0}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-purple-500 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-400"
+          >
+            {pages.length === 0 ? (
+              <option value="">
+                {isLoading ? "Loading pages..." : "No pages available"}
+              </option>
+            ) : null}
+            {pages.map((page) => (
+              <option key={toPageKey(page)} value={toPageKey(page)}>
+                [{page.locale}] /{page.slug} - {page.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={onAnalyze}
+          disabled={disabled}
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Sparkles className="h-4 w-4" />
+          Analyze page
+        </button>
       </div>
     </div>
   );
@@ -213,6 +325,7 @@ function OverviewTable({
   onSelect,
   onAnalyze,
   analyzingKey,
+  canReanalyze,
 }: {
   rows: AiCitationOverviewRow[];
   isLoading: boolean;
@@ -220,6 +333,7 @@ function OverviewTable({
   onSelect: (row: AiCitationOverviewRow) => void;
   onAnalyze: (row: AiCitationOverviewRow) => void;
   analyzingKey: string | null;
+  canReanalyze: boolean;
 }): React.ReactElement {
   if (isLoading) {
     return (
@@ -231,8 +345,8 @@ function OverviewTable({
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
-        No AI citation audits yet. Open a page from the Pages tab and run an
-        analysis, or analyze pages individually from the reports pane.
+        No AI citation audits yet. Choose a page above and run the first
+        analysis.
       </div>
     );
   }
@@ -291,22 +405,24 @@ function OverviewTable({
                   )}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={(ev) => {
-                      ev.stopPropagation();
-                      onAnalyze(r);
-                    }}
-                    disabled={analyzingKey === key}
-                    className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    {analyzingKey === key ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3 w-3" />
-                    )}
-                    Re-analyze
-                  </button>
+                  {canReanalyze ? (
+                    <button
+                      type="button"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        onAnalyze(r);
+                      }}
+                      disabled={analyzingKey === key}
+                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {analyzingKey === key ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
+                      Re-analyze
+                    </button>
+                  ) : null}
                 </td>
               </tr>
             );
@@ -323,6 +439,7 @@ function ReportPane({
   isLoading,
   onAnalyze,
   isAnalyzing,
+  canReanalyze,
 }: {
   siteId: string;
   selected: { slug: string; locale: string } | null;
@@ -330,6 +447,7 @@ function ReportPane({
   isLoading: boolean;
   onAnalyze: () => void;
   isAnalyzing: boolean;
+  canReanalyze: boolean;
 }): React.ReactElement {
   const findings = useMemo(
     () =>
@@ -382,19 +500,21 @@ function ReportPane({
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onAnalyze}
-          disabled={isAnalyzing}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          {isAnalyzing ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3 w-3" />
-          )}
-          Re-analyze
-        </button>
+        {canReanalyze ? (
+          <button
+            type="button"
+            onClick={onAnalyze}
+            disabled={isAnalyzing}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {isAnalyzing ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3" />
+            )}
+            Re-analyze
+          </button>
+        ) : null}
       </div>
 
       <div className="grid gap-3 border-b border-gray-100 p-4 sm:grid-cols-2">

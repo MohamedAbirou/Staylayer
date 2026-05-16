@@ -60,9 +60,7 @@ export interface InviteWorkspaceMemberPayload {
   role: WorkspaceMemberRole;
 }
 
-export interface CreateWorkspaceMemberPayload extends InviteWorkspaceMemberPayload {
-  password: string;
-}
+export type CreateWorkspaceMemberPayload = InviteWorkspaceMemberPayload;
 
 export async function getWorkspaceSites(
   tenantId: string,

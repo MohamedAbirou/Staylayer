@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   AlertTriangle,
@@ -71,10 +72,39 @@ type Tab =
   | "scheduled-audits"
   | "audit-tasks";
 
+function isSeoTab(value: string | null): value is Tab {
+  return (
+    value === "audit" ||
+    value === "redirects" ||
+    value === "structured-data" ||
+    value === "robots" ||
+    value === "indexnow" ||
+    value === "site-crawl" ||
+    value === "search-console" ||
+    value === "bing-webmaster" ||
+    value === "psi" ||
+    value === "hreflang" ||
+    value === "page-schema" ||
+    value === "images" ||
+    value === "previews" ||
+    value === "ai-citation" ||
+    value === "scheduled-audits" ||
+    value === "audit-tasks"
+  );
+}
+
 export default function SeoPage() {
   const { session } = useAuth();
   const siteId = session?.activeSite?.id ?? null;
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>("audit");
+
+  useEffect(() => {
+    const queryTab = searchParams.get("tab");
+    if (isSeoTab(queryTab)) {
+      setTab(queryTab);
+    }
+  }, [searchParams]);
 
   if (!siteId) {
     return (

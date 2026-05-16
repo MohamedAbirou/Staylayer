@@ -13,6 +13,9 @@ function buildPrismaMock() {
     siteSettings: {
       create: jest.fn(),
     },
+    tenant: {
+      findUnique: jest.fn(),
+    },
     tenantMembership: {
       findUnique: jest.fn(),
       count: jest.fn(),
@@ -42,6 +45,7 @@ describe("TenantWorkspaceService", () => {
   };
   let customerAccessService: {
     createWorkspaceInvitation: jest.Mock;
+    sendWorkspaceAccountSetupEmail: jest.Mock;
   };
   let notificationsService: {
     create: jest.Mock;
@@ -52,6 +56,7 @@ describe("TenantWorkspaceService", () => {
   beforeEach(() => {
     prisma = buildPrismaMock();
     prisma.site.findUnique.mockResolvedValue(null);
+    prisma.tenant.findUnique.mockResolvedValue({ name: "Azure Bay" });
     billingService = {
       assertCanProvisionSite: jest.fn().mockResolvedValue(undefined),
       assertCanAddSeat: jest.fn().mockResolvedValue(undefined),
@@ -62,6 +67,9 @@ describe("TenantWorkspaceService", () => {
     };
     customerAccessService = {
       createWorkspaceInvitation: jest.fn(),
+      sendWorkspaceAccountSetupEmail: jest.fn().mockResolvedValue({
+        accepted: true,
+      }),
     };
     notificationsService = {
       create: jest.fn().mockResolvedValue(null),
@@ -252,6 +260,14 @@ describe("TenantWorkspaceService", () => {
         id: true,
         email: true,
       },
+    });
+    expect(
+      customerAccessService.sendWorkspaceAccountSetupEmail,
+    ).toHaveBeenCalledWith({
+      userId: "user-2",
+      email: "new@example.com",
+      tenantName: "Azure Bay",
+      role: TenantMembershipRole.EDITOR,
     });
     expect(member.userId).toBe("user-2");
   });

@@ -7,7 +7,6 @@ import {
   Building2,
   Check,
   Clock3,
-  CreditCard,
   Globe2,
   Home,
   Hotel,
@@ -183,7 +182,6 @@ export default function WorkspaceStudioPage() {
   });
   const [createForm, setCreateForm] = useState<CreateWorkspaceMemberPayload>({
     email: "",
-    password: "",
     role: "EDITOR",
   });
 
@@ -345,8 +343,8 @@ export default function WorkspaceStudioPage() {
           queryKey: ["notifications", "list", tenantId],
         }),
       ]);
-      setCreateForm({ email: "", password: "", role: createForm.role });
-      toast.success(`${member.email} is ready to sign in.`);
+      setCreateForm({ email: "", role: createForm.role });
+      toast.success(`Setup email sent to ${member.email}.`);
     },
     onError: (error: unknown) => {
       toast.error(
@@ -1150,11 +1148,11 @@ export default function WorkspaceStudioPage() {
             Team composer
           </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-950">
-            Add existing accounts or mint new teammates
+            Add existing accounts or set up new teammates
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Invite collaborators by email, or create a brand-new teammate
-            account directly when you need to hand off access right away.
+            account and let them choose their own password securely.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -1197,10 +1195,10 @@ export default function WorkspaceStudioPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
-                    Create fresh account
+                    Send account setup
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Use this when the collaborator is brand new to the platform.
+                    Create the user and email a secure password setup link.
                   </p>
                 </div>
               </div>
@@ -1266,19 +1264,11 @@ export default function WorkspaceStudioPage() {
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white"
                 />
 
-                <FieldLabel label="Temporary password" icon={CreditCard} />
-                <input
-                  value={createForm.password}
-                  onChange={(event) =>
-                    setCreateForm((current) => ({
-                      ...current,
-                      password: event.target.value,
-                    }))
-                  }
-                  type="password"
-                  placeholder="Use 8+ characters"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white"
-                />
+                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+                  StayLayer will create the account, add workspace access, and
+                  send a secure link so this teammate can choose their own
+                  password.
+                </p>
 
                 <RolePicker
                   value={createForm.role}
@@ -1301,7 +1291,7 @@ export default function WorkspaceStudioPage() {
                   ) : (
                     <Shield className="h-4 w-4" />
                   )}
-                  Create teammate account
+                  Send setup email
                 </button>
               </>
             )}

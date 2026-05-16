@@ -3,8 +3,11 @@ import {
   ForbiddenException,
   NotFoundException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 
+import { TransactionalEmailService } from "../../mail/transactional-email.service";
+import { NotificationsService } from "../../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { SeoAuditTasksService } from "./audit-tasks.service";
 
@@ -213,13 +216,29 @@ function buildPrismaMock() {
 describe("SeoAuditTasksService", () => {
   let service: SeoAuditTasksService;
   let prismaMock: ReturnType<typeof buildPrismaMock>;
+  let notificationsMock: { create: jest.Mock };
+  let emailMock: { isConfigured: jest.Mock; send: jest.Mock };
+  let configMock: { get: jest.Mock };
 
   beforeEach(async () => {
     prismaMock = buildPrismaMock();
+    notificationsMock = { create: jest.fn().mockResolvedValue(null) };
+    emailMock = {
+      isConfigured: jest.fn().mockReturnValue(true),
+      send: jest.fn().mockResolvedValue({ messageId: "msg-1" }),
+    };
+    configMock = {
+      get: jest.fn().mockImplementation((key: string) =>
+        key === "DASHBOARD_APP_URL" ? "https://dashboard.example.com" : null,
+      ),
+    };
     const moduleRef = await Test.createTestingModule({
       providers: [
         SeoAuditTasksService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: NotificationsService, useValue: notificationsMock },
+        { provide: TransactionalEmailService, useValue: emailMock },
+        { provide: ConfigService, useValue: configMock },
       ],
     }).compile();
     service = moduleRef.get(SeoAuditTasksService);
@@ -257,6 +276,19 @@ describe("SeoAuditTasksService", () => {
         assigneeUserId: "user-2",
       });
       expect(task.assigneeUserId).toBe("user-2");
+      expect(notificationsMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-2",
+          title: "SEO task assigned: x",
+          actionUrl: "/seo?tab=audit-tasks",
+        }),
+      );
+      expect(emailMock.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "editor@t1",
+          subject: "SEO task assigned: x",
+        }),
+      );
     });
 
     it("requires title/slug/locale", async () => {

@@ -1,5 +1,5 @@
 import { TenantMembershipRole } from "@prisma/client";
-import { IsEmail, IsEnum, IsString, MinLength } from "class-validator";
+import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from "class-validator";
 
 export class CreateTenantMemberDto {
   @IsEmail()
@@ -7,7 +7,8 @@ export class CreateTenantMemberDto {
 
   @IsString()
   @MinLength(8)
-  password: string;
+  @IsOptional()
+  password?: string;
 
   @IsEnum(TenantMembershipRole)
   role: TenantMembershipRole;

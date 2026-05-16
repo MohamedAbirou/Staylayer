@@ -2,7 +2,9 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
 } from "@nestjs/common";
+import { randomBytes } from "node:crypto";
 import {
   NotificationCategory,
   Prisma,
@@ -240,9 +242,22 @@ export class TenantWorkspaceService {
       });
     }
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true },
+    });
+    if (!tenant) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Workspace not found",
+      });
+    }
+
     await this.billingService.assertCanAddSeat(tenantId);
 
-    const passwordHash = await this.usersService.hashPassword(dto.password);
+    const initialPassword =
+      dto.password?.trim() || randomBytes(32).toString("base64url");
+    const passwordHash = await this.usersService.hashPassword(initialPassword);
     const membership = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -286,7 +301,7 @@ export class TenantWorkspaceService {
         roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
         category: NotificationCategory.SYSTEM,
         title: `Team member added: ${membership.user.email}`,
-        body: `${membership.user.email} can now sign in as ${this.describeRole(membership.role)}.`,
+        body: `${membership.user.email} was added as ${this.describeRole(membership.role)} and received a secure password setup email.`,
         actionUrl: "/workspace",
         metadata: {
           userId: membership.user.id,
@@ -299,11 +314,17 @@ export class TenantWorkspaceService {
         userId: membership.user.id,
         category: NotificationCategory.SYSTEM,
         title: "Your StayLayer workspace access is ready",
-        body: `You can now sign in and work as ${this.describeRole(membership.role)} in this workspace.`,
+        body: `You were added as ${this.describeRole(membership.role)}. Check your email to choose your password.`,
         actionUrl: "/",
         metadata: {
           role: membership.role,
         },
+      }),
+      this.customerAccessService.sendWorkspaceAccountSetupEmail({
+        userId: membership.user.id,
+        email: membership.user.email,
+        tenantName: tenant.name,
+        role: membership.role,
       }),
     ]);
 

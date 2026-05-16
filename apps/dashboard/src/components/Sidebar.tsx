@@ -64,7 +64,7 @@ export function Sidebar() {
     session,
     SITE_ADMIN_MEMBERSHIP_ROLES,
   );
-  const canOpenSettings = hasActiveSite(session);
+  const canOpenSettings = canManageWorkspace && hasActiveSite(session);
   const tenantId = session?.activeTenant?.id ?? null;
   const activeMembership =
     session?.memberships.find(
@@ -151,6 +151,44 @@ export function Sidebar() {
     : null;
   const pendingInvitationCount = pendingInvitations.length;
   const navFilter = navQuery.trim().toLowerCase();
+  const primaryQuickAction = canManageWorkspace
+    ? {
+        to: "/workspace",
+        label: "Workspace Studio",
+        icon: Users,
+      }
+    : hasContentAccess && hasActiveSite(session)
+      ? {
+          to: "/pages",
+          label: "Pages",
+          icon: FileText,
+        }
+      : {
+          to: getDefaultAuthenticatedPath(session),
+          label: "Dashboard",
+          icon: LayoutDashboard,
+        };
+  const secondaryQuickAction = hasBillingAccess
+    ? {
+        to: "/billing",
+        label: "Billing",
+        icon: CreditCard,
+      }
+    : canOpenSettings
+      ? {
+          to: "/settings",
+          label: "Site settings",
+          icon: Settings,
+        }
+      : hasContentAccess && hasActiveSite(session)
+        ? {
+            to: "/seo",
+            label: "SEO toolkit",
+            icon: Search,
+          }
+        : null;
+  const PrimaryQuickIcon = primaryQuickAction.icon;
+  const SecondaryQuickIcon = secondaryQuickAction?.icon;
 
   const navigationGroups: NavigationGroup[] = [
     {
@@ -373,36 +411,28 @@ export function Sidebar() {
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() =>
-                navigate(
-                  canManageWorkspace
-                    ? "/workspace"
-                    : getDefaultAuthenticatedPath(session),
-                )
-              }
+              onClick={() => navigate(primaryQuickAction.to)}
               className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
             >
-              <Users className="h-4 w-4 shrink-0 text-slate-500" />
+              <PrimaryQuickIcon className="h-4 w-4 shrink-0 text-slate-500" />
               <p className="truncate text-sm font-semibold text-slate-900">
-                {canManageWorkspace ? "Workspace Studio" : "Open current desk"}
+                {primaryQuickAction.label}
               </p>
             </button>
-            <button
-              type="button"
-              onClick={() =>
-                navigate(hasBillingAccess ? "/billing" : "/settings")
-              }
-              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-[#12392f] px-3 py-2.5 text-left text-white shadow-[0_14px_30px_rgba(18,57,47,0.22)] transition hover:bg-[#0f3028]"
-            >
-              {hasBillingAccess ? (
-                <CreditCard className="h-4 w-4 shrink-0 text-white/80" />
-              ) : (
-                <Settings className="h-4 w-4 shrink-0 text-white/80" />
-              )}
-              <p className="truncate text-sm font-semibold">
-                {hasBillingAccess ? "Billing control" : "Workspace settings"}
-              </p>
-            </button>
+            {secondaryQuickAction ? (
+              <button
+                type="button"
+                onClick={() => navigate(secondaryQuickAction.to)}
+                className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-[#12392f] px-3 py-2.5 text-left text-white shadow-[0_14px_30px_rgba(18,57,47,0.22)] transition hover:bg-[#0f3028]"
+              >
+                {SecondaryQuickIcon ? (
+                  <SecondaryQuickIcon className="h-4 w-4 shrink-0 text-white/80" />
+                ) : null}
+                <p className="truncate text-sm font-semibold">
+                  {secondaryQuickAction.label}
+                </p>
+              </button>
+            ) : null}
           </div>
         </div>
 

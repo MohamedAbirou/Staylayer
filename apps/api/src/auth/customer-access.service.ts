@@ -220,6 +220,60 @@ export class CustomerAccessService {
     return { accepted: true };
   }
 
+  async sendWorkspaceAccountSetupEmail(input: {
+    userId: string;
+    email: string;
+    tenantName: string;
+    role: TenantMembershipRole;
+  }): Promise<{ accepted: true }> {
+    const normalizedEmail = this.normalizeEmail(input.email);
+    const token = this.issueToken();
+    const tokenHash = this.hashToken(token);
+    const expiresAt = this.addHours(RESET_TTL_HOURS);
+
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.updateMany({
+        where: {
+          userId: input.userId,
+          consumedAt: null,
+        },
+        data: {
+          consumedAt: new Date(),
+        },
+      }),
+      this.prisma.passwordResetToken.create({
+        data: {
+          userId: input.userId,
+          email: normalizedEmail,
+          tokenHash,
+          expiresAt,
+        },
+      }),
+    ]);
+
+    const url = `${this.getMarketingBaseUrl()}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`;
+    await this.transactionalEmailService.send({
+      to: normalizedEmail,
+      subject: `Set up your ${input.tenantName} StayLayer account`,
+      text: this.buildWorkspaceAccountSetupText({
+        tenantName: input.tenantName,
+        role: input.role,
+        url,
+      }),
+      html: this.buildEmailHtml({
+        eyebrow: "Workspace access",
+        title: `Set up your ${input.tenantName} account`,
+        body: `Your ${this.describeRole(input.role)} access is ready. Choose your own password with the secure link below, then sign in to the workspace.`,
+        ctaLabel: "Choose password",
+        ctaUrl: url,
+        fallbackLabel:
+          "If the button does not open, copy this link into your browser:",
+      }),
+    });
+
+    return { accepted: true };
+  }
+
   async resetPassword(
     token: string,
     password: string,
@@ -745,6 +799,22 @@ export class CustomerAccessService {
       input.url,
       "",
       `This link expires in ${INVITATION_TTL_DAYS} days.`,
+    ].join("\n");
+  }
+
+  private buildWorkspaceAccountSetupText(input: {
+    tenantName: string;
+    role: TenantMembershipRole;
+    url: string;
+  }): string {
+    return [
+      `Your ${input.tenantName} StayLayer account is ready`,
+      "",
+      `You were added as ${this.describeRole(input.role)}.`,
+      "Choose your password here:",
+      input.url,
+      "",
+      `This secure link expires in ${RESET_TTL_HOURS} hours.`,
     ].join("\n");
   }
 

@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import type {
   OperationalAlert,
   Prisma,
@@ -11,7 +13,10 @@ import type {
   SeoAuditTaskPriority,
   SeoAuditTaskStatus,
 } from "@prisma/client";
+import { NotificationCategory } from "@prisma/client";
 
+import { TransactionalEmailService } from "../../mail/transactional-email.service";
+import { NotificationsService } from "../../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
   alertSeverityToPriority,
@@ -72,7 +77,14 @@ export type SeoAuditTaskWithRefs = Prisma.SeoAuditTaskGetPayload<{
 
 @Injectable()
 export class SeoAuditTasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(SeoAuditTasksService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    private readonly transactionalEmailService: TransactionalEmailService,
+    private readonly configService: ConfigService,
+  ) {}
 
   // ── Reads ──────────────────────────────────────────────────────────────
 
@@ -204,6 +216,9 @@ export class SeoAuditTasksService {
       },
       include: TASK_INCLUDE,
     });
+    if (task.assigneeUserId) {
+      await this.notifyTaskAssignee(siteId, task, createdByUserId);
+    }
     return task;
   }
 
@@ -214,7 +229,7 @@ export class SeoAuditTasksService {
   ): Promise<SeoAuditTaskWithRefs> {
     const existing = await this.prisma.seoAuditTask.findFirst({
       where: { id: taskId, siteId },
-      select: { id: true },
+      select: { id: true, assigneeUserId: true },
     });
     if (!existing) throw new NotFoundException("Audit task not found");
 
@@ -244,11 +259,18 @@ export class SeoAuditTasksService {
           : null;
     }
 
-    return this.prisma.seoAuditTask.update({
+    const task = await this.prisma.seoAuditTask.update({
       where: { id: taskId },
       data,
       include: TASK_INCLUDE,
     });
+    if (
+      payload.assigneeUserId &&
+      payload.assigneeUserId !== existing.assigneeUserId
+    ) {
+      await this.notifyTaskAssignee(siteId, task);
+    }
+    return task;
   }
 
   async deleteTask(siteId: string, taskId: string): Promise<void> {
@@ -297,6 +319,18 @@ export class SeoAuditTasksService {
       where: { id: { in: ids }, siteId },
       data: patch as Prisma.SeoAuditTaskUpdateManyMutationInput,
     });
+
+    if (
+      payload.action.kind === "ASSIGN" &&
+      payload.action.assigneeUserId &&
+      result.count > 0
+    ) {
+      await this.notifyBulkAssignee(
+        siteId,
+        payload.action.assigneeUserId,
+        result.count,
+      );
+    }
 
     return { matched: matchedCount, affected: result.count };
   }
@@ -369,17 +403,184 @@ export class SeoAuditTasksService {
   private async assertTenantMember(
     siteId: string,
     userId: string,
-  ): Promise<void> {
+  ): Promise<{ tenantId: string; email: string | null }> {
     const tenantId = await this.resolveTenantId(siteId);
     const membership = await this.prisma.tenantMembership.findUnique({
       where: { tenantId_userId: { tenantId, userId } },
-      select: { id: true },
+      select: { id: true, user: { select: { email: true } } },
     });
     if (!membership) {
       throw new ForbiddenException(
         "Assignee must be a member of the site's workspace",
       );
     }
+    return { tenantId, email: membership.user?.email ?? null };
+  }
+
+  private async notifyTaskAssignee(
+    siteId: string,
+    task: Pick<
+      SeoAuditTaskWithRefs,
+      "id" | "title" | "slug" | "locale" | "priority" | "assigneeUserId"
+    >,
+    actorUserId?: string | null,
+  ): Promise<void> {
+    if (!task.assigneeUserId || task.assigneeUserId === actorUserId) return;
+
+    try {
+      const member = await this.assertTenantMember(siteId, task.assigneeUserId);
+      await this.notificationsService.create({
+        tenantId: member.tenantId,
+        siteId,
+        userId: task.assigneeUserId,
+        category: NotificationCategory.SYSTEM,
+        title: `SEO task assigned: ${task.title}`,
+        body: `A ${task.priority.toLowerCase()} priority SEO task for ${this.formatSlug(task.slug)} (${task.locale}) was assigned to you.`,
+        actionUrl: "/seo?tab=audit-tasks",
+        metadata: {
+          taskId: task.id,
+          slug: task.slug,
+          locale: task.locale,
+          priority: task.priority,
+        },
+      });
+
+      if (member.email && this.transactionalEmailService.isConfigured()) {
+        const url = `${this.getDashboardBaseUrl()}/seo?tab=audit-tasks`;
+        await this.transactionalEmailService.send({
+          to: member.email,
+          subject: `SEO task assigned: ${task.title}`,
+          text: this.buildTaskAssignmentText({
+            title: task.title,
+            slug: task.slug,
+            locale: task.locale,
+            priority: task.priority,
+            url,
+          }),
+          html: this.buildTaskAssignmentHtml({
+            title: task.title,
+            slug: task.slug,
+            locale: task.locale,
+            priority: task.priority,
+            url,
+          }),
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to notify SEO task assignee ${task.assigneeUserId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+
+  private async notifyBulkAssignee(
+    siteId: string,
+    assigneeUserId: string,
+    count: number,
+  ): Promise<void> {
+    try {
+      const member = await this.assertTenantMember(siteId, assigneeUserId);
+      await this.notificationsService.create({
+        tenantId: member.tenantId,
+        siteId,
+        userId: assigneeUserId,
+        category: NotificationCategory.SYSTEM,
+        title: `${count} SEO task${count === 1 ? "" : "s"} assigned to you`,
+        body: `Open the SEO audit task board to review your newly assigned work.`,
+        actionUrl: "/seo?tab=audit-tasks",
+        metadata: { count },
+      });
+
+      if (member.email && this.transactionalEmailService.isConfigured()) {
+        const url = `${this.getDashboardBaseUrl()}/seo?tab=audit-tasks`;
+        await this.transactionalEmailService.send({
+          to: member.email,
+          subject: `${count} SEO task${count === 1 ? "" : "s"} assigned to you`,
+          text: [
+            `${count} SEO task${count === 1 ? "" : "s"} assigned to you`,
+            "",
+            "Open the SEO audit task board to review them:",
+            url,
+          ].join("\n"),
+          html: this.buildTaskAssignmentHtml({
+            title: `${count} SEO task${count === 1 ? "" : "s"}`,
+            slug: "audit-tasks",
+            locale: "all",
+            priority: "MEDIUM",
+            url,
+          }),
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to notify bulk SEO task assignee ${assigneeUserId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+
+  private buildTaskAssignmentText(input: {
+    title: string;
+    slug: string;
+    locale: string;
+    priority: SeoAuditTaskPriority;
+    url: string;
+  }): string {
+    return [
+      "A StayLayer SEO audit task was assigned to you.",
+      "",
+      input.title,
+      `Page: ${this.formatSlug(input.slug)} (${input.locale})`,
+      `Priority: ${input.priority.toLowerCase()}`,
+      "",
+      "Open the task board:",
+      input.url,
+    ].join("\n");
+  }
+
+  private buildTaskAssignmentHtml(input: {
+    title: string;
+    slug: string;
+    locale: string;
+    priority: SeoAuditTaskPriority;
+    url: string;
+  }): string {
+    const body = `${input.title} for ${this.formatSlug(input.slug)} (${input.locale}) was assigned to you with ${input.priority.toLowerCase()} priority.`;
+    return [
+      "<!doctype html>",
+      '<html><body style="margin:0;padding:24px;background:#f7f2eb;font-family:Arial,sans-serif;color:#102a36;">',
+      '<div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:20px;padding:32px;border:1px solid rgba(26,72,112,0.12);">',
+      '<p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#E07038;">SEO task</p>',
+      `<h1 style="margin:0 0 16px;font-size:28px;line-height:1.2;color:#0D2840;">${this.escapeHtml(input.title)}</h1>`,
+      `<p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#102a36;">${this.escapeHtml(body)}</p>`,
+      `<a href="${this.escapeHtml(input.url)}" style="display:inline-block;border-radius:999px;background:#0D2840;color:#ffffff;padding:14px 22px;text-decoration:none;font-weight:700;">Open task board</a>`,
+      "</div></body></html>",
+    ].join("");
+  }
+
+  private getDashboardBaseUrl(): string {
+    return (
+      this.configService
+        .get<string>("DASHBOARD_APP_URL")
+        ?.trim()
+        .replace(/\/$/, "") || "http://localhost:5173"
+    );
+  }
+
+  private formatSlug(slug: string): string {
+    return slug.startsWith("/") ? slug : `/${slug}`;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 }
 
