@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 
 import client from "../../api/client";
+import { getBillingPlan } from "../../api/billing";
+import { BILLING_MEMBERSHIP_ROLES, hasMembershipRole } from "../../auth/access";
+import { useAuth } from "../../auth/useAuth";
 import {
   cancelSeoCrawl,
   getSeoCrawlJob,
@@ -35,12 +38,15 @@ interface Props {
   siteId: string;
 }
 
-const DEFAULT_URL_LIMIT = 250;
+const DEFAULT_URL_LIMIT = 100;
 const DEFAULT_MAX_DEPTH = 5;
 const POLL_INTERVAL_MS = 5_000;
 
 export function SiteCrawlPanel({ siteId }: Props) {
   const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const tenantId = session?.activeTenant?.id ?? null;
+  const canViewBilling = hasMembershipRole(session, BILLING_MEMBERSHIP_ROLES);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [urlLimit, setUrlLimit] = useState(DEFAULT_URL_LIMIT);
   const [maxDepth, setMaxDepth] = useState(DEFAULT_MAX_DEPTH);
@@ -50,6 +56,23 @@ export function SiteCrawlPanel({ siteId }: Props) {
   const [completedTab, setCompletedTab] = useState<"issues" | "link-graph">(
     "issues",
   );
+
+  const planQuery = useQuery({
+    queryKey: ["seo", "crawler", "plan", tenantId],
+    queryFn: () => getBillingPlan(tenantId!),
+    enabled: Boolean(tenantId && canViewBilling),
+    retry: false,
+  });
+
+  const planUrlLimit = planQuery.data?.limits.seoCrawlerMaxUrlsPerCrawl;
+  const urlLimitMax = planUrlLimit && planUrlLimit > 0 ? planUrlLimit : 10_000;
+  const effectiveUrlLimit = Math.min(Math.max(urlLimit, 1), urlLimitMax);
+
+  useEffect(() => {
+    if (urlLimit > urlLimitMax) {
+      setUrlLimit(urlLimitMax);
+    }
+  }, [urlLimit, urlLimitMax]);
 
   const jobsQuery = useQuery({
     queryKey: ["seo", "crawler", "jobs", siteId],
@@ -107,7 +130,8 @@ export function SiteCrawlPanel({ siteId }: Props) {
   });
 
   const startMutation = useMutation({
-    mutationFn: () => startSeoCrawl(siteId, { urlLimit, maxDepth }),
+    mutationFn: () =>
+      startSeoCrawl(siteId, { urlLimit: effectiveUrlLimit, maxDepth }),
     onSuccess: (newJob) => {
       setSelectedJobId(newJob.id);
       queryClient.invalidateQueries({
@@ -181,13 +205,16 @@ export function SiteCrawlPanel({ siteId }: Props) {
             <input
               type="number"
               min={1}
-              max={10000}
+              max={urlLimitMax}
               value={urlLimit}
-              onChange={(e) => setUrlLimit(Number(e.target.value) || 1)}
+              onChange={(e) =>
+                setUrlLimit(Math.min(Number(e.target.value) || 1, urlLimitMax))
+              }
               className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             <span className="mt-1 block text-xs text-gray-500">
-              Maximum URLs to fetch. Your plan caps this value.
+              Maximum URLs to fetch. Your plan caps this value
+              {planUrlLimit ? ` at ${planUrlLimit}.` : "."}
             </span>
           </label>
           <label className="block text-sm">
