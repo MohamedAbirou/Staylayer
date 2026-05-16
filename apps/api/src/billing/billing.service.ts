@@ -268,6 +268,97 @@ export class BillingService {
     };
   }
 
+  async updateSubscriptionPlan(
+    tenantId: string,
+    planKey: BillingPlanKey,
+  ): Promise<TenantBillingSnapshot> {
+    if (!isPaidPlanKey(planKey)) {
+      throw new BadRequestException({
+        code: "PLAN_CHANGE_NOT_AVAILABLE_FOR_FREE_PLAN",
+        message:
+          "Stripe-managed subscriptions can only be changed to paid hospitality plans.",
+      });
+    }
+
+    const snapshot = await this.getTenantPlanSnapshot(tenantId);
+
+    if (snapshot.planKey === planKey) {
+      throw new ConflictException({
+        code: "PLAN_ALREADY_ACTIVE",
+        message: "This hospitality plan is already active for the workspace.",
+      });
+    }
+
+    if (
+      snapshot.source !== "stripe" ||
+      !snapshot.providerSubscriptionId ||
+      !["active", "trialing", "past_due"].includes(snapshot.status)
+    ) {
+      throw new ConflictException({
+        code: "SUBSCRIPTION_CHANGE_UNAVAILABLE",
+        message:
+          "A live Stripe subscription is required before the plan can be changed.",
+      });
+    }
+
+    const stripe = this.getStripeClient();
+    const priceId = this.getStripePriceId(planKey);
+    const plan = getBillingPlan(planKey);
+    const stripeSubscription = await stripe.subscriptions.retrieve(
+      snapshot.providerSubscriptionId,
+    );
+    const subscriptionItem = stripeSubscription.items.data[0];
+
+    if (!subscriptionItem?.id) {
+      throw new ServiceUnavailableException({
+        code: "STRIPE_SUBSCRIPTION_ITEM_MISSING",
+        message:
+          "Stripe did not return a subscription item that can be updated.",
+      });
+    }
+
+    const updatedSubscription = await stripe.subscriptions.update(
+      snapshot.providerSubscriptionId,
+      {
+        cancel_at_period_end: false,
+        items: [
+          {
+            id: subscriptionItem.id,
+            price: priceId,
+            quantity: subscriptionItem.quantity ?? 1,
+          },
+        ],
+        metadata: {
+          ...(stripeSubscription.metadata ?? {}),
+          tenantId,
+          planKey,
+        },
+        proration_behavior: "always_invoice",
+      },
+    );
+
+    const updatedRecord = this.toStripeSubscriptionRecord(updatedSubscription);
+
+    if (!updatedRecord) {
+      throw new InternalServerErrorException({
+        code: "STRIPE_SUBSCRIPTION_SYNC_ERROR",
+        message: "Stripe returned an unreadable subscription response.",
+      });
+    }
+
+    await this.syncSubscriptionFromStripe(
+      updatedRecord,
+      `stripe-local-plan-change:${updatedSubscription.id}:${Date.now()}`,
+      Math.floor(Date.now() / 1000),
+    );
+
+    this.logger.log(
+      `Updated tenant ${tenantId} subscription to ${plan.key} with Stripe proration`,
+    );
+
+    return this.getTenantPlanSnapshot(tenantId);
+  }
+
   async createPortalSession(
     tenantId: string,
     returnUrl: string,
@@ -926,48 +1017,55 @@ export class BillingService {
     monthStart.setUTCDate(1);
     monthStart.setUTCHours(0, 0, 0, 0);
 
-    const [sites, seats, pages, formSubmissions, domains, translationUsage, psiAudits] =
-      await Promise.all([
-        this.prisma.site.findMany({
-          where: {
+    const [
+      sites,
+      seats,
+      pages,
+      formSubmissions,
+      domains,
+      translationUsage,
+      psiAudits,
+    ] = await Promise.all([
+      this.prisma.site.findMany({
+        where: {
+          tenantId,
+          status: { not: SiteStatus.ARCHIVED },
+        },
+        select: {
+          id: true,
+          enabledLocales: true,
+        },
+      }),
+      this.prisma.tenantMembership.count({ where: { tenantId } }),
+      this.prisma.page.count({
+        where: {
+          deletedAt: null,
+          site: {
             tenantId,
             status: { not: SiteStatus.ARCHIVED },
           },
-          select: {
-            id: true,
-            enabledLocales: true,
+        },
+      }),
+      this.prisma.formSubmission.count({
+        where: {
+          createdAt: { gte: monthStart },
+          site: {
+            tenantId,
+            status: { not: SiteStatus.ARCHIVED },
           },
-        }),
-        this.prisma.tenantMembership.count({ where: { tenantId } }),
-        this.prisma.page.count({
-          where: {
-            deletedAt: null,
-            site: {
-              tenantId,
-              status: { not: SiteStatus.ARCHIVED },
-            },
+        },
+      }),
+      this.prisma.domain.count({
+        where: {
+          site: {
+            tenantId,
+            status: { not: SiteStatus.ARCHIVED },
           },
-        }),
-        this.prisma.formSubmission.count({
-          where: {
-            createdAt: { gte: monthStart },
-            site: {
-              tenantId,
-              status: { not: SiteStatus.ARCHIVED },
-            },
-          },
-        }),
-        this.prisma.domain.count({
-          where: {
-            site: {
-              tenantId,
-              status: { not: SiteStatus.ARCHIVED },
-            },
-          },
-        }),
-        this.getTranslationUsageForMonth(tenantId, monthStart),
-        this.getPsiAuditUsageForMonth(tenantId, monthStart),
-      ]);
+        },
+      }),
+      this.getTranslationUsageForMonth(tenantId, monthStart),
+      this.getPsiAuditUsageForMonth(tenantId, monthStart),
+    ]);
 
     return {
       sites: sites.length,

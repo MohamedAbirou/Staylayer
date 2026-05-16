@@ -53,6 +53,18 @@ function buildConfigMock() {
         return "sk_test_123";
       }
 
+      if (key === "STRIPE_PRICE_STARTER_STAY") {
+        return "price_starter";
+      }
+
+      if (key === "STRIPE_PRICE_BOUTIQUE_GROWTH") {
+        return "price_boutique";
+      }
+
+      if (key === "STRIPE_PRICE_PORTFOLIO") {
+        return "price_portfolio";
+      }
+
       return undefined;
     }),
   };
@@ -405,6 +417,82 @@ describe("BillingService", () => {
         }),
       }),
     );
+  });
+
+  it("updates an active Stripe subscription with immediate proration", async () => {
+    const currentSnapshot = {
+      tenantId: "tenant-1",
+      planKey: "starter_stay",
+      planName: "Starter Stay",
+      description: "Single-property plan",
+      provider: "stripe",
+      status: "active",
+      renewsAt: new Date("2026-06-01T00:00:00.000Z"),
+      currentPeriodStart: new Date("2026-05-01T00:00:00.000Z"),
+      gracePeriodEndsAt: null,
+      limits: {},
+      usage: {},
+      source: "stripe",
+      providerCustomerId: "cus_123",
+      providerSubscriptionId: "sub_live_123",
+      cancelAtPeriodEnd: false,
+      actions: {},
+      lastWebhookAt: null,
+      subscriptionId: "db-sub-1",
+      isFreePlan: false,
+    };
+    const updatedSnapshot = {
+      ...currentSnapshot,
+      planKey: "boutique_growth",
+      planName: "Boutique Growth",
+    };
+    const retrieve = jest.fn().mockResolvedValue({
+      id: "sub_live_123",
+      metadata: { tenantId: "tenant-1", planKey: "starter_stay" },
+      items: {
+        data: [{ id: "si_123", quantity: 1, price: { id: "price_starter" } }],
+      },
+    });
+    const update = jest.fn().mockResolvedValue({
+      id: "sub_live_123",
+      customer: "cus_123",
+      metadata: { tenantId: "tenant-1", planKey: "boutique_growth" },
+      status: "active",
+      items: {
+        data: [{ price: { id: "price_boutique" } }],
+      },
+      current_period_start: 1_777_000_000,
+      current_period_end: 1_779_592_000,
+      cancel_at_period_end: false,
+    });
+
+    jest
+      .spyOn(service, "getTenantPlanSnapshot")
+      .mockResolvedValueOnce(currentSnapshot as never)
+      .mockResolvedValueOnce(updatedSnapshot as never);
+    jest
+      .spyOn(service, "syncSubscriptionFromStripe")
+      .mockResolvedValue({ tenantId: "tenant-1", subscriptionId: "db-sub-1" });
+    (service as unknown as { getStripeClient: jest.Mock }).getStripeClient =
+      jest.fn().mockReturnValue({
+        subscriptions: {
+          retrieve,
+          update,
+        },
+      });
+
+    const snapshot = await service.updateSubscriptionPlan(
+      "tenant-1",
+      "boutique_growth",
+    );
+
+    expect(update).toHaveBeenCalledWith("sub_live_123", {
+      cancel_at_period_end: false,
+      items: [{ id: "si_123", price: "price_boutique", quantity: 1 }],
+      metadata: { tenantId: "tenant-1", planKey: "boutique_growth" },
+      proration_behavior: "always_invoice",
+    });
+    expect(snapshot.planKey).toBe("boutique_growth");
   });
 
   // ── Launch checklist: "billing webhooks are reliable and idempotent" ──────────

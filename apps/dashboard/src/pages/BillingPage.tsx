@@ -5,10 +5,9 @@ import {
   type ElementType,
   type ReactNode,
 } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
-  ArrowUpRight,
   BarChart3,
   CheckCircle2,
   Clock,
@@ -23,12 +22,14 @@ import { useAuth } from "../auth/useAuth";
 import { BILLING_MEMBERSHIP_ROLES, hasMembershipRole } from "../auth/access";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
-  PLAN_CATALOG,
   createCheckoutSession,
   createPortalSession,
   getBillingPlan,
   isBillingPlanKey,
+  listBillingPlans,
+  updateBillingPlan,
   type BillingPlanKey,
+  type BillingPlanCatalogEntry,
   type BillingPlanSnapshot,
   type BillingPlanStatus,
 } from "../api/billing";
@@ -45,6 +46,7 @@ const STATUS_META: Record<BillingPlanStatus, { label: string; color: string }> =
 
 export default function BillingPage() {
   const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const tenantId = session?.activeTenant?.id ?? null;
   const canViewBilling = hasMembershipRole(session, BILLING_MEMBERSHIP_ROLES);
@@ -52,6 +54,7 @@ export default function BillingPage() {
     null,
   );
   const [checkoutConfirmOpen, setCheckoutConfirmOpen] = useState(false);
+  const [planChangeConfirmOpen, setPlanChangeConfirmOpen] = useState(false);
   const [checkoutFeedback, setCheckoutFeedback] = useState<
     "none" | "syncing" | "synced"
   >(searchParams.get("checkout") === "success" ? "syncing" : "none");
@@ -73,6 +76,17 @@ export default function BillingPage() {
     refetchInterval: searchParams.get("checkout") === "success" ? 2000 : false,
   });
 
+  const {
+    data: plans = [],
+    isLoading: plansLoading,
+    isError: plansError,
+  } = useQuery({
+    queryKey: ["billing-plans", tenantId],
+    queryFn: () => listBillingPlans(tenantId!),
+    enabled: Boolean(tenantId && canViewBilling),
+    retry: false,
+  });
+
   const requestedPlanParam = searchParams.get("plan");
   const requestedPlan = isBillingPlanKey(requestedPlanParam)
     ? requestedPlanParam
@@ -92,7 +106,12 @@ export default function BillingPage() {
 
       const returnUrl = `${window.location.origin}/billing?checkout=success`;
       const cancelUrl = `${window.location.origin}/billing?checkout=cancelled`;
-      const targetPlanKey = selectedPlanKey ?? plan.planKey;
+      const targetPlanKey = getPaidPlanSelection(selectedPlanKey, plans, plan);
+
+      if (!targetPlanKey) {
+        throw new Error("Choose a paid plan before starting checkout");
+      }
+
       return createCheckoutSession(tenantId, {
         planKey: targetPlanKey,
         successUrl: returnUrl,
@@ -134,7 +153,57 @@ export default function BillingPage() {
     },
   });
 
+  const planChangeMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenantId || !plan) {
+        throw new Error("Select a tenant workspace before changing plans");
+      }
+
+      const targetPlanKey = getPaidPlanSelection(selectedPlanKey, plans, plan);
+
+      if (!targetPlanKey) {
+        throw new Error("Choose a paid plan before changing plans");
+      }
+
+      return updateBillingPlan(tenantId, { planKey: targetPlanKey });
+    },
+    onSuccess: async (updatedPlan) => {
+      setPlanChangeConfirmOpen(false);
+      setSelectedPlanKey(updatedPlan.planKey);
+      await queryClient.invalidateQueries({ queryKey: ["billing", tenantId] });
+      toast.success(`Plan changed to ${updatedPlan.planName}`);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ??
+        "Unable to change the subscription plan for this workspace.";
+      toast.error(message);
+    },
+  });
+
   const checkoutAllowed = plan ? canStartCheckout(plan) : false;
+  const planChangeAllowed = plan ? canChangePlan(plan) : false;
+
+  useEffect(() => {
+    if (!plan || plans.length === 0) {
+      return;
+    }
+
+    const defaultSelection = getDefaultPlanSelection(plan, plans);
+
+    setSelectedPlanKey((current) => {
+      if (
+        current &&
+        current !== "free" &&
+        plans.some((catalogPlan) => catalogPlan.key === current)
+      ) {
+        return current;
+      }
+
+      return defaultSelection;
+    });
+  }, [plan, plans]);
 
   useEffect(() => {
     if (checkoutReturn === "success") {
@@ -179,7 +248,7 @@ export default function BillingPage() {
   }, [requestedPlan]);
 
   useEffect(() => {
-    if (!plan || !requestedPlan || !checkoutIntentKey || !checkoutAllowed) {
+    if (!plan || !requestedPlan || !checkoutIntentKey) {
       return;
     }
 
@@ -193,11 +262,28 @@ export default function BillingPage() {
     }
 
     handledCheckoutIntentRef.current = checkoutIntentKey;
-    setCheckoutConfirmOpen(true);
+    if (checkoutAllowed) {
+      setCheckoutConfirmOpen(true);
+      return;
+    }
+
+    const requestedCatalogPlan = plans.find(
+      (catalogPlan) => catalogPlan.key === requestedPlan,
+    );
+
+    if (
+      planChangeAllowed &&
+      requestedPlan !== plan.planKey &&
+      !requestedCatalogPlan?.isFree
+    ) {
+      setPlanChangeConfirmOpen(true);
+    }
   }, [
     checkoutAllowed,
     checkoutIntentKey,
     plan,
+    planChangeAllowed,
+    plans,
     requestedPlan,
     selectedPlanKey,
   ]);
@@ -224,18 +310,18 @@ export default function BillingPage() {
     );
   }
 
-  if (isError) {
+  if (isError || plansError) {
     return (
       <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-8 shadow-sm">
         <div className="flex items-start gap-3 text-amber-800">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <h1 className="text-xl font-bold">
-              Billing status could not be refreshed
+              Billing details could not be refreshed
             </h1>
             <p className="mt-2 text-sm">
-              Retry this live check before making a launch decision for the
-              active hospitality workspace.
+              Retry this live check before making a plan decision for the active
+              hospitality workspace.
             </p>
           </div>
         </div>
@@ -250,11 +336,11 @@ export default function BillingPage() {
     );
   }
 
-  if (isLoading || !plan) {
+  if (isLoading || plansLoading || !plan) {
     return (
       <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white p-10 text-sm text-gray-500 shadow-sm">
         <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-        Loading billing status…
+        Loading billing details…
       </div>
     );
   }
@@ -264,9 +350,19 @@ export default function BillingPage() {
     plan.source === "stripe" && !!plan.providerCustomerId;
   const overLimitItems = getOverLimitItems(plan);
   const nearLimitItems = getNearLimitItems(plan);
-  const selectedPlan = PLAN_CATALOG.find(
-    (entry) => entry.key === (selectedPlanKey ?? plan.planKey),
+  const selectedPlanKeyForAction =
+    getPaidPlanSelection(selectedPlanKey, plans, plan) ?? plan.planKey;
+  const selectedPlan = plans.find(
+    (entry) => entry.key === selectedPlanKeyForAction,
   );
+  const selectedPlanIsCurrent = selectedPlan?.key === plan.planKey;
+  const canSubmitCheckout =
+    checkoutAllowed && selectedPlan && !selectedPlan.isFree;
+  const canSubmitPlanChange =
+    planChangeAllowed &&
+    selectedPlan &&
+    !selectedPlan.isFree &&
+    !selectedPlanIsCurrent;
 
   return (
     <div className="space-y-6">
@@ -472,23 +568,6 @@ export default function BillingPage() {
                 Manage billing
               </button>
             )}
-            {checkoutAllowed && (
-              <button
-                onClick={() => setCheckoutConfirmOpen(true)}
-                disabled={checkoutMutation.isPending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {checkoutMutation.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Zap className="h-3.5 w-3.5" />
-                )}
-                {plan.status === "canceled" || plan.status === "inactive"
-                  ? "Resume billing"
-                  : "Start subscription"}
-                <ArrowUpRight className="h-3 w-3" />
-              </button>
-            )}
           </div>
         </div>
 
@@ -535,11 +614,80 @@ export default function BillingPage() {
         )}
       </div>
 
-      {checkoutAllowed && (
-        <PlanSelector
-          selected={selectedPlanKey ?? plan.planKey}
-          onSelect={setSelectedPlanKey}
-        />
+      {plans.length > 0 && (
+        <>
+          <PlanSelector
+            plans={plans}
+            currentPlanKey={plan.planKey}
+            selected={selectedPlanKeyForAction}
+            onSelect={setSelectedPlanKey}
+          />
+
+          {(checkoutAllowed || planChangeAllowed || manageBillingAllowed) && (
+            <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {selectedPlan
+                    ? selectedPlanIsCurrent
+                      ? `${selectedPlan.name} is your current plan`
+                      : `Change to ${selectedPlan.name}`
+                    : "Choose a paid plan"}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {planChangeAllowed
+                    ? "Stripe calculates prorated credits and charges from the current billing period before applying the new plan."
+                    : "Choose a paid hospitality plan before opening Stripe Checkout."}
+                </p>
+              </div>
+
+              {checkoutAllowed ? (
+                <button
+                  type="button"
+                  onClick={() => setCheckoutConfirmOpen(true)}
+                  disabled={checkoutMutation.isPending || !canSubmitCheckout}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {checkoutMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4" />
+                  )}
+                  Start subscription
+                </button>
+              ) : planChangeAllowed ? (
+                <button
+                  type="button"
+                  onClick={() => setPlanChangeConfirmOpen(true)}
+                  disabled={
+                    planChangeMutation.isPending || !canSubmitPlanChange
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {planChangeMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4" />
+                  )}
+                  Change plan
+                </button>
+              ) : manageBillingAllowed ? (
+                <button
+                  type="button"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {portalMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                  Manage billing
+                </button>
+              ) : null}
+            </div>
+          )}
+        </>
       )}
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -592,6 +740,16 @@ export default function BillingPage() {
         onConfirm={() => checkoutMutation.mutate()}
         onCancel={() => setCheckoutConfirmOpen(false)}
       />
+
+      <ConfirmDialog
+        open={planChangeConfirmOpen}
+        title="Change subscription plan?"
+        message={`You are about to change ${session?.activeTenant?.name} from ${plan.planName} to ${selectedPlan?.name ?? "the selected plan"}. Stripe will apply prorated credits and charges for the current billing period.`}
+        confirmLabel="Change plan"
+        isPending={planChangeMutation.isPending}
+        onConfirm={() => planChangeMutation.mutate()}
+        onCancel={() => setPlanChangeConfirmOpen(false)}
+      />
     </div>
   );
 }
@@ -605,37 +763,123 @@ function canStartCheckout(plan: BillingPlanSnapshot): boolean {
   );
 }
 
+function canChangePlan(plan: BillingPlanSnapshot): boolean {
+  return (
+    plan.source === "stripe" &&
+    Boolean(plan.providerSubscriptionId) &&
+    ["active", "trialing", "past_due"].includes(plan.status)
+  );
+}
+
+function getDefaultPlanSelection(
+  plan: BillingPlanSnapshot,
+  plans: BillingPlanCatalogEntry[],
+): BillingPlanKey {
+  const paidPlans = plans.filter((entry) => !entry.isFree);
+
+  if (plan.source === "stripe") {
+    const currentPaidPlan = paidPlans.find(
+      (entry) => entry.key === plan.planKey,
+    );
+    if (currentPaidPlan) {
+      return currentPaidPlan.key;
+    }
+  }
+
+  return paidPlans[0]?.key ?? plan.planKey;
+}
+
+function getPaidPlanSelection(
+  selectedPlanKey: BillingPlanKey | null,
+  plans: BillingPlanCatalogEntry[],
+  plan: BillingPlanSnapshot,
+): BillingPlanKey | null {
+  const selectedPlan = selectedPlanKey
+    ? plans.find((entry) => entry.key === selectedPlanKey)
+    : null;
+
+  if (selectedPlan && !selectedPlan.isFree) {
+    return selectedPlan.key;
+  }
+
+  const defaultPlanKey = getDefaultPlanSelection(plan, plans);
+  const defaultPlan = plans.find((entry) => entry.key === defaultPlanKey);
+
+  return defaultPlan && !defaultPlan.isFree ? defaultPlan.key : null;
+}
+
 function PlanSelector({
+  plans,
+  currentPlanKey,
   selected,
   onSelect,
 }: {
+  plans: BillingPlanCatalogEntry[];
+  currentPlanKey: BillingPlanKey;
   selected: BillingPlanKey;
   onSelect: (key: BillingPlanKey) => void;
 }) {
   return (
     <div className="rounded-xl border border-blue-100 bg-blue-50 p-6 shadow-sm">
-      <p className="mb-4 text-sm font-semibold text-blue-900">
-        Choose your hospitality plan
-      </p>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-blue-900">
+          Choose your hospitality plan
+        </p>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700">
+          Live plans
+        </span>
+      </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {PLAN_CATALOG.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            onClick={() => onSelect(p.key)}
-            className={`rounded-lg border-2 p-4 text-left transition-colors ${
-              selected === p.key
-                ? "border-blue-600 bg-white shadow-sm"
-                : "border-transparent bg-white hover:border-blue-300"
-            }`}
-          >
-            <p className="text-sm font-semibold text-gray-900">{p.name}</p>
-            <p className="mt-1 text-xs text-gray-500">{p.tagline}</p>
-          </button>
-        ))}
+        {plans.map((p) => {
+          const isCurrent = p.key === currentPlanKey;
+          const isSelected = selected === p.key;
+
+          return (
+            <button
+              key={p.key}
+              type="button"
+              disabled={p.isFree}
+              onClick={() => onSelect(p.key)}
+              className={`rounded-lg border-2 p-4 text-left transition-colors ${
+                isSelected
+                  ? "border-blue-600 bg-white shadow-sm"
+                  : "border-transparent bg-white hover:border-blue-300"
+              } disabled:cursor-not-allowed disabled:opacity-75`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                {isCurrent ? (
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                    Current
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">{p.description}</p>
+              <p className="mt-3 text-xs font-medium text-gray-600">
+                {formatPlanHighlights(p)}
+              </p>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
+}
+
+function formatPlanHighlights(plan: BillingPlanCatalogEntry): string {
+  return [
+    pluralize(plan.limits.sites, "site"),
+    pluralize(plan.limits.locales, "language"),
+    pluralize(plan.limits.seats, "seat"),
+    `${plan.limits.formSubmissions.toLocaleString()} inquiries/mo`,
+    plan.limits.domains > 0
+      ? pluralize(plan.limits.domains, "domain")
+      : "No custom domains",
+  ].join(" · ");
+}
+
+function pluralize(count: number, singular: string): string {
+  return `${count.toLocaleString()} ${singular}${count === 1 ? "" : "s"}`;
 }
 
 function StatusBanner({

@@ -26,6 +26,7 @@ describe("BillingController", () => {
   let billingService: {
     getTenantPlanSnapshot: jest.Mock;
     createCheckoutSession: jest.Mock;
+    updateSubscriptionPlan: jest.Mock;
     createPortalSession: jest.Mock;
   };
   let workspaceAccessService: {
@@ -36,6 +37,7 @@ describe("BillingController", () => {
     billingService = {
       getTenantPlanSnapshot: jest.fn(),
       createCheckoutSession: jest.fn(),
+      updateSubscriptionPlan: jest.fn(),
       createPortalSession: jest.fn(),
     };
     workspaceAccessService = {
@@ -184,6 +186,41 @@ describe("BillingController", () => {
     expect(billingService.createPortalSession).toHaveBeenCalledWith(
       "tenant-a",
       "http://localhost:5173/billing",
+    );
+  });
+
+  it("uses the resolved tenant scope when changing a subscription plan", async () => {
+    workspaceAccessService.ensureTenantAccess.mockResolvedValue("tenant-a");
+    billingService.updateSubscriptionPlan.mockResolvedValue({
+      planKey: "boutique_growth",
+      planName: "Boutique Growth",
+      description: "Growth plan",
+      status: "active",
+      renewsAt: null,
+      currentPeriodStart: null,
+      gracePeriodEndsAt: null,
+      limits: {},
+      usage: {},
+      provider: "stripe",
+      providerCustomerId: "cus_test_123",
+      providerSubscriptionId: "sub_test_123",
+      cancelAtPeriodEnd: false,
+      actions: {},
+      lastWebhookAt: null,
+      source: "stripe",
+      subscriptionId: "db-sub-1",
+      isFreePlan: false,
+    });
+
+    await controller.updateSubscriptionPlan(
+      "tenant-b",
+      { planKey: "boutique_growth" },
+      buildRequest(),
+    );
+
+    expect(billingService.updateSubscriptionPlan).toHaveBeenCalledWith(
+      "tenant-a",
+      "boutique_growth",
     );
   });
 });

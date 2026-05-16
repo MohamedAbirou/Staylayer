@@ -31,6 +31,7 @@ export interface BillingPlanLimits {
   scheduledExports: boolean;
   supportTier: BillingSupportTier;
   seoCrawlerMaxUrlsPerCrawl: number;
+  psiAuditsPerMonth: number;
 }
 
 export interface BillingUsageTotals {
@@ -46,42 +47,22 @@ export interface BillingUsageTotals {
 export interface PlanCatalogEntry {
   key: BillingPlanKey;
   name: string;
-  tagline: string;
+  description: string;
   isFree: boolean;
+  limits: BillingPlanLimits;
 }
 
-export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
-  {
-    key: "free",
-    name: "Free",
-    tagline: "1 site · English only · 1 seat · 50 inquiries/mo",
-    isFree: true,
-  },
-  {
-    key: "starter_stay",
-    name: "Starter Stay",
-    tagline: "1 site · 2 languages · 2 seats · 250 inquiries/mo · 1 domain",
-    isFree: false,
-  },
-  {
-    key: "boutique_growth",
-    name: "Boutique Growth",
-    tagline: "1 site · 4 languages · 5 seats · 1 500 inquiries/mo · 3 domains",
-    isFree: false,
-  },
-  {
-    key: "portfolio",
-    name: "Portfolio",
-    tagline:
-      "5 sites · 4 languages/site · 15 seats · 10 000 inquiries/mo · 15 domains",
-    isFree: false,
-  },
-];
+const BILLING_PLAN_KEYS = [
+  "free",
+  "starter_stay",
+  "boutique_growth",
+  "portfolio",
+] as const satisfies readonly BillingPlanKey[];
 
 export function isBillingPlanKey(
   value: string | null,
 ): value is BillingPlanKey {
-  return Boolean(value && PLAN_CATALOG.some((plan) => plan.key === value));
+  return Boolean(value && BILLING_PLAN_KEYS.includes(value as BillingPlanKey));
 }
 
 export interface BillingPlanSnapshot {
@@ -162,6 +143,17 @@ export async function createCheckoutSession(
 ): Promise<BillingCheckoutSession> {
   const { data } = await client.post<BillingCheckoutSession>(
     `/tenants/${tenantId}/billing/checkout-session`,
+    payload,
+  );
+  return data;
+}
+
+export async function updateBillingPlan(
+  tenantId: string,
+  payload: { planKey: BillingPlanKey },
+): Promise<BillingPlanSnapshot> {
+  const { data } = await client.post<BillingPlanSnapshot>(
+    `/tenants/${tenantId}/billing/subscription-plan`,
     payload,
   );
   return data;
