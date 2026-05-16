@@ -104,6 +104,7 @@ export class SearchConsoleOAuthService {
   /** Public configuration view for diagnostics (no secrets). */
   describeConfig(): {
     configured: boolean;
+    oauthConfigured: boolean;
     clientIdPresent: boolean;
     clientSecretPresent: boolean;
     redirectUri: string;
@@ -111,6 +112,7 @@ export class SearchConsoleOAuthService {
   } {
     return {
       configured: this.isConfigured() && this.encryption.isConfigured(),
+      oauthConfigured: this.isConfigured(),
       clientIdPresent: this.clientId.length > 0,
       clientSecretPresent: this.clientSecret.length > 0,
       redirectUri: this.redirectUri,

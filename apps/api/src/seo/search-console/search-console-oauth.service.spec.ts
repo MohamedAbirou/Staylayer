@@ -122,6 +122,7 @@ describe("SearchConsoleOAuthService", () => {
       const svc = new SearchConsoleOAuthService(new SeoTokenEncryptionService());
       const cfg = svc.describeConfig();
       expect(cfg.configured).toBe(true);
+      expect(cfg.oauthConfigured).toBe(true);
       expect(cfg.clientIdPresent).toBe(true);
       expect(cfg.clientSecretPresent).toBe(true);
       expect(cfg.redirectUri).toBe(baseEnv.SEARCH_CONSOLE_OAUTH_REDIRECT_URI);
