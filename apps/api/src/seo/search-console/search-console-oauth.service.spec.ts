@@ -39,7 +39,9 @@ describe("SearchConsoleOAuthService", () => {
 
   it("isConfigured() false when client id missing", () => {
     withEnv({ ...baseEnv, GOOGLE_OAUTH_CLIENT_ID: "" }, () => {
-      const svc = new SearchConsoleOAuthService(new SeoTokenEncryptionService());
+      const svc = new SearchConsoleOAuthService(
+        new SeoTokenEncryptionService(),
+      );
       expect(svc.isConfigured()).toBe(false);
       expect(() =>
         svc.buildAuthorizeUrl({ siteId: "s1", userId: "u1" }),
@@ -49,7 +51,9 @@ describe("SearchConsoleOAuthService", () => {
 
   it("buildAuthorizeUrl returns a properly shaped Google URL with state", () => {
     withEnv(baseEnv, () => {
-      const svc = new SearchConsoleOAuthService(new SeoTokenEncryptionService());
+      const svc = new SearchConsoleOAuthService(
+        new SeoTokenEncryptionService(),
+      );
       const { authUrl, state } = svc.buildAuthorizeUrl({
         siteId: "site-123",
         userId: "user-7",
@@ -74,7 +78,9 @@ describe("SearchConsoleOAuthService", () => {
 
   it("verifyState rejects tampered tokens", () => {
     withEnv(baseEnv, () => {
-      const svc = new SearchConsoleOAuthService(new SeoTokenEncryptionService());
+      const svc = new SearchConsoleOAuthService(
+        new SeoTokenEncryptionService(),
+      );
       const { state } = svc.buildAuthorizeUrl({ siteId: "s", userId: "u" });
       const [body, sig] = state.split(".");
       const tampered = `${body}A.${sig}`;
@@ -86,7 +92,9 @@ describe("SearchConsoleOAuthService", () => {
 
   it("verifyState rejects malformed tokens", () => {
     withEnv(baseEnv, () => {
-      const svc = new SearchConsoleOAuthService(new SeoTokenEncryptionService());
+      const svc = new SearchConsoleOAuthService(
+        new SeoTokenEncryptionService(),
+      );
       expect(() => svc.verifyState("not-a-token")).toThrow(
         SearchConsoleOAuthStateError,
       );
@@ -95,7 +103,9 @@ describe("SearchConsoleOAuthService", () => {
 
   it("verifyState rejects expired tokens", () => {
     withEnv(baseEnv, () => {
-      const svc = new SearchConsoleOAuthService(new SeoTokenEncryptionService());
+      const svc = new SearchConsoleOAuthService(
+        new SeoTokenEncryptionService(),
+      );
       // Hand-craft expired payload
       const expired = Math.floor(Date.now() / 1000) - 60;
       const body = Buffer.from(
@@ -119,7 +129,9 @@ describe("SearchConsoleOAuthService", () => {
 
   it("describeConfig() reports presence without leaking secrets", () => {
     withEnv(baseEnv, () => {
-      const svc = new SearchConsoleOAuthService(new SeoTokenEncryptionService());
+      const svc = new SearchConsoleOAuthService(
+        new SeoTokenEncryptionService(),
+      );
       const cfg = svc.describeConfig();
       expect(cfg.configured).toBe(true);
       expect(cfg.oauthConfigured).toBe(true);

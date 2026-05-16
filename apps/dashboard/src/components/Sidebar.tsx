@@ -18,6 +18,7 @@ import {
   BookOpen,
   Search,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import {
   BILLING_MEMBERSHIP_ROLES,
@@ -57,6 +58,26 @@ export function Sidebar() {
   const { data: settings } = useSettings();
   const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const [navQuery, setNavQuery] = useState("");
+  const [cockpitOpen, setCockpitOpen] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem("dashboard:cockpit-open");
+      return stored !== null ? stored === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleCockpit = () => {
+    setCockpitOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("dashboard:cockpit-open", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   const hasContentAccess = hasMembershipRole(session, CONTENT_MEMBERSHIP_ROLES);
   const hasBillingAccess = hasMembershipRole(session, BILLING_MEMBERSHIP_ROLES);
@@ -294,16 +315,52 @@ export function Sidebar() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <aside className="flex h-screen w-[22rem] shrink-0 flex-col border-r border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96),rgba(241,245,249,0.96))] px-3 py-3 text-slate-900">
-      <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.98),_rgba(226,232,240,0.7)_50%,_rgba(191,219,254,0.32)_100%)] p-3.5 shadow-[0_24px_50px_rgba(15,23,42,0.08)]">
+    <aside className="flex h-full w-full flex-col bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96),rgba(241,245,249,0.96))] px-3 py-3 text-slate-900">
+      <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.98),rgba(226,232,240,0.7)_50%,rgba(191,219,254,0.32)_100%)] p-3.5 shadow-[0_24px_50px_rgba(15,23,42,0.08)]">
+        {/* ── Cockpit header – always visible ──────────────── */}
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex h-12 w-32 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
-              <img src="/logo2.png" alt={siteName} className="h-16" />
+          <div className="min-w-0 flex-1">
+            <div className="flex h-12 w-40 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
+              <img src="/logo2.png" alt={siteName} className="h-20" />
             </div>
-            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
-              Workspace cockpit
-            </p>
+          </div>
+          <NotificationBell align="start" />
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
+            Workspace cockpit
+          </p>
+          <button
+            type="button"
+            onClick={toggleCockpit}
+            aria-label={cockpitOpen ? "Collapse cockpit" : "Expand cockpit"}
+            aria-expanded={cockpitOpen}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/70 text-slate-400 shadow-sm ring-1 ring-slate-200/60 transition-all duration-200 hover:bg-white hover:text-slate-600 hover:shadow-md"
+          >
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform duration-300 ease-in-out ${
+                cockpitOpen ? "rotate-0" : "rotate-180"
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* ── Cockpit body – collapsible ───────────────────── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateRows: cockpitOpen ? "1fr" : "0fr",
+            transition: "grid-template-rows 320ms cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          <div
+            className="overflow-hidden"
+            style={{
+              opacity: cockpitOpen ? 1 : 0,
+              transition: "opacity 260ms cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
             <p className="mt-1.5 truncate text-lg font-semibold text-slate-950">
               {session?.activeTenant?.name || siteName}
             </p>
@@ -311,89 +368,95 @@ export function Sidebar() {
               {session?.activeSite?.name ||
                 "Choose a site context to unlock content tools"}
             </p>
-          </div>
-          <NotificationBell align="start" />
-        </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {membershipLabel ? (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${roleColor[session?.activeMembershipRole ?? "EDITOR"] ?? "text-slate-500"} bg-white`}
-            >
-              {membershipLabel}
-            </span>
-          ) : null}
-          {pendingInvitationCount > 0 ? (
-            <button
-              type="button"
-              onClick={() => navigate("/workspace#pending-invitations")}
-              className="inline-flex items-center gap-2 rounded-full bg-[#12392f] px-3 py-1 text-xs font-semibold text-white"
-            >
-              <Bell className="h-3.5 w-3.5" />
-              {pendingInvitationCount} pending invite
-              {pendingInvitationCount === 1 ? "" : "s"}
-            </button>
-          ) : null}
-        </div>
-
-        {session?.memberships.length ? (
-          <div className="mt-4 space-y-2.5">
-            <label className="block">
-              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                Workspace
-              </span>
-              <div className="relative">
-                <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <select
-                  value={session.activeTenant?.id ?? ""}
-                  disabled={
-                    switchingWorkspace || session.memberships.length === 1
-                  }
-                  onChange={(event) =>
-                    void handleTenantChange(event.target.value)
-                  }
-                  className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+            <div className="mt-3 flex flex-wrap gap-2">
+              {membershipLabel ? (
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    roleColor[session?.activeMembershipRole ?? "EDITOR"] ??
+                    "text-slate-500"
+                  } bg-white`}
                 >
-                  {session.memberships.map((membership) => (
-                    <option
-                      key={membership.tenantId}
-                      value={membership.tenantId}
+                  {membershipLabel}
+                </span>
+              ) : null}
+              {pendingInvitationCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => navigate("/workspace#pending-invitations")}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#12392f] px-3 py-1 text-xs font-semibold text-white"
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                  {pendingInvitationCount} pending invite
+                  {pendingInvitationCount === 1 ? "" : "s"}
+                </button>
+              ) : null}
+            </div>
+
+            {session?.memberships.length ? (
+              <div className="mt-4 space-y-2.5">
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    Workspace
+                  </span>
+                  <div className="relative">
+                    <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <select
+                      value={session.activeTenant?.id ?? ""}
+                      disabled={
+                        switchingWorkspace || session.memberships.length === 1
+                      }
+                      onChange={(event) =>
+                        void handleTenantChange(event.target.value)
+                      }
+                      className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-slate-400"
                     >
-                      {membership.tenantName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </label>
+                      {session.memberships.map((membership) => (
+                        <option
+                          key={membership.tenantId}
+                          value={membership.tenantId}
+                        >
+                          {membership.tenantName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                Active site
-              </span>
-              <select
-                value={session?.activeSite?.id ?? ""}
-                disabled={switchingWorkspace || !activeMembership?.sites.length}
-                onChange={(event) => void handleSiteChange(event.target.value)}
-                className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-slate-400"
-              >
-                {!activeMembership?.sites.length ? (
-                  <option value="">No site available yet</option>
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    Active site
+                  </span>
+                  <select
+                    value={session?.activeSite?.id ?? ""}
+                    disabled={
+                      switchingWorkspace || !activeMembership?.sites.length
+                    }
+                    onChange={(event) =>
+                      void handleSiteChange(event.target.value)
+                    }
+                    className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+                  >
+                    {!activeMembership?.sites.length ? (
+                      <option value="">No site available yet</option>
+                    ) : null}
+                    {activeMembership?.sites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {switchingWorkspace ? (
+                  <p className="text-xs font-medium text-slate-500">
+                    Syncing workspace context...
+                  </p>
                 ) : null}
-                {activeMembership?.sites.map((site) => (
-                  <option key={site.id} value={site.id}>
-                    {site.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {switchingWorkspace ? (
-              <p className="text-xs font-medium text-slate-500">
-                Syncing workspace context...
-              </p>
+              </div>
             ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
 
       <div className="mt-4 flex flex-1 min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
@@ -492,7 +555,7 @@ export function Sidebar() {
         </nav>
       </div>
 
-      <div className="mt-3 rounded-[24px] border border-slate-200 bg-white/90 p-3 shadow-sm">
+      <div className="mt-3 rounded-3xl border border-slate-200 bg-white/90 p-3 shadow-sm">
         <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2.5">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#12392f] text-sm font-semibold text-white">
             {user?.email?.[0]?.toUpperCase()}

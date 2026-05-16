@@ -1,8 +1,4 @@
-import {
-  createHmac,
-  randomBytes,
-  timingSafeEqual,
-} from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { Injectable, Logger } from "@nestjs/common";
 
@@ -253,10 +249,7 @@ export class SearchConsoleOAuthService {
     } catch {
       throw new SearchConsoleOAuthStateError("State payload is not JSON");
     }
-    if (
-      typeof parsed.exp !== "number" ||
-      parsed.exp * 1000 < Date.now()
-    ) {
+    if (typeof parsed.exp !== "number" || parsed.exp * 1000 < Date.now()) {
       throw new SearchConsoleOAuthStateError("State has expired");
     }
     if (typeof parsed.siteId !== "string" || parsed.siteId.length === 0) {
