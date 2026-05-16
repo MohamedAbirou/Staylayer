@@ -162,6 +162,15 @@ export default function DomainsPage() {
     (domain) => domain.isPrimary && domain.status === "ACTIVE",
   );
   const fallbackDomain = domains.find((domain) => domain.isPrimary) ?? null;
+  const selectedDomainGroupApexHost = fallbackDomain?.apexHost ?? null;
+  const canonicalHost = resolveCanonicalHost(
+    domains,
+    runtimeProfile?.preferredHostVariant,
+  );
+  const canonicalApexHost = canonicalHost
+    ? (domains.find((domain) => domain.hostname === canonicalHost)?.apexHost ??
+      null)
+    : null;
   const dnsTarget =
     runtimeProfile?.websiteProjectTarget ??
     activePrimaryDomain?.dnsTarget ??
@@ -218,12 +227,12 @@ export default function DomainsPage() {
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <DomainSignalTile
-            label="Production domain"
-            value={activePrimaryDomain?.hostname ?? "Not verified yet"}
+            label="Canonical host"
+            value={canonicalHost ?? "Not verified yet"}
             detail={
-              activePrimaryDomain
-                ? "Guests can already reach the live site here."
-                : "Connect and verify a primary domain before launch."
+              canonicalHost
+                ? "Guests land here after apex/www redirects are applied."
+                : "Connect and verify a custom domain before launch."
             }
           />
           <DomainSignalTile
@@ -260,6 +269,8 @@ export default function DomainsPage() {
         <CanonicalHostnameCard
           domains={domains}
           preferredHostVariant={runtimeProfile.preferredHostVariant}
+          selectedDomainGroupApexHost={selectedDomainGroupApexHost}
+          canonicalHost={canonicalHost}
           isPending={preferredVariantMutation.isPending}
           onChange={(variant) => preferredVariantMutation.mutate(variant)}
           onAddCompanion={(domainId) => companionMutation.mutate(domainId)}
@@ -296,6 +307,9 @@ export default function DomainsPage() {
                 key={domain.id}
                 domain={domain}
                 canManageDomains={canManageDomains}
+                selectedDomainGroupApexHost={selectedDomainGroupApexHost}
+                canonicalHost={canonicalHost}
+                canonicalApexHost={canonicalApexHost}
                 onSetPrimary={() => primaryMutation.mutate(domain.id)}
                 onRemove={() => removeMutation.mutate(domain.id)}
                 onRetry={() => retryMutation.mutate(domain.id)}
@@ -360,6 +374,9 @@ function EmptyDomains({
 function DomainRow({
   domain,
   canManageDomains,
+  selectedDomainGroupApexHost,
+  canonicalHost,
+  canonicalApexHost,
   onSetPrimary,
   onRemove,
   onRetry,
@@ -370,6 +387,9 @@ function DomainRow({
 }: {
   domain: SiteDomain;
   canManageDomains: boolean;
+  selectedDomainGroupApexHost: string | null;
+  canonicalHost: string | null;
+  canonicalApexHost: string | null;
   onSetPrimary: () => void;
   onRemove: () => void;
   onRetry: () => void;
@@ -384,6 +404,17 @@ function DomainRow({
   const StatusIcon = meta.icon;
   const detail = getDomainStatusDetail(domain);
   const [copied, setCopied] = useState(false);
+  const isSelectedDomainGroup =
+    selectedDomainGroupApexHost !== null &&
+    domain.apexHost === selectedDomainGroupApexHost;
+  const isCanonicalHost = canonicalHost === hostname;
+  const redirectsToCanonicalHost =
+    domain.status === "ACTIVE" &&
+    canonicalHost !== null &&
+    canonicalApexHost !== null &&
+    domain.apexHost === canonicalApexHost &&
+    hostname !== canonicalHost;
+  const canSelectDomainGroup = canManageDomains && !isSelectedDomainGroup;
 
   function copyDnsTarget() {
     if (!dnsTarget) return;
@@ -402,9 +433,24 @@ function DomainRow({
             <span className="text-sm font-medium text-gray-900">
               {hostname}
             </span>
-            {isPrimary && (
+            {isSelectedDomainGroup && (
               <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                Primary
+                {domain.kind === "apex" || domain.kind === "www"
+                  ? "Production group"
+                  : "Production host"}
+              </span>
+            )}
+            {isCanonicalHost && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                Canonical
+              </span>
+            )}
+            {redirectsToCanonicalHost && (
+              <span
+                title={`Redirects to ${canonicalHost}`}
+                className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600"
+              >
+                Redirects to canonical
               </span>
             )}
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
@@ -422,7 +468,11 @@ function DomainRow({
             <StatusIcon className="h-3 w-3" />
             {meta.label}
           </div>
-          <p className="mt-1 text-xs text-gray-500">{detail}</p>
+          <p className="mt-1 text-xs text-gray-500">
+            {redirectsToCanonicalHost
+              ? `Live host that redirects to ${canonicalHost}.`
+              : detail}
+          </p>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
             <DomainStateChip
               label={
@@ -494,11 +544,11 @@ function DomainRow({
             <Wand2 className="h-4 w-4" />
           </button>
         )}
-        {canManageDomains && !isPrimary && (
+        {canSelectDomainGroup && (
           <button
             onClick={onSetPrimary}
             disabled={isPrimaryPending}
-            title="Set as primary domain"
+            title="Use this domain group for production"
             className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-amber-500 disabled:opacity-50"
           >
             <Star className="h-4 w-4" />
@@ -582,12 +632,13 @@ function DomainStateChip({
 
 function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
   const records = getDisplayRecommendedRecords(domain);
+  const domainIsLive = domain.status === "ACTIVE" || domain.sslActive;
+  const hasProviderDnsRecommendation =
+    domain.providerMisconfigured === true ||
+    domain.dnsMatchesExpected === false ||
+    records.some((record) => record.isMatch === false);
 
-  if (
-    (domain.status === "ACTIVE" || domain.sslActive) &&
-    !domain.providerError &&
-    !domain.providerMisconfigured
-  ) {
+  if (domainIsLive && !domain.providerError && !hasProviderDnsRecommendation) {
     return null;
   }
 
@@ -607,18 +658,17 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
         </p>
         {domain.providerConfiguredBy ? (
           <DomainStateChip
-            label={`Provider sees ${domain.providerConfiguredBy}`}
-            tone={
-              domain.providerMisconfigured ||
-              domain.dnsMatchesExpected === false
-                ? "warning"
-                : "info"
-            }
+            label={`Provider checks ${domain.providerConfiguredBy}`}
+            tone={hasProviderDnsRecommendation ? "warning" : "info"}
           />
         ) : null}
-        {domain.providerMisconfigured ? (
+        {hasProviderDnsRecommendation ? (
           <DomainStateChip
-            label="Provider marked misconfigured"
+            label={
+              domainIsLive
+                ? "Provider recommends DNS change"
+                : "DNS update recommended"
+            }
             tone="warning"
           />
         ) : null}
@@ -637,41 +687,35 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {records.map((record, index) => (
-                <tr
-                  key={`${record.type}-${record.name}-${record.value}-${index}`}
-                >
-                  <td className="px-4 py-3 text-xs font-semibold text-gray-700">
-                    {record.type}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-700">
-                    {record.name}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-900">
-                    {record.value}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                    {getObservedRecordValue(domain, record.type)}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <span
-                      className={`rounded-full px-2 py-1 font-semibold ${
-                        record.isMatch === true
-                          ? "bg-emerald-100 text-emerald-700"
-                          : record.isMatch === false
-                            ? "bg-red-100 text-red-700"
-                            : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {record.isMatch === true
-                        ? "Correct"
-                        : record.isMatch === false
-                          ? "Needs update"
-                          : "Unknown"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {records.map((record, index) => {
+                const statusMeta = getRecommendedRecordStatus(domain, record);
+
+                return (
+                  <tr
+                    key={`${record.type}-${record.name}-${record.value}-${index}`}
+                  >
+                    <td className="px-4 py-3 text-xs font-semibold text-gray-700">
+                      {record.type}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700">
+                      {record.name}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-900">
+                      {record.value}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                      {getObservedRecordValue(domain, record.type)}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <span
+                        className={`rounded-full px-2 py-1 font-semibold ${statusMeta.className}`}
+                      >
+                        {statusMeta.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -684,8 +728,14 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
       <div className="space-y-2 border-t border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-500">
         {domain.recommendedRecords.length > records.length ? (
           <p>
-            The provider returned alternative DNS targets. The table shows the
-            matched or highest-priority records to act on.
+            The provider returned alternative accepted records. The table shows
+            the provider-preferred record for each type and name.
+          </p>
+        ) : null}
+        {domainIsLive && hasProviderDnsRecommendation ? (
+          <p>
+            Traffic is live, but the provider may still recommend replacing
+            older DNS records with the preferred targets above.
           </p>
         ) : null}
         {domain.providerAcceptedChallenges.length > 0 ? (
@@ -727,12 +777,6 @@ function getDisplayRecommendedRecords(domain: SiteDomain) {
   }
 
   return Array.from(grouped.values()).flatMap((records) => {
-    const matching = records.filter((record) => record.isMatch === true);
-
-    if (matching.length > 0) {
-      return matching;
-    }
-
     const ranked = records.filter((record) => record.rank !== null);
 
     if (ranked.length > 0) {
@@ -745,6 +789,34 @@ function getDisplayRecommendedRecords(domain: SiteDomain) {
 
     return records.slice(0, 1);
   });
+}
+
+function getRecommendedRecordStatus(
+  domain: SiteDomain,
+  record: SiteDomain["recommendedRecords"][number],
+) {
+  if (record.isMatch === true) {
+    return {
+      label: "Current",
+      className: "bg-emerald-100 text-emerald-700",
+    };
+  }
+
+  if (record.isMatch === false) {
+    const domainIsLive = domain.status === "ACTIVE" || domain.sslActive;
+
+    return {
+      label: domainIsLive ? "Recommended update" : "Needs update",
+      className: domainIsLive
+        ? "bg-amber-100 text-amber-800"
+        : "bg-red-100 text-red-700",
+    };
+  }
+
+  return {
+    label: "Unknown",
+    className: "bg-gray-100 text-gray-600",
+  };
 }
 
 function getDomainStatusDetail(domain: SiteDomain) {
@@ -790,9 +862,42 @@ function hostnameKindLabel(kind: HostnameKind): string {
   }
 }
 
+function resolveCanonicalHost(
+  domains: SiteDomain[],
+  preferredHostVariant?: HostVariant,
+): string | null {
+  const activeDomains = domains.filter((domain) => domain.status === "ACTIVE");
+
+  if (activeDomains.length === 0) {
+    return null;
+  }
+
+  const primaryDomain =
+    activeDomains.find((domain) => domain.isPrimary) ?? activeDomains[0];
+  const baseDomain = primaryDomain.apexHost;
+  const apexHost = activeDomains.find(
+    (domain) => domain.apexHost === baseDomain && domain.kind === "apex",
+  );
+  const wwwHost = activeDomains.find(
+    (domain) => domain.apexHost === baseDomain && domain.kind === "www",
+  );
+
+  if (preferredHostVariant === "WWW" && wwwHost) {
+    return wwwHost.hostname;
+  }
+
+  if (preferredHostVariant === "APEX" && apexHost) {
+    return apexHost.hostname;
+  }
+
+  return primaryDomain.hostname;
+}
+
 function CanonicalHostnameCard({
   domains,
   preferredHostVariant,
+  selectedDomainGroupApexHost,
+  canonicalHost,
   isPending,
   onChange,
   onAddCompanion,
@@ -800,6 +905,8 @@ function CanonicalHostnameCard({
 }: {
   domains: SiteDomain[];
   preferredHostVariant: HostVariant;
+  selectedDomainGroupApexHost: string | null;
+  canonicalHost: string | null;
   isPending: boolean;
   onChange: (variant: HostVariant) => void;
   onAddCompanion: (domainId: string) => void;
@@ -823,16 +930,15 @@ function CanonicalHostnameCard({
       <div className="flex flex-col gap-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-            Canonical hostname
+            Apex / www routing
           </p>
           <h2 className="mt-2 text-lg font-semibold text-gray-900">
             Pick which hostname guests see in the address bar
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            When both the root domain and its www companion are connected, the
-            platform serves one as canonical and 308-redirects the other to it.
-            Search engines and shared links will all converge on the canonical
-            hostname.
+            The domain list chooses the production domain group. This setting
+            controls the redirect inside that group when both the root domain
+            and its www companion are connected.
           </p>
         </div>
 
@@ -869,6 +975,18 @@ function CanonicalHostnameCard({
                 className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600"
               >
                 <span className="font-mono text-gray-700">{apexHost}</span>
+                {selectedDomainGroupApexHost === apexHost ? (
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700">
+                    Production group
+                  </span>
+                ) : null}
+                {canonicalHost &&
+                (pair.apex?.hostname === canonicalHost ||
+                  pair.www?.hostname === canonicalHost) ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">
+                    Canonical: {canonicalHost}
+                  </span>
+                ) : null}
                 {haveBoth ? (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">
                     Apex + www connected
