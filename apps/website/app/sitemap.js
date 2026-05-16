@@ -5,6 +5,13 @@ import { getRequestIdFromHeaders } from "@/lib/runtime/request-id";
 
 export const dynamic = "force-dynamic";
 
+function escapeXmlText(value) {
+  return String(value)
+    .replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[\da-fA-F]+;)/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export default async function sitemap() {
   const headerList = await headers();
   const hostname = normalizeHostname(
@@ -45,7 +52,9 @@ export default async function sitemap() {
       }
 
       const images =
-        includeImages && Array.isArray(route.images) ? route.images : [];
+        includeImages && Array.isArray(route.images)
+          ? route.images.filter(Boolean).map(escapeXmlText)
+          : [];
 
       return {
         url: route.url,
