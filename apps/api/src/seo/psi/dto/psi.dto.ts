@@ -9,6 +9,8 @@ import {
 } from "class-validator";
 import { CruxFormFactor, PsiAuditStatus, PsiStrategy } from "@prisma/client";
 
+import { OptionalSiteScopeQueryDto } from "../../../common/dto/site-scope-query.dto";
+
 export class RunPsiAuditDto {
   @IsString()
   url!: string;
@@ -21,7 +23,7 @@ export class RunPsiAuditDto {
   forceRefresh?: boolean;
 }
 
-export class ListPsiAuditsQueryDto {
+export class ListPsiAuditsQueryDto extends OptionalSiteScopeQueryDto {
   @IsOptional()
   @IsString()
   url?: string;
@@ -62,7 +64,7 @@ export class FetchCruxRecordDto {
   forceRefresh?: boolean;
 }
 
-export class LatestPsiAuditsQueryDto {
+export class LatestPsiAuditsQueryDto extends OptionalSiteScopeQueryDto {
   @IsOptional()
   @IsInt()
   @Min(1)

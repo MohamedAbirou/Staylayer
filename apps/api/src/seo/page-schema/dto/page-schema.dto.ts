@@ -8,7 +8,9 @@ import {
   Length,
 } from "class-validator";
 
-export class OverrideLocatorQueryDto {
+import { OptionalSiteScopeQueryDto } from "../../../common/dto/site-scope-query.dto";
+
+export class OverrideLocatorQueryDto extends OptionalSiteScopeQueryDto {
   @IsString()
   @Length(1, 200)
   slug!: string;

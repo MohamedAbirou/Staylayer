@@ -12,3 +12,10 @@ export class SiteScopeQueryDto extends TenantScopeQueryDto {
   @MinLength(1)
   siteId: string;
 }
+
+export class OptionalSiteScopeQueryDto extends TenantScopeQueryDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  siteId?: string;
+}

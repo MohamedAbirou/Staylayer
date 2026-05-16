@@ -15,7 +15,9 @@ import {
 } from "class-validator";
 import { HreflangIssueSeverity, HreflangIssueType } from "@prisma/client";
 
-export class ListHreflangIssuesQueryDto {
+import { OptionalSiteScopeQueryDto } from "../../../common/dto/site-scope-query.dto";
+
+export class ListHreflangIssuesQueryDto extends OptionalSiteScopeQueryDto {
   @IsOptional()
   @IsString()
   scanId?: string;
@@ -49,7 +51,7 @@ export class ListHreflangIssuesQueryDto {
   cursor?: string;
 }
 
-export class ListHreflangScansQueryDto {
+export class ListHreflangScansQueryDto extends OptionalSiteScopeQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
