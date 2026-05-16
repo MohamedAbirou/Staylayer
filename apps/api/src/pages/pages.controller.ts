@@ -19,6 +19,7 @@ import { PagesService } from "./pages.service";
 import { CreatePageDto } from "./dto/create-page.dto";
 import { UpdatePageDto } from "./dto/update-page.dto";
 import { DuplicatePageDto } from "./dto/duplicate-page.dto";
+import { RenamePageDto } from "./dto/rename-page.dto";
 import { BulkActionDto } from "./dto/bulk-action.dto";
 import {
   PageQueryDto,
@@ -331,7 +332,6 @@ export class PagesController {
       query.locale || "en",
     );
   }
-
   @Post(":slug/duplicate")
   @UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
   @MembershipRoles(
@@ -358,6 +358,30 @@ export class PagesController {
       dto.newLocale || query.locale || "en",
       user.sub,
     );
+  }
+
+  @Post(":slug/rename")
+  @UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async rename(
+    @Param("slug") slug: string,
+    @Query() query: PageLocaleQueryDto,
+    @Body() dto: RenamePageDto,
+    @Req() req: Request,
+  ): Promise<Record<string, unknown>> {
+    const siteId = await this.ensureAuthenticatedSiteAccess(req);
+    const locale = query.locale || "en";
+    const result = await this.pagesService.renamePage(
+      siteId,
+      slug,
+      locale,
+      dto.newSlug,
+    );
+    // Revalidate the old slug (now redirecting) and the new slug.
+    await this.revalidationService.revalidatePage(siteId, slug);
+    await this.revalidationService.revalidatePage(siteId, dto.newSlug);
+    return result as unknown as Record<string, unknown>;
   }
 
   @Get(":slug/preview")

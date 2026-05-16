@@ -4,7 +4,9 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { Prisma } from "@prisma/client";
+import { Prisma, SearchEngineSubmissionTarget } from "@prisma/client";
+import { IndexNowService } from "./indexnow/indexnow.service";
+import { RobotsService } from "./robots/robots.service";
 
 // ── Redirect Management ─────────────────────────────────────────────────────
 
@@ -127,7 +129,33 @@ const GENERIC_CONTENT_PATTERNS = [
 
 @Injectable()
 export class SeoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly indexNowService: IndexNowService,
+    private readonly robotsService: RobotsService,
+  ) {}
+
+  private async submitRedirectIndexNow(
+    siteId: string,
+    paths: string[],
+    target: SearchEngineSubmissionTarget,
+  ): Promise<void> {
+    try {
+      const canonicalHost =
+        await this.robotsService.resolveCanonicalHost(siteId);
+      if (!canonicalHost) return;
+      const urls = paths
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map(
+          (p) => `https://${canonicalHost}${p.startsWith("/") ? p : `/${p}`}`,
+        );
+      if (urls.length === 0) return;
+      await this.indexNowService.submitAuto({ siteId, urls, target });
+    } catch {
+      // Hooks must never break redirect operations.
+    }
+  }
 
   // ── Redirects ─────────────────────────────────────────────────────────────
 
@@ -153,6 +181,12 @@ export class SeoService {
         enabled: true,
       },
     });
+
+    await this.submitRedirectIndexNow(
+      input.siteId,
+      [normalizedFrom, normalizedTo],
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_REDIRECT_CREATE,
+    );
 
     return this.redirectToDto(redirect);
   }
@@ -197,6 +231,17 @@ export class SeoService {
       where: { id: redirectId },
       data: { enabled },
     });
+
+    if (existing.enabled !== enabled) {
+      await this.submitRedirectIndexNow(
+        siteId,
+        [existing.fromPath, existing.toPath],
+        enabled
+          ? SearchEngineSubmissionTarget.INDEXNOW_AUTO_REDIRECT_CREATE
+          : SearchEngineSubmissionTarget.INDEXNOW_AUTO_REDIRECT_REMOVE,
+      );
+    }
+
     return this.redirectToDto(updated);
   }
 
@@ -206,6 +251,11 @@ export class SeoService {
     });
     if (!existing) throw new NotFoundException("Redirect not found");
     await this.prisma.redirect.delete({ where: { id: redirectId } });
+    await this.submitRedirectIndexNow(
+      siteId,
+      [existing.fromPath, existing.toPath],
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_REDIRECT_REMOVE,
+    );
   }
 
   // ── SEO Validation ────────────────────────────────────────────────────────

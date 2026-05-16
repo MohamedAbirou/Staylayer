@@ -148,6 +148,7 @@ describe("BillingService", () => {
       pages: 4,
       domains: 0,
       translationCharactersThisMonth: 0,
+      psiAuditsThisMonth: 0,
     });
     expect(snapshot.actions.publishingBlocked).toBe(false);
     expect(snapshot.isFreePlan).toBe(true);

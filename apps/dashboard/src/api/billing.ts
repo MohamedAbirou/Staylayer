@@ -30,6 +30,7 @@ export interface BillingPlanLimits {
   exportEnabled: boolean;
   scheduledExports: boolean;
   supportTier: BillingSupportTier;
+  seoCrawlerMaxUrlsPerCrawl: number;
 }
 
 export interface BillingUsageTotals {

@@ -142,7 +142,8 @@ export default function EditorPage() {
   const [seoForm, setSeoForm] = useState({
     seoTitle: "",
     seoDescription: "",
-    seoKeywords: "",
+    targetKeywords: "",
+    internalBrief: "",
     seoOgImage: "",
     seoCanonical: "",
     seoNoindex: false,
@@ -309,7 +310,8 @@ export default function EditorPage() {
       setSeoForm({
         seoTitle: page.seoTitle ?? "",
         seoDescription: page.seoDescription ?? "",
-        seoKeywords: page.seoKeywords ?? "",
+        targetKeywords: page.targetKeywords ?? "",
+        internalBrief: page.internalBrief ?? "",
         seoOgImage: page.seoOgImage ?? "",
         seoCanonical: page.seoCanonical ?? "",
         seoNoindex: page.seoNoindex ?? false,
@@ -700,6 +702,14 @@ export default function EditorPage() {
               slug={slug!}
               locale={locale}
               page={page}
+              puckData={
+                (latestDataRef.current as unknown as Record<
+                  string,
+                  unknown
+                > | null) ??
+                (page?.puckData as Record<string, unknown> | null) ??
+                null
+              }
               form={seoForm}
               dirty={seoDirty}
               saving={saveSeoMutation.isPending}
@@ -735,7 +745,8 @@ export default function EditorPage() {
 interface SeoFormState {
   seoTitle: string;
   seoDescription: string;
-  seoKeywords: string;
+  targetKeywords: string;
+  internalBrief: string;
   seoOgImage: string;
   seoCanonical: string;
   seoNoindex: boolean;
@@ -745,6 +756,7 @@ function PageSeoPanel({
   slug,
   locale,
   page,
+  puckData,
   form,
   dirty,
   saving,
@@ -755,6 +767,7 @@ function PageSeoPanel({
   slug: string;
   locale: string;
   page: { title: string; seoTitle?: string };
+  puckData: Record<string, unknown> | null;
   form: SeoFormState;
   dirty: boolean;
   saving: boolean;
@@ -911,24 +924,53 @@ function PageSeoPanel({
             </p>
           </div>
 
-          {/* Keywords */}
+          {/* Target Keywords */}
           <div>
             <label className="block text-xs font-semibold text-gray-700">
-              Keywords
+              Target Keywords
             </label>
             <input
               type="text"
-              value={form.seoKeywords}
+              value={form.targetKeywords}
               onChange={(e) =>
-                onChange({ ...form, seoKeywords: e.target.value })
+                onChange({ ...form, targetKeywords: e.target.value })
               }
-              placeholder="vacation rental, direct bookings…"
+              placeholder="primary keyword, secondary keyword…"
               className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <p className="mt-1 text-[11px] text-gray-400">
-              Comma-separated · Optional, low weight in modern search
+              Comma-separated · First keyword is treated as primary
             </p>
           </div>
+
+          {/* Internal Brief */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Internal Brief
+            </label>
+            <textarea
+              rows={4}
+              value={form.internalBrief}
+              onChange={(e) =>
+                onChange({ ...form, internalBrief: e.target.value })
+              }
+              placeholder="Notes for writers/editors — search intent, angle, key sections, internal links to use…"
+              className="mt-1.5 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              maxLength={5000}
+            />
+            <p className="mt-1 text-[11px] text-gray-400">
+              Not published · Visible only to your team
+            </p>
+          </div>
+
+          {/* On-page checklist */}
+          <SeoChecklist
+            slug={slug}
+            title={page.title}
+            seoTitle={form.seoTitle}
+            targetKeywords={form.targetKeywords}
+            puckData={puckData}
+          />
 
           {/* OG Image */}
           <div>
@@ -1022,6 +1064,136 @@ function PageSeoPanel({
           Save SEO settings
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── On-page SEO checklist ───────────────────────────────────────────────────
+
+function collectPuckText(puckData: Record<string, unknown> | null): {
+  h1Texts: string[];
+  bodyText: string;
+} {
+  if (!puckData) return { h1Texts: [], bodyText: "" };
+  const content = (puckData as { content?: unknown }).content;
+  if (!Array.isArray(content)) return { h1Texts: [], bodyText: "" };
+  const h1Texts: string[] = [];
+  const bodyParts: string[] = [];
+  for (const block of content as Array<Record<string, unknown>>) {
+    const type = typeof block?.type === "string" ? (block.type as string) : "";
+    const props =
+      (block?.props as Record<string, unknown> | undefined) ?? undefined;
+    if (!props) continue;
+    const lvl = props.level ?? props.headingLevel ?? props.tag;
+    const text =
+      typeof props.text === "string"
+        ? (props.text as string)
+        : typeof props.title === "string"
+          ? (props.title as string)
+          : typeof props.heading === "string"
+            ? (props.heading as string)
+            : typeof props.content === "string"
+              ? (props.content as string)
+              : "";
+    if (
+      type.toLowerCase().includes("heading") &&
+      (lvl === 1 || lvl === "h1" || lvl === "1")
+    ) {
+      if (text) h1Texts.push(text);
+    }
+    if (text) bodyParts.push(text);
+  }
+  return { h1Texts, bodyText: bodyParts.join(" \n") };
+}
+
+function SeoChecklist({
+  slug,
+  title,
+  seoTitle,
+  targetKeywords,
+  puckData,
+}: {
+  slug: string;
+  title: string;
+  seoTitle: string;
+  targetKeywords: string;
+  puckData: Record<string, unknown> | null;
+}) {
+  const kws = targetKeywords
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+  const primary = kws[0] ?? "";
+  const lc = (s: string) => s.toLowerCase();
+  const { h1Texts, bodyText } = collectPuckText(puckData);
+
+  const hasPrimary = primary.length > 0;
+  const inTitle = hasPrimary && lc(seoTitle || title).includes(lc(primary));
+  const inH1 = hasPrimary && h1Texts.some((t) => lc(t).includes(lc(primary)));
+  const inUrl =
+    hasPrimary &&
+    lc(slug).includes(
+      lc(primary)
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, ""),
+    );
+  const first100 = bodyText.split(/\s+/).slice(0, 100).join(" ");
+  const inFirst100 = hasPrimary && lc(first100).includes(lc(primary));
+  const siblings = kws.slice(1);
+  const siblingHits = siblings.filter((k) =>
+    lc(bodyText).includes(lc(k)),
+  ).length;
+  const semanticOk = siblings.length === 0 ? false : siblingHits >= 1;
+
+  const items: Array<{ ok: boolean; label: string }> = [
+    { ok: inTitle, label: "Primary keyword in title" },
+    { ok: inH1, label: "Primary keyword in H1" },
+    { ok: inUrl, label: "Primary keyword in URL slug" },
+    { ok: inFirst100, label: "Primary keyword in first 100 words" },
+    {
+      ok: semanticOk,
+      label:
+        siblings.length === 0
+          ? "Add semantic sibling keywords"
+          : `Semantic siblings present (${siblingHits}/${siblings.length})`,
+    },
+  ];
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-700">
+          On-page checklist
+        </span>
+        {hasPrimary ? (
+          <span className="text-[11px] text-gray-500">
+            primary: <span className="font-medium">{primary}</span>
+          </span>
+        ) : (
+          <span className="text-[11px] text-amber-600">
+            Add a target keyword to enable checks
+          </span>
+        )}
+      </div>
+      <ul className="space-y-1">
+        {items.map((item) => (
+          <li
+            key={item.label}
+            className="flex items-center gap-2 text-[12px] text-gray-700"
+          >
+            <span
+              className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
+                item.ok
+                  ? "bg-green-100 text-green-700"
+                  : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              {item.ok ? "✓" : "·"}
+            </span>
+            <span className={item.ok ? "" : "text-gray-500"}>{item.label}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

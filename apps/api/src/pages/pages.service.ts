@@ -4,9 +4,12 @@ import {
   NotFoundException,
   PayloadTooLargeException,
 } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { Prisma, SearchEngineSubmissionTarget } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
+import { IndexNowService } from "../seo/indexnow/indexnow.service";
+import { RobotsService } from "../seo/robots/robots.service";
+import { RedirectMigrationService } from "../seo/redirect-migration/redirect-migration.service";
 import { CreatePageDto } from "./dto/create-page.dto";
 import { UpdatePageDto } from "./dto/update-page.dto";
 
@@ -17,7 +20,55 @@ export class PagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
+    private readonly indexNowService: IndexNowService,
+    private readonly robotsService: RobotsService,
+    private readonly redirectMigrationService: RedirectMigrationService,
   ) {}
+
+  /**
+   * Build absolute URLs for a list of (slug, locale) pairs scoped to the
+   * site's canonical host. Used by IndexNow auto-submission hooks.
+   */
+  private async buildSubmissionUrls(
+    siteId: string,
+    entries: Array<{ slug: string; locale: string }>,
+  ): Promise<string[]> {
+    if (entries.length === 0) return [];
+    const canonicalHost = await this.robotsService.resolveCanonicalHost(siteId);
+    if (!canonicalHost) return [];
+    const site = await this.prisma.site.findUnique({
+      where: { id: siteId },
+      select: { primaryLocale: true },
+    });
+    const primaryLocale = site?.primaryLocale ?? "en";
+    const urls = new Set<string>();
+    for (const entry of entries) {
+      const slug = entry.slug.startsWith("/") ? entry.slug : `/${entry.slug}`;
+      const path = slug === "/" ? "" : slug;
+      const localePrefix =
+        entry.locale && entry.locale !== primaryLocale
+          ? `/${entry.locale}`
+          : "";
+      const url = `https://${canonicalHost}${localePrefix}${path || "/"}`;
+      urls.add(url);
+    }
+    return Array.from(urls);
+  }
+
+  private async submitIndexNow(
+    siteId: string,
+    entries: Array<{ slug: string; locale: string }>,
+    target: SearchEngineSubmissionTarget,
+  ): Promise<void> {
+    try {
+      const urls = await this.buildSubmissionUrls(siteId, entries);
+      if (urls.length === 0) return;
+      await this.indexNowService.submitAuto({ siteId, urls, target });
+    } catch {
+      // Auto-submission must never break the page operation. The service
+      // already persists failure logs internally.
+    }
+  }
 
   async createPage(
     siteId: string,
@@ -52,7 +103,8 @@ export class PagesService {
         puckData: dto.puckData as unknown as Prisma.InputJsonValue,
         seoTitle: dto.seoTitle,
         seoDescription: dto.seoDescription,
-        seoKeywords: dto.seoKeywords,
+        targetKeywords: dto.targetKeywords ?? dto.seoKeywords,
+        internalBrief: dto.internalBrief,
         seoOgImage: dto.seoOgImage,
         seoCanonical: dto.seoCanonical,
         seoNoindex: dto.seoNoindex ?? false,
@@ -123,7 +175,8 @@ export class PagesService {
           published: true,
           seoTitle: true,
           seoDescription: true,
-          seoKeywords: true,
+          targetKeywords: true,
+          internalBrief: true,
           seoOgImage: true,
           seoNoindex: true,
           deletedAt: true,
@@ -221,7 +274,12 @@ export class PagesService {
     if (dto.seoTitle !== undefined) updateData.seoTitle = dto.seoTitle;
     if (dto.seoDescription !== undefined)
       updateData.seoDescription = dto.seoDescription;
-    if (dto.seoKeywords !== undefined) updateData.seoKeywords = dto.seoKeywords;
+    if (dto.targetKeywords !== undefined)
+      updateData.targetKeywords = dto.targetKeywords;
+    else if (dto.seoKeywords !== undefined)
+      updateData.targetKeywords = dto.seoKeywords;
+    if (dto.internalBrief !== undefined)
+      updateData.internalBrief = dto.internalBrief;
     if (dto.seoOgImage !== undefined) updateData.seoOgImage = dto.seoOgImage;
     if (dto.seoCanonical !== undefined)
       updateData.seoCanonical = dto.seoCanonical;
@@ -246,6 +304,72 @@ export class PagesService {
     return updated as unknown as Record<string, unknown>;
   }
 
+  /**
+   * Rename a page's slug. Atomically updates the page row and records a
+   * SLUG_CHANGE auto-redirect from the old slug to the new one so existing
+   * inbound links keep working. Idempotent: re-renaming back to the original
+   * slug simply re-targets the same redirect row.
+   */
+  async renamePage(
+    siteId: string,
+    slug: string,
+    locale: string,
+    newSlug: string,
+  ): Promise<{
+    slug: string;
+    locale: string;
+    previousSlug: string;
+  }> {
+    if (slug === newSlug) {
+      return { slug, locale, previousSlug: slug };
+    }
+
+    const page = await this.prisma.page.findUnique({
+      where: this.pageWhereUnique(siteId, slug, locale),
+      select: { id: true },
+    });
+    if (!page) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Page not found",
+      });
+    }
+
+    const collision = await this.prisma.page.findUnique({
+      where: this.pageWhereUnique(siteId, newSlug, locale),
+      select: { id: true },
+    });
+    if (collision) {
+      throw new ConflictException({
+        code: "CONFLICT",
+        message: `A page with slug '${newSlug}' already exists for locale '${locale}'.`,
+      });
+    }
+
+    await this.prisma.page.update({
+      where: { id: page.id },
+      data: { slug: newSlug },
+    });
+
+    await this.redirectMigrationService.recordSlugChange({
+      siteId,
+      oldSlug: slug,
+      newSlug,
+      locale,
+    });
+
+    await this.submitIndexNow(
+      siteId,
+      [
+        { slug, locale },
+        { slug: newSlug, locale },
+      ],
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_REDIRECT_CREATE,
+    );
+
+    return { slug: newSlug, locale, previousSlug: slug };
+  }
+
   async deletePage(
     siteId: string,
     slug: string,
@@ -262,11 +386,21 @@ export class PagesService {
       });
     }
 
+    const wasPublished = page.published;
+
     // Soft delete: set deletedAt timestamp, unpublish
     await this.prisma.page.update({
       where: this.pageWhereUnique(siteId, slug, locale),
       data: { deletedAt: new Date(), published: false },
     });
+
+    if (wasPublished) {
+      await this.submitIndexNow(
+        siteId,
+        [{ slug, locale }],
+        SearchEngineSubmissionTarget.INDEXNOW_AUTO_DELETE,
+      );
+    }
 
     return { message: "Page moved to trash" };
   }
@@ -317,9 +451,19 @@ export class PagesService {
       });
     }
 
+    const wasPublished = page.published;
+
     await this.prisma.page.delete({
       where: this.pageWhereUnique(siteId, slug, locale),
     });
+
+    if (wasPublished) {
+      await this.submitIndexNow(
+        siteId,
+        [{ slug, locale }],
+        SearchEngineSubmissionTarget.INDEXNOW_AUTO_DELETE,
+      );
+    }
 
     return { message: "Page permanently deleted" };
   }
@@ -344,6 +488,12 @@ export class PagesService {
       data: { published: true },
     });
 
+    await this.submitIndexNow(
+      siteId,
+      pages,
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_PUBLISH,
+    );
+
     return { message: "Pages published", count: result.count };
   }
 
@@ -363,6 +513,12 @@ export class PagesService {
       data: { published: false },
     });
 
+    await this.submitIndexNow(
+      siteId,
+      pages,
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_UNPUBLISH,
+    );
+
     return { message: "Pages unpublished", count: result.count };
   }
 
@@ -381,6 +537,12 @@ export class PagesService {
       },
       data: { deletedAt: new Date(), published: false },
     });
+
+    await this.submitIndexNow(
+      siteId,
+      pages,
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_DELETE,
+    );
 
     return { message: "Pages moved to trash", count: result.count };
   }
@@ -457,6 +619,12 @@ export class PagesService {
       data: { published: true },
     });
 
+    await this.submitIndexNow(
+      siteId,
+      [{ slug, locale }],
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_PUBLISH,
+    );
+
     return { message: "Page published", slug, locale };
   }
 
@@ -480,6 +648,12 @@ export class PagesService {
       where: this.pageWhereUnique(siteId, slug, locale),
       data: { published: false },
     });
+
+    await this.submitIndexNow(
+      siteId,
+      [{ slug, locale }],
+      SearchEngineSubmissionTarget.INDEXNOW_AUTO_UNPUBLISH,
+    );
 
     return { message: "Page unpublished", slug, locale };
   }
@@ -555,7 +729,8 @@ export class PagesService {
         puckData: source.puckData as unknown as Prisma.InputJsonValue,
         seoTitle: source.seoTitle,
         seoDescription: source.seoDescription,
-        seoKeywords: source.seoKeywords,
+        targetKeywords: source.targetKeywords,
+        internalBrief: source.internalBrief,
         published: false,
       },
     });

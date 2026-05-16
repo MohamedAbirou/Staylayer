@@ -27,6 +27,7 @@ import DeploymentsPage from "./pages/DeploymentsPage";
 import TranslationCenterPage from "./pages/TranslationCenterPage";
 import GlossaryPage from "./pages/GlossaryPage";
 import SeoPage from "./pages/SeoPage";
+import SearchConsoleCallbackPage from "./pages/SearchConsoleCallbackPage";
 import BillingPage from "./pages/BillingPage";
 import WorkspaceStudioPage from "./pages/WorkspaceStudioPage";
 import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
@@ -207,6 +208,19 @@ export const router = createBrowserRouter([
               >
                 <ErrorBoundary>
                   <SeoPage />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/seo/search-console/callback",
+            element: (
+              <ProtectedRoute
+                membershipRoles={SITE_ADMIN_MEMBERSHIP_ROLES}
+                requireActiveSite
+              >
+                <ErrorBoundary>
+                  <SearchConsoleCallbackPage />
                 </ErrorBoundary>
               </ProtectedRoute>
             ),

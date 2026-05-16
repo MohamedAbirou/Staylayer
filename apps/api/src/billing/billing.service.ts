@@ -605,6 +605,87 @@ export class BillingService {
     }
   }
 
+  /**
+   * Validates that the requested URL budget for an SEO crawler audit fits
+   * within the plan's per-crawl ceiling. Returns the effective URL limit
+   * (clamped to the plan ceiling) so callers can use it as the engine cap.
+   */
+  async assertCanRunCrawl(
+    siteId: string,
+    requestedUrlLimit: number,
+  ): Promise<number> {
+    const site = await this.requireSite(siteId);
+    const snapshot = await this.getTenantPlanSnapshot(site.tenantId);
+    const planLimit = snapshot.limits.seoCrawlerMaxUrlsPerCrawl;
+
+    if (planLimit <= 0) {
+      throw new ConflictException({
+        code: "PLAN_SEO_CRAWLER_NOT_INCLUDED",
+        message:
+          "The SEO crawler is not available on this plan. Upgrade to unlock site audits.",
+        limitType: "seoCrawlerMaxUrlsPerCrawl",
+        limit: 0,
+      });
+    }
+
+    if (requestedUrlLimit > planLimit) {
+      throw new ConflictException({
+        code: "PLAN_LIMIT_EXCEEDED",
+        message: `The requested crawl budget exceeds this plan's per-audit URL limit (${planLimit}).`,
+        limitType: "seoCrawlerMaxUrlsPerCrawl",
+        limit: planLimit,
+        requested: requestedUrlLimit,
+      });
+    }
+
+    return Math.min(requestedUrlLimit, planLimit);
+  }
+
+  /**
+   * Validates that the tenant has remaining PageSpeed Insights audit
+   * budget for the current calendar month. Should be called once per
+   * audit attempt before invoking the provider. Returns the remaining
+   * budget after this audit would be counted.
+   */
+  async assertCanRunPsiAudit(siteId: string): Promise<{
+    limit: number;
+    used: number;
+    remaining: number;
+  }> {
+    const site = await this.requireSite(siteId);
+    const snapshot = await this.getTenantPlanSnapshot(site.tenantId);
+    const planLimit = snapshot.limits.psiAuditsPerMonth;
+
+    if (planLimit <= 0) {
+      throw new ConflictException({
+        code: "PLAN_PSI_NOT_INCLUDED",
+        message:
+          "PageSpeed Insights audits are not available on this plan. Upgrade to unlock performance monitoring.",
+        limitType: "psiAuditsPerMonth",
+        limit: 0,
+      });
+    }
+
+    const used = snapshot.usage.psiAuditsThisMonth;
+    if (used + 1 > planLimit) {
+      throw new ConflictException({
+        code: "PLAN_LIMIT_EXCEEDED",
+        message:
+          "This audit would exceed the plan's monthly PageSpeed Insights allowance.",
+        limitType: "psiAuditsPerMonth",
+        limit: planLimit,
+        current: used,
+        requested: used + 1,
+      });
+    }
+
+    return {
+      limit: planLimit,
+      used,
+      remaining: planLimit - used - 1,
+    };
+  }
+
   async assertCanConsumeTranslationCharacters(
     tenantId: string,
     charactersRequested: number,
@@ -845,7 +926,7 @@ export class BillingService {
     monthStart.setUTCDate(1);
     monthStart.setUTCHours(0, 0, 0, 0);
 
-    const [sites, seats, pages, formSubmissions, domains, translationUsage] =
+    const [sites, seats, pages, formSubmissions, domains, translationUsage, psiAudits] =
       await Promise.all([
         this.prisma.site.findMany({
           where: {
@@ -885,6 +966,7 @@ export class BillingService {
           },
         }),
         this.getTranslationUsageForMonth(tenantId, monthStart),
+        this.getPsiAuditUsageForMonth(tenantId, monthStart),
       ]);
 
     return {
@@ -898,6 +980,7 @@ export class BillingService {
       pages,
       domains,
       translationCharactersThisMonth: translationUsage,
+      psiAuditsThisMonth: psiAudits,
     };
   }
 
@@ -924,6 +1007,42 @@ export class BillingService {
         _sum: { characters: true },
       });
       return aggregate._sum.characters ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async getPsiAuditUsageForMonth(
+    tenantId: string,
+    monthStart: Date,
+  ): Promise<number> {
+    // Safe no-op if PsiAudit model is not yet present on the generated client.
+    const client = this.prisma as unknown as {
+      psiAudit?: {
+        count: (args: {
+          where: {
+            createdAt: { gte: Date };
+            site: { tenantId: string; status: { not: SiteStatus } };
+            status: { not: "FAILED" };
+          };
+        }) => Promise<number>;
+      };
+    };
+    if (!client.psiAudit) {
+      return 0;
+    }
+
+    try {
+      return await client.psiAudit.count({
+        where: {
+          createdAt: { gte: monthStart },
+          site: {
+            tenantId,
+            status: { not: SiteStatus.ARCHIVED },
+          },
+          status: { not: "FAILED" },
+        },
+      });
     } catch {
       return 0;
     }
@@ -1129,6 +1248,18 @@ export class BillingService {
         ? value.supportTier
         : "email";
 
+    const seoCrawlerMaxUrlsPerCrawl =
+      typeof value.seoCrawlerMaxUrlsPerCrawl === "number" &&
+      value.seoCrawlerMaxUrlsPerCrawl >= 0
+        ? value.seoCrawlerMaxUrlsPerCrawl
+        : 100;
+
+    const psiAuditsPerMonth =
+      typeof value.psiAuditsPerMonth === "number" &&
+      value.psiAuditsPerMonth >= 0
+        ? value.psiAuditsPerMonth
+        : 20;
+
     return {
       sites: value.sites,
       locales: value.locales,
@@ -1144,6 +1275,8 @@ export class BillingService {
       exportEnabled,
       scheduledExports,
       supportTier,
+      seoCrawlerMaxUrlsPerCrawl,
+      psiAuditsPerMonth,
     };
   }
 

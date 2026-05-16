@@ -30,6 +30,8 @@ describe("PublicRuntimeService", () => {
   let seoService: {
     resolveRedirect: jest.Mock;
     generateJsonLd: jest.Mock;
+    getEnabledSchemas: jest.Mock;
+    generatePageTypeJsonLd: jest.Mock;
   };
   let cacheService: {
     getJson: jest.Mock;
@@ -87,6 +89,10 @@ describe("PublicRuntimeService", () => {
         "@type": "Hotel",
         name: "Sunset Villa",
       }),
+      getEnabledSchemas: jest
+        .fn()
+        .mockResolvedValue(["BreadcrumbList", "FAQPage", "WebSite"]),
+      generatePageTypeJsonLd: jest.fn().mockResolvedValue([]),
     };
     cacheService = {
       getJson: jest.fn().mockResolvedValue(null),

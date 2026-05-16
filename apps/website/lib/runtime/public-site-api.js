@@ -108,3 +108,41 @@ export const fetchPublicRuntimeRoutes = cache(
     );
   },
 );
+
+export const fetchPublicRuntimeSiteMeta = cache(
+  async ({ hostname, requestId }) => {
+    const normalizedHostname = normalizeHostname(hostname);
+
+    return fetchRuntimeJson(
+      "/public/runtime/site-meta",
+      {
+        hostname: normalizedHostname,
+      },
+      {
+        hostname: normalizedHostname,
+        requestId,
+        cacheMode: "force-cache",
+        nextOptions: {
+          revalidate: 300,
+          tags: [
+            `host:${normalizedHostname}`,
+            `site-meta:${normalizedHostname}`,
+          ],
+        },
+      },
+    );
+  },
+);
+
+export async function verifyIndexNowKey({ hostname, key, requestId }) {
+  const normalizedHostname = normalizeHostname(hostname);
+  return fetchRuntimeJson(
+    "/public/runtime/indexnow-verify",
+    { hostname: normalizedHostname, key },
+    {
+      hostname: normalizedHostname,
+      requestId,
+      cacheMode: "no-store",
+    },
+  );
+}

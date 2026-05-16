@@ -18,8 +18,16 @@ export default async function sitemap() {
 
   try {
     const payload = await fetchPublicRuntimeRoutes({ hostname, requestId });
-    const canonicalHost = payload.site?.canonicalHost || hostname;
+
+    // Honor site indexing flag — emit an empty sitemap when indexing is
+    // paused so crawlers receive a clear "nothing to index" signal.
+    if (payload?.sitemap?.indexingEnabled === false) {
+      return [];
+    }
+
+    const canonicalHost = payload.canonicalHost || hostname;
     const defaultLocale = payload.site?.defaultLocale || null;
+    const includeImages = payload?.sitemap?.includeImages !== false;
 
     return payload.routes.map((route) => {
       const path = route.path === "/" ? "" : route.path;
@@ -36,12 +44,16 @@ export default async function sitemap() {
         languages["x-default"] = `https://${canonicalHost}${path || "/"}`;
       }
 
+      const images =
+        includeImages && Array.isArray(route.images) ? route.images : [];
+
       return {
         url: route.url,
         lastModified: route.lastModified,
         ...(Object.keys(languages).length > 0
           ? { alternates: { languages } }
           : {}),
+        ...(images.length > 0 ? { images } : {}),
       };
     });
   } catch (error) {

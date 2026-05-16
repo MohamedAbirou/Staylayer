@@ -10,6 +10,10 @@ import { timingSafeEqual } from "node:crypto";
 import { FormsService } from "../forms/forms.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { SeoService } from "../seo/seo.service";
+import {
+  applyJsonLdOverride,
+  normalizeOverride,
+} from "../seo/page-schema/page-schema-merge";
 import { PublicRuntimeCacheService } from "./public-runtime.cache.service";
 import {
   HostResolutionService,
@@ -26,6 +30,26 @@ import {
   pathnameToSlug,
   stripWww,
 } from "./public-runtime.util";
+import { extractImagesFromPuck } from "../seo/sitemap/extract-images";
+
+function matchesAnyExclusion(path: string, patterns: string[]): boolean {
+  for (const pattern of patterns) {
+    if (!pattern) continue;
+    if (pattern === path) return true;
+    if (pattern.includes("*")) {
+      const regex = new RegExp(
+        "^" +
+          pattern
+            .split("*")
+            .map((segment) => segment.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+            .join(".*") +
+          "$",
+      );
+      if (regex.test(path)) return true;
+    }
+  }
+  return false;
+}
 
 type RuntimePageRecord = {
   id: string;
@@ -35,10 +59,12 @@ type RuntimePageRecord = {
   puckData: Record<string, unknown>;
   seoTitle: string | null;
   seoDescription: string | null;
-  seoKeywords: string | null;
+  targetKeywords: string | null;
+  internalBrief: string | null;
   seoOgImage: string | null;
   seoCanonical: string | null;
   seoNoindex: boolean;
+  jsonLdOverride: unknown;
   updatedAt: Date;
 };
 
@@ -273,6 +299,7 @@ export class PublicRuntimeService {
         this.toNullableString(site.settings?.tiktokUrl),
         this.toNullableString(site.settings?.pinterestUrl),
       ].filter((value): value is string => Boolean(value)),
+      jsonLdOverride: page.jsonLdOverride,
     });
     const payload = {
       site: {
@@ -344,7 +371,7 @@ export class PublicRuntimeService {
             localeSeoDefaults.description ||
             this.toNullableString(site.settings?.seoDefaultDesc) ||
             "",
-          keywords: this.parseKeywords(page.seoKeywords),
+          keywords: this.parseKeywords(page.targetKeywords),
           canonicalUrl: this.resolveCanonicalUrl(
             page.seoCanonical,
             resolution.canonicalHost,
@@ -396,23 +423,39 @@ export class PublicRuntimeService {
       });
     }
 
-    const pages = await this.prisma.page.findMany({
-      where: {
-        siteId: resolution.siteId,
-        published: true,
-        deletedAt: null,
-      },
-      select: {
-        slug: true,
-        locale: true,
-        updatedAt: true,
-      },
-      orderBy: [{ slug: "asc" }, { locale: "asc" }],
-    });
+    const [pages, settings] = await Promise.all([
+      this.prisma.page.findMany({
+        where: {
+          siteId: resolution.siteId,
+          published: true,
+          deletedAt: null,
+        },
+        select: {
+          slug: true,
+          locale: true,
+          updatedAt: true,
+          puckData: true,
+        },
+        orderBy: [{ slug: "asc" }, { locale: "asc" }],
+      }),
+      this.prisma.siteSettings.findUnique({
+        where: { siteId: resolution.siteId },
+        select: {
+          sitemapExcludedPaths: true,
+          sitemapIncludeImages: true,
+          seoIndexingEnabled: true,
+        },
+      }),
+    ]);
+
+    const excludedPaths = (settings?.sitemapExcludedPaths ?? [])
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const includeImages = settings?.sitemapIncludeImages ?? true;
 
     const routeMap = new Map<
       string,
-      { lastModified: Date; locales: Set<string> }
+      { lastModified: Date; locales: Set<string>; images: Set<string> }
     >();
 
     for (const page of pages) {
@@ -420,10 +463,17 @@ export class PublicRuntimeService {
       const existing = routeMap.get(path);
 
       if (!existing) {
-        routeMap.set(path, {
+        const entry = {
           lastModified: page.updatedAt,
           locales: new Set([page.locale]),
-        });
+          images: new Set<string>(),
+        };
+        if (includeImages) {
+          for (const img of extractImagesFromPuck(page.puckData)) {
+            entry.images.add(img);
+          }
+        }
+        routeMap.set(path, entry);
         continue;
       }
 
@@ -432,18 +482,116 @@ export class PublicRuntimeService {
       }
 
       existing.locales.add(page.locale);
+      if (includeImages) {
+        for (const img of extractImagesFromPuck(page.puckData)) {
+          existing.images.add(img);
+        }
+      }
     }
 
     return {
       siteId: resolution.siteId,
       canonicalHost: resolution.canonicalHost,
-      routes: Array.from(routeMap.entries()).map(([path, value]) => ({
-        path,
-        url: buildAbsoluteUrl(resolution.canonicalHost, path),
-        locales: Array.from(value.locales).sort(),
-        lastModified: value.lastModified.toISOString(),
-      })),
+      sitemap: {
+        indexingEnabled: settings?.seoIndexingEnabled ?? true,
+        includeImages,
+        excludedPaths,
+      },
+      routes: Array.from(routeMap.entries())
+        .map(([path, value]) => ({
+          path,
+          url: buildAbsoluteUrl(resolution.canonicalHost, path),
+          locales: Array.from(value.locales).sort(),
+          lastModified: value.lastModified.toISOString(),
+          images: Array.from(value.images),
+          excluded: matchesAnyExclusion(path, excludedPaths),
+        }))
+        .filter((route) => !route.excluded)
+        .map(({ excluded: _excluded, ...rest }) => rest),
     };
+  }
+
+  /**
+   * Lean payload used by the website's `robots.js` and middleware. Returns
+   * only the data needed to render `/robots.txt` and verify IndexNow key
+   * file requests.
+   */
+  async getSiteMeta(input: { hostname: string }) {
+    const hostname = normalizeHostname(input.hostname);
+    const resolution = await this.hostResolutionService.resolveHost({
+      hostname,
+      pathname: "/",
+    });
+    if (resolution.action !== "serve") {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Site meta is only available for resolved public hosts",
+      });
+    }
+    const settings = await this.prisma.siteSettings.findUnique({
+      where: { siteId: resolution.siteId },
+      select: {
+        seoIndexingEnabled: true,
+        robotsCustomRules: true,
+        robotsAiCrawlerPolicy: true,
+        indexNowEnabled: true,
+        indexNowKey: true,
+        sitemapIncludeImages: true,
+      },
+    });
+    return {
+      siteId: resolution.siteId,
+      canonicalHost: resolution.canonicalHost,
+      indexingEnabled: settings?.seoIndexingEnabled ?? true,
+      robots: {
+        customRules: settings?.robotsCustomRules ?? "",
+        aiCrawlerPolicy: settings?.robotsAiCrawlerPolicy ?? {},
+      },
+      indexNow: {
+        enabled: settings?.indexNowEnabled ?? false,
+        hasKey: Boolean(settings?.indexNowKey),
+      },
+      sitemap: {
+        includeImages: settings?.sitemapIncludeImages ?? true,
+      },
+    };
+  }
+
+  /**
+   * Verify whether the supplied key matches the IndexNow key configured for
+   * the site that resolves from the supplied hostname. Used by the website
+   * middleware to serve `/{key}.txt`.
+   */
+  async verifyIndexNowKey(input: {
+    hostname: string;
+    key: string;
+  }): Promise<{ valid: boolean; key: string | null }> {
+    const candidate = (input.key || "").trim();
+    if (
+      !candidate ||
+      candidate.length < 8 ||
+      candidate.length > 128 ||
+      !/^[a-zA-Z0-9-]+$/.test(candidate)
+    ) {
+      return { valid: false, key: null };
+    }
+    const resolution = await this.hostResolutionService.resolveHost({
+      hostname: normalizeHostname(input.hostname),
+      pathname: "/",
+    });
+    if (resolution.action !== "serve") return { valid: false, key: null };
+    const settings = await this.prisma.siteSettings.findUnique({
+      where: { siteId: resolution.siteId },
+      select: { indexNowKey: true },
+    });
+    if (!settings?.indexNowKey || settings.indexNowKey.length < 8) {
+      return { valid: false, key: null };
+    }
+    const expected = Buffer.from(settings.indexNowKey);
+    const provided = Buffer.from(candidate);
+    if (expected.length !== provided.length) return { valid: false, key: null };
+    const valid = timingSafeEqual(expected, provided);
+    return { valid, key: valid ? candidate : null };
   }
 
   async createPreviewLink(input: {
@@ -560,10 +708,12 @@ export class PublicRuntimeService {
             puckData: true,
             seoTitle: true,
             seoDescription: true,
-            seoKeywords: true,
+            targetKeywords: true,
+            internalBrief: true,
             seoOgImage: true,
             seoCanonical: true,
             seoNoindex: true,
+            jsonLdOverride: true,
             updatedAt: true,
           },
         });
@@ -695,6 +845,7 @@ export class PublicRuntimeService {
     puckData: Record<string, unknown>;
     logoUrl: string | null;
     sameAs: string[];
+    jsonLdOverride?: unknown;
   }): Promise<Record<string, unknown>[]> {
     const entries: Record<string, unknown>[] = [
       {
@@ -751,6 +902,11 @@ export class PublicRuntimeService {
       },
     );
     entries.push(...pageSchemas);
+
+    if (input.jsonLdOverride !== undefined && input.jsonLdOverride !== null) {
+      const override = normalizeOverride(input.jsonLdOverride);
+      return applyJsonLdOverride(entries, override);
+    }
 
     return entries;
   }

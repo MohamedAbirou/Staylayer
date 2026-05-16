@@ -44,7 +44,18 @@ export class CreatePageDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  targetKeywords?: string;
+
+  /** @deprecated retained for backward compatibility — use targetKeywords */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   seoKeywords?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  internalBrief?: string;
 
   @IsOptional()
   @IsString()

@@ -35,6 +35,17 @@ export interface BillingPlanLimits {
   exportEnabled: boolean;
   scheduledExports: boolean;
   supportTier: BillingSupportTier;
+  /**
+   * Maximum URLs the SEO crawler is allowed to fetch per audit job.
+   * 0 disables the crawler entirely (no plan currently uses that, but
+   * the field is kept open so a future read-only or trial plan can).
+   */
+  seoCrawlerMaxUrlsPerCrawl: number;
+  /**
+   * Maximum PageSpeed Insights audits the tenant can run per calendar
+   * month (each strategy counts as one). 0 disables the feature.
+   */
+  psiAuditsPerMonth: number;
 }
 
 export interface BillingPlanPublicCatalog {
@@ -62,6 +73,7 @@ export interface BillingUsageTotals {
   pages: number;
   domains: number;
   translationCharactersThisMonth: number;
+  psiAuditsThisMonth: number;
 }
 
 export interface BillingActionState {

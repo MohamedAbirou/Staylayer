@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "translation_provider_glossaries_site_provider_source_target_key" RENAME TO "translation_provider_glossaries_site_id_provider_source_loc_key";

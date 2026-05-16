@@ -51,6 +51,8 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
       exportEnabled: false,
       scheduledExports: false,
       supportTier: "docs",
+      seoCrawlerMaxUrlsPerCrawl: 100,
+      psiAuditsPerMonth: 20,
     },
   },
   starter_stay: {
@@ -87,6 +89,8 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
       exportEnabled: true,
       scheduledExports: false,
       supportTier: "email",
+      seoCrawlerMaxUrlsPerCrawl: 500,
+      psiAuditsPerMonth: 200,
     },
   },
   boutique_growth: {
@@ -123,6 +127,8 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
       exportEnabled: true,
       scheduledExports: true,
       supportTier: "priority",
+      seoCrawlerMaxUrlsPerCrawl: 2000,
+      psiAuditsPerMonth: 1000,
     },
   },
   portfolio: {
@@ -159,6 +165,8 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
       exportEnabled: true,
       scheduledExports: true,
       supportTier: "white_glove",
+      seoCrawlerMaxUrlsPerCrawl: 5000,
+      psiAuditsPerMonth: 5000,
     },
   },
 };

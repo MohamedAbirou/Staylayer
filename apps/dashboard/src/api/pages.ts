@@ -174,7 +174,8 @@ interface CreatePagePayload {
   puckData?: Record<string, unknown>;
   seoTitle?: string;
   seoDescription?: string;
-  seoKeywords?: string;
+  targetKeywords?: string;
+  internalBrief?: string;
   seoOgImage?: string;
   seoCanonical?: string;
   seoNoindex?: boolean;
@@ -190,7 +191,8 @@ interface UpdatePagePayload {
   puckData?: Record<string, unknown>;
   seoTitle?: string;
   seoDescription?: string;
-  seoKeywords?: string;
+  targetKeywords?: string;
+  internalBrief?: string;
   seoOgImage?: string;
   seoCanonical?: string;
   seoNoindex?: boolean;

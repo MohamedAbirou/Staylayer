@@ -58,6 +58,25 @@ export class PublicRuntimeController {
     return this.publicRuntimeService.getRoutes(query);
   }
 
+  @Get("public/runtime/site-meta")
+  async getSiteMeta(
+    @Headers("x-website-runtime-secret") secret: string,
+    @Query("hostname") hostname: string,
+  ) {
+    this.publicRuntimeService.assertTrustedWebsite(secret);
+    return this.publicRuntimeService.getSiteMeta({ hostname });
+  }
+
+  @Get("public/runtime/indexnow-verify")
+  async verifyIndexNow(
+    @Headers("x-website-runtime-secret") secret: string,
+    @Query("hostname") hostname: string,
+    @Query("key") key: string,
+  ) {
+    this.publicRuntimeService.assertTrustedWebsite(secret);
+    return this.publicRuntimeService.verifyIndexNowKey({ hostname, key });
+  }
+
   @Post("sites/:siteId/preview-links")
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard, RolesGuard)

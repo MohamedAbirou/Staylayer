@@ -39,7 +39,8 @@ export interface Page {
   published: boolean;
   seoTitle: string;
   seoDescription: string;
-  seoKeywords: string;
+  targetKeywords: string;
+  internalBrief: string;
   seoOgImage: string;
   seoCanonical: string;
   seoNoindex: boolean;
@@ -55,7 +56,8 @@ export interface PageListItem {
   published: boolean;
   seoTitle: string;
   seoDescription: string;
-  seoKeywords: string;
+  targetKeywords: string;
+  internalBrief: string;
   seoOgImage: string;
   seoNoindex: boolean;
   deletedAt: string | null;

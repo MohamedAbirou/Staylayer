@@ -11,7 +11,8 @@ type PageSnapshotEntry = {
   puckData: Prisma.JsonValue;
   seoTitle: string | null;
   seoDescription: string | null;
-  seoKeywords: string | null;
+  targetKeywords: string | null;
+  internalBrief: string | null;
   seoOgImage: string | null;
   seoCanonical: string | null;
   seoNoindex: boolean;
@@ -103,7 +104,8 @@ export class SitePublishedRevisionsService {
           puckData: true,
           seoTitle: true,
           seoDescription: true,
-          seoKeywords: true,
+          targetKeywords: true,
+          internalBrief: true,
           seoOgImage: true,
           seoCanonical: true,
           seoNoindex: true,
@@ -118,7 +120,8 @@ export class SitePublishedRevisionsService {
         puckData: page.puckData,
         seoTitle: page.seoTitle,
         seoDescription: page.seoDescription,
-        seoKeywords: page.seoKeywords,
+        targetKeywords: page.targetKeywords,
+        internalBrief: page.internalBrief,
         seoOgImage: page.seoOgImage,
         seoCanonical: page.seoCanonical,
         seoNoindex: page.seoNoindex,
@@ -280,7 +283,8 @@ export class SitePublishedRevisionsService {
                 puckData: page.puckData as Prisma.InputJsonValue,
                 seoTitle: page.seoTitle,
                 seoDescription: page.seoDescription,
-                seoKeywords: page.seoKeywords,
+                targetKeywords: page.targetKeywords,
+                internalBrief: page.internalBrief,
                 seoOgImage: page.seoOgImage,
                 seoCanonical: page.seoCanonical,
                 seoNoindex: page.seoNoindex,
@@ -298,7 +302,8 @@ export class SitePublishedRevisionsService {
                 puckData: page.puckData as Prisma.InputJsonValue,
                 seoTitle: page.seoTitle,
                 seoDescription: page.seoDescription,
-                seoKeywords: page.seoKeywords,
+                targetKeywords: page.targetKeywords,
+                internalBrief: page.internalBrief,
                 seoOgImage: page.seoOgImage,
                 seoCanonical: page.seoCanonical,
                 seoNoindex: page.seoNoindex,
@@ -400,7 +405,8 @@ export class SitePublishedRevisionsService {
             puckData: true,
             seoTitle: true,
             seoDescription: true,
-            seoKeywords: true,
+            targetKeywords: true,
+            internalBrief: true,
             seoOgImage: true,
             seoCanonical: true,
             seoNoindex: true,
@@ -462,8 +468,14 @@ export class SitePublishedRevisionsService {
           seoTitle: typeof obj.seoTitle === "string" ? obj.seoTitle : null,
           seoDescription:
             typeof obj.seoDescription === "string" ? obj.seoDescription : null,
-          seoKeywords:
-            typeof obj.seoKeywords === "string" ? obj.seoKeywords : null,
+          targetKeywords:
+            typeof obj.targetKeywords === "string"
+              ? obj.targetKeywords
+              : typeof obj.seoKeywords === "string"
+                ? obj.seoKeywords
+                : null,
+          internalBrief:
+            typeof obj.internalBrief === "string" ? obj.internalBrief : null,
           seoOgImage:
             typeof obj.seoOgImage === "string" ? obj.seoOgImage : null,
           seoCanonical:

@@ -119,6 +119,7 @@ describe("DomainsService", () => {
       preferredHostVariant: HostVariant.APEX,
       platformRootDomain: "staylayer.com",
       defaultHostname: "sunset-villa.staylayer.com",
+      defaultHostnameIssue: null,
       websiteProjectId: "website-project-id",
       websiteProjectTarget: "staylayer-web.vercel.app",
       sharedRuntimeReady: true,

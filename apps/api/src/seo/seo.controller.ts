@@ -5,28 +5,38 @@ import {
   Patch,
   Delete,
   Body,
+  Header,
   Param,
   Query,
   UseGuards,
   Req,
+  Res,
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
-import { Request } from "express";
+import { Request, Response } from "express";
 import { TenantMembershipRole } from "@prisma/client";
 import { SeoService } from "./seo.service";
-import { JwtAuthGuard, OptionalJwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import {
+  JwtAuthGuard,
+  OptionalJwtAuthGuard,
+} from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { WorkspaceScopeGuard } from "../auth/guards/workspace-scope.guard";
 import { MembershipRoles } from "../auth/decorators/roles.decorator";
 import { WorkspaceAccessService } from "../auth/workspace-access.service";
 import { AuthenticatedRequestUser } from "../auth/auth.types";
+import {
+  RedirectMigrationService,
+  type ImportMode,
+} from "./redirect-migration/redirect-migration.service";
 
 @Controller("seo")
 export class SeoController {
   constructor(
     private readonly seoService: SeoService,
     private readonly workspaceAccessService: WorkspaceAccessService,
+    private readonly redirectMigrationService: RedirectMigrationService,
   ) {}
 
   private async ensureSiteAccess(req: Request): Promise<string> {
@@ -107,6 +117,57 @@ export class SeoController {
     return result ?? { redirect: null };
   }
 
+  // ── Redirect Migration Suite (Phase E.1) ──────────────────────────────────
+
+  @Get("redirects/analysis")
+  @UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
+  @MembershipRoles(
+    TenantMembershipRole.OWNER,
+    TenantMembershipRole.ADMIN,
+    TenantMembershipRole.EDITOR,
+  )
+  async analyzeRedirects(@Req() req: Request) {
+    const siteId = await this.ensureSiteAccess(req);
+    return this.redirectMigrationService.analyze(siteId);
+  }
+
+  @Get("redirects/export")
+  @UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
+  @MembershipRoles(
+    TenantMembershipRole.OWNER,
+    TenantMembershipRole.ADMIN,
+    TenantMembershipRole.EDITOR,
+  )
+  @Header("Content-Type", "text/csv; charset=utf-8")
+  @Header("Content-Disposition", 'attachment; filename="redirects.csv"')
+  async exportRedirects(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string> {
+    const siteId = await this.ensureSiteAccess(req);
+    const csv = await this.redirectMigrationService.exportCsv(siteId);
+    res.setHeader("Cache-Control", "no-store");
+    return csv;
+  }
+
+  @Post("redirects/import")
+  @UseGuards(JwtAuthGuard, RolesGuard, WorkspaceScopeGuard)
+  @MembershipRoles(TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async importRedirects(
+    @Req() req: Request,
+    @Body() body: { csv?: string; mode?: ImportMode },
+  ) {
+    const siteId = await this.ensureSiteAccess(req);
+    const mode: ImportMode =
+      body.mode === "overwrite" || body.mode === "strict" ? body.mode : "skip";
+    return this.redirectMigrationService.importCsv(
+      siteId,
+      body.csv ?? "",
+      mode,
+    );
+  }
+
   // ── SEO Validation ────────────────────────────────────────────────────────
 
   @Get("validate")
@@ -135,7 +196,10 @@ export class SeoController {
     TenantMembershipRole.ADMIN,
     TenantMembershipRole.EDITOR,
   )
-  async getStructuredData(@Req() req: Request, @Query("siteId") siteId: string) {
+  async getStructuredData(
+    @Req() req: Request,
+    @Query("siteId") siteId: string,
+  ) {
     await this.ensureSiteAccess(req);
     return this.seoService.getStructuredData(siteId);
   }

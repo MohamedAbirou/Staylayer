@@ -6,6 +6,7 @@ import {
 } from "@/lib/runtime/host";
 import { ensureRequestId, REQUEST_ID_HEADER } from "@/lib/runtime/request-id";
 import { buildCsp } from "@/lib/runtime/csp";
+import { verifyIndexNowKey } from "@/lib/runtime/public-site-api";
 
 const PUBLIC_FILE = /\.[a-z0-9]+$/i;
 const METADATA_PATHS = new Set([
@@ -15,11 +16,16 @@ const METADATA_PATHS = new Set([
   "/manifest.webmanifest",
 ]);
 
+// IndexNow key files: 8–128 chars of [a-zA-Z0-9-] followed by .txt at root.
+const INDEXNOW_KEY_PATH = /^\/([a-zA-Z0-9-]{8,128})\.txt$/;
+
 function shouldBypass(pathname) {
   return (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
-    (PUBLIC_FILE.test(pathname) && !METADATA_PATHS.has(pathname))
+    (PUBLIC_FILE.test(pathname) &&
+      !METADATA_PATHS.has(pathname) &&
+      !INDEXNOW_KEY_PATH.test(pathname))
   );
 }
 
@@ -86,6 +92,41 @@ export default async function middleware(request) {
   const hostname = getRequestHostname(request.headers);
   if (!hostname) {
     return decorateResponse(NextResponse.next(), requestId);
+  }
+
+  // IndexNow key file verification — serves /{key}.txt with the key as
+  // plain text when (and only when) the supplied key matches the one
+  // configured for this tenant. This avoids requiring the operator to
+  // upload anything manually.
+  const indexNowMatch = request.nextUrl.pathname.match(INDEXNOW_KEY_PATH);
+  if (indexNowMatch) {
+    try {
+      const result = await verifyIndexNowKey({
+        hostname,
+        key: indexNowMatch[1],
+        requestId,
+      });
+      if (result?.valid && result.key) {
+        return decorateResponse(
+          new NextResponse(result.key, {
+            status: 200,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "Cache-Control": "public, max-age=3600",
+            },
+          }),
+          requestId,
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[website] indexnow verify failed host=${hostname} requestId=${requestId} status=${
+          error?.status ?? "?"
+        } message=${error?.message ?? "unknown"}`,
+      );
+    }
+    // Fall through to normal routing — the .txt path will 404 naturally
+    // when no key matches.
   }
 
   const reservedRedirect = maybeRedirectReservedHost(request, hostname);

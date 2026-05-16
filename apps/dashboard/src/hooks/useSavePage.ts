@@ -28,7 +28,9 @@ export function useSavePage() {
         title,
         seoTitle: rootProps.seoTitle || undefined,
         seoDescription: rootProps.seoDescription || undefined,
-        seoKeywords: rootProps.seoKeywords || undefined,
+        targetKeywords:
+          rootProps.targetKeywords || rootProps.seoKeywords || undefined,
+        internalBrief: rootProps.internalBrief || undefined,
       });
     },
     onSuccess: (_data, variables) => {

@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
+  Download,
   FileText,
+  Info,
   Plus,
   Trash2,
+  Upload,
   Loader as Loader2,
   ToggleLeft,
   ToggleRight,
@@ -25,13 +29,47 @@ import {
   validatePageSeo,
   getStructuredData,
   upsertStructuredData,
+  getRedirectAnalysis,
+  exportRedirectsCsv,
+  importRedirectsCsv,
   type StructuredDataDto,
   type StructuredOffer,
   type StructuredRoomType,
+  type RedirectImportMode,
+  type RedirectImportSummary,
 } from "../api/seo";
 import { useSettings } from "../hooks/useSettings";
+import { RobotsSitemapPanel } from "./seo/RobotsSitemapPanel";
+import { IndexNowPanel } from "./seo/IndexNowPanel";
+import { SiteCrawlPanel } from "./seo/SiteCrawlPanel";
+import { SearchConsolePanel } from "./seo/SearchConsolePanel";
+import { BingWebmasterPanel } from "./seo/BingWebmasterPanel";
+import { PsiPanel } from "./seo/PsiPanel";
+import { HreflangPanel } from "./seo/HreflangPanel";
+import { PageSchemaPanel } from "./seo/PageSchemaPanel";
+import { ImagesPanel } from "./seo/ImagesPanel";
+import { PreviewsPanel } from "./seo/PreviewsPanel";
+import { AiCitationPanel } from "./seo/AiCitationPanel";
+import { ScheduledAuditsPanel } from "./seo/ScheduledAuditsPanel";
+import { AuditTasksPanel } from "./seo/AuditTasksPanel";
 
-type Tab = "audit" | "redirects" | "structured-data";
+type Tab =
+  | "audit"
+  | "redirects"
+  | "structured-data"
+  | "robots"
+  | "indexnow"
+  | "site-crawl"
+  | "search-console"
+  | "bing-webmaster"
+  | "psi"
+  | "hreflang"
+  | "page-schema"
+  | "images"
+  | "previews"
+  | "ai-citation"
+  | "scheduled-audits"
+  | "audit-tasks";
 
 export default function SeoPage() {
   const { session } = useAuth();
@@ -131,11 +169,160 @@ export default function SeoPage() {
         >
           Structured Data
         </button>
+        <button
+          onClick={() => setTab("robots")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "robots"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Robots &amp; Sitemap
+        </button>
+        <button
+          onClick={() => setTab("indexnow")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "indexnow"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          IndexNow
+        </button>
+        <button
+          onClick={() => setTab("site-crawl")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "site-crawl"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Site Crawl
+        </button>
+        <button
+          onClick={() => setTab("search-console")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "search-console"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Search Console
+        </button>
+        <button
+          onClick={() => setTab("bing-webmaster")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "bing-webmaster"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Bing Webmaster
+        </button>
+        <button
+          onClick={() => setTab("psi")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "psi"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Performance
+        </button>
+        <button
+          onClick={() => setTab("hreflang")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "hreflang"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Hreflang
+        </button>
+        <button
+          onClick={() => setTab("page-schema")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "page-schema"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Page Schema
+        </button>
+        <button
+          onClick={() => setTab("images")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "images"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Images
+        </button>
+        <button
+          onClick={() => setTab("previews")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "previews"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Previews
+        </button>
+        <button
+          onClick={() => setTab("ai-citation")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "ai-citation"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          AI Citation
+        </button>
+        <button
+          onClick={() => setTab("scheduled-audits")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "scheduled-audits"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Scheduled Audits
+        </button>
+        <button
+          onClick={() => setTab("audit-tasks")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "audit-tasks"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          Audit Tasks
+        </button>
       </div>
 
       {tab === "audit" && <SeoAuditPanel siteId={siteId} />}
       {tab === "redirects" && <RedirectsPanel siteId={siteId} />}
       {tab === "structured-data" && <StructuredDataPanel siteId={siteId} />}
+      {tab === "robots" && siteId && <RobotsSitemapPanel siteId={siteId} />}
+      {tab === "indexnow" && siteId && <IndexNowPanel siteId={siteId} />}
+      {tab === "site-crawl" && siteId && <SiteCrawlPanel siteId={siteId} />}
+      {tab === "search-console" && siteId && (
+        <SearchConsolePanel siteId={siteId} />
+      )}
+      {tab === "bing-webmaster" && siteId && (
+        <BingWebmasterPanel siteId={siteId} />
+      )}
+      {tab === "psi" && siteId && <PsiPanel siteId={siteId} />}
+      {tab === "hreflang" && siteId && <HreflangPanel siteId={siteId} />}
+      {tab === "page-schema" && siteId && <PageSchemaPanel siteId={siteId} />}
+      {tab === "images" && siteId && <ImagesPanel siteId={siteId} />}
+      {tab === "previews" && siteId && <PreviewsPanel siteId={siteId} />}
+      {tab === "ai-citation" && siteId && <AiCitationPanel siteId={siteId} />}
+      {tab === "scheduled-audits" && siteId && (
+        <ScheduledAuditsPanel siteId={siteId} />
+      )}
+      {tab === "audit-tasks" && siteId && <AuditTasksPanel siteId={siteId} />}
     </div>
   );
 }
@@ -538,10 +725,19 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
   const [fromPath, setFromPath] = useState("");
   const [toPath, setToPath] = useState("");
   const [permanent, setPermanent] = useState(true);
+  const [importMode, setImportMode] = useState<RedirectImportMode>("skip");
+  const [importSummary, setImportSummary] =
+    useState<RedirectImportSummary | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const { data: redirects = [], isLoading } = useQuery({
     queryKey: ["seo", "redirects", siteId],
     queryFn: () => getRedirects(siteId),
+  });
+
+  const { data: analysis } = useQuery({
+    queryKey: ["seo", "redirects", "analysis", siteId],
+    queryFn: () => getRedirectAnalysis(siteId),
   });
 
   const createMutation = useMutation({
@@ -549,6 +745,9 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["seo", "redirects", siteId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", "analysis", siteId],
       });
       setShowAdd(false);
       setFromPath("");
@@ -563,6 +762,9 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
       void queryClient.invalidateQueries({
         queryKey: ["seo", "redirects", siteId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", "analysis", siteId],
+      });
     },
   });
 
@@ -572,24 +774,213 @@ function RedirectsPanel({ siteId }: { siteId: string }) {
       void queryClient.invalidateQueries({
         queryKey: ["seo", "redirects", siteId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", "analysis", siteId],
+      });
     },
   });
 
+  const importMutation = useMutation({
+    mutationFn: ({ csv, mode }: { csv: string; mode: RedirectImportMode }) =>
+      importRedirectsCsv(siteId, csv, mode),
+    onSuccess: (summary) => {
+      setImportSummary(summary);
+      setImportError(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", siteId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["seo", "redirects", "analysis", siteId],
+      });
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ??
+        (err instanceof Error ? err.message : "CSV import failed.");
+      setImportError(msg);
+      setImportSummary(null);
+    },
+  });
+
+  const handleExport = async () => {
+    try {
+      const csv = await exportRedirectsCsv(siteId);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `redirects-${siteId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Surface a minimal error; the user can retry.
+      setImportError("Failed to download CSV.");
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    setImportError(null);
+    setImportSummary(null);
+    if (file.size > 1_000_000) {
+      setImportError("CSV file must be ≤ 1 MB.");
+      return;
+    }
+    const csv = await file.text();
+    importMutation.mutate({ csv, mode: importMode });
+  };
+
+  const errorIssues =
+    analysis?.issues.filter((i) => i.severity === "error") ?? [];
+  const warningIssues =
+    analysis?.issues.filter((i) => i.severity === "warning") ?? [];
+  const infoIssues =
+    analysis?.issues.filter((i) => i.severity === "info") ?? [];
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-gray-600">
           Redirect old URLs to prevent broken links after slug renames or page
           deletions.
         </p>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
-          Add redirect
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <Upload className="h-4 w-4" />
+            Import CSV
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleImportFile(file);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+          <select
+            value={importMode}
+            onChange={(e) =>
+              setImportMode(e.target.value as RedirectImportMode)
+            }
+            className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+            title="Import conflict mode"
+          >
+            <option value="skip">Skip existing</option>
+            <option value="overwrite">Overwrite existing</option>
+            <option value="strict">Strict (reject on errors)</option>
+          </select>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add redirect
+          </button>
+        </div>
       </div>
+
+      {(importSummary || importError) && (
+        <div
+          className={`rounded-xl border p-4 text-sm ${
+            importError
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-emerald-200 bg-emerald-50 text-emerald-800"
+          }`}
+        >
+          {importError ? (
+            <p>{importError}</p>
+          ) : importSummary ? (
+            <div className="space-y-1">
+              <p className="font-semibold">
+                Import complete: {importSummary.created} created,{" "}
+                {importSummary.updated} updated, {importSummary.skipped}{" "}
+                skipped, {importSummary.failed} failed (of{" "}
+                {importSummary.totalRows} rows).
+              </p>
+              {importSummary.errors.length > 0 && (
+                <ul className="ml-5 list-disc text-xs">
+                  {importSummary.errors.slice(0, 10).map((e, i) => (
+                    <li key={i}>
+                      Line {e.line}
+                      {e.column ? ` (${e.column})` : ""}: {e.message}
+                    </li>
+                  ))}
+                  {importSummary.errors.length > 10 && (
+                    <li>… {importSummary.errors.length - 10} more.</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {analysis && analysis.issues.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">
+            Redirect health
+          </h3>
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="rounded-lg bg-red-50 px-3 py-2 text-red-700">
+              <span className="font-semibold">{errorIssues.length}</span> errors
+            </div>
+            <div className="rounded-lg bg-amber-50 px-3 py-2 text-amber-700">
+              <span className="font-semibold">{warningIssues.length}</span>{" "}
+              warnings
+            </div>
+            <div className="rounded-lg bg-blue-50 px-3 py-2 text-blue-700">
+              <span className="font-semibold">{infoIssues.length}</span> info
+            </div>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {analysis.issues.slice(0, 12).map((issue, i) => {
+              const Icon =
+                issue.severity === "error"
+                  ? AlertCircle
+                  : issue.severity === "warning"
+                    ? AlertTriangle
+                    : Info;
+              const color =
+                issue.severity === "error"
+                  ? "text-red-600"
+                  : issue.severity === "warning"
+                    ? "text-amber-600"
+                    : "text-blue-600";
+              return (
+                <li key={i} className="flex items-start gap-2 text-xs">
+                  <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} />
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900">
+                      [{issue.code}] {issue.message}
+                    </p>
+                    {issue.chain && issue.chain.length > 0 && (
+                      <p className="truncate font-mono text-[11px] text-gray-500">
+                        {issue.chain.join(" → ")}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {analysis.issues.length > 12 && (
+              <li className="text-xs text-gray-500">
+                … {analysis.issues.length - 12} additional issues.
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
 
       {showAdd && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">

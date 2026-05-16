@@ -143,6 +143,8 @@ enum OperationalAlertType {
   DOMAIN_FAILURE
   FORM_DELIVERY_FAILURE
   SUBMISSION_SPIKE
+  SEO_AUDIT_REGRESSION
+  SEO_AUDIT_CRITICAL
 }
 
 enum OperationalAlertSeverity {
@@ -173,6 +175,8 @@ model User {
   emailVerificationTokens  EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
   sentWorkspaceInvitations WorkspaceInvitation[]    @relation("WorkspaceInvitationSender")
+  assignedSeoAuditTasks    SeoAuditTask[]           @relation("SeoAuditTaskAssignee")
+  createdSeoAuditTasks     SeoAuditTask[]           @relation("SeoAuditTaskCreator")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -319,6 +323,30 @@ model Site {
   redirects                      Redirect[]
   structuredData                 SiteStructuredData?
   publishedRevisions             SitePublishedRevision[]
+  sitemapSubmissionLogs          SitemapSubmissionLog[]
+  crawlJobs                      SeoCrawlJob[]
+  searchConsoleConnection        SearchConsoleConnection?
+  searchConsoleSyncJobs          SearchConsoleSyncJob[]
+  searchConsolePagePerformance   SearchConsolePagePerformance[]
+  searchConsoleQueryPerformance  SearchConsoleQueryPerformance[]
+  searchConsoleSitemaps          SearchConsoleSitemap[]
+  searchConsoleUrlInspections    SearchConsoleUrlInspection[]
+  psiAudits                      PsiAudit[]
+  cruxRecords                    CruxRecord[]
+  hreflangScans                  HreflangScan[]
+  hreflangIssues                 HreflangIssue[]
+  bingWebmasterConnection        BingWebmasterConnection?
+  bingSyncJobs                   BingSyncJob[]
+  bingPagePerformance            BingPagePerformance[]
+  bingQueryPerformance           BingQueryPerformance[]
+  bingSitemaps                   BingSitemap[]
+  bingCrawlIssues                BingCrawlIssue[]
+  bingLinkSummary                BingLinkSummary?
+  aiCitationAudits               AiCitationAudit[]
+  seoAuditSchedule               SeoAuditSchedule?
+  seoAuditRuns                   SeoAuditRun[]
+  seoAuditSnapshots              SeoAuditSnapshot[]
+  seoAuditTasks                  SeoAuditTask[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -341,10 +369,15 @@ model Page {
 
   seoTitle       String? @map("seo_title")
   seoDescription String? @map("seo_description")
-  seoKeywords    String? @map("seo_keywords")
+  targetKeywords String? @map("target_keywords")
+  internalBrief  String? @map("internal_brief")
   seoOgImage     String? @map("seo_og_image")
   seoCanonical   String? @map("seo_canonical")
   seoNoindex     Boolean @default(false) @map("seo_noindex")
+
+  /// Per-page JSON-LD override. Shape:
+  /// { mode: "merge" | "replace", disabledTypes: string[], customNodes: object[] }
+  jsonLdOverride Json? @map("json_ld_override")
 
   // Soft delete
   deletedAt DateTime? @map("deleted_at")
@@ -433,6 +466,16 @@ model SiteSettings {
   // Localization
   defaultLocale String   @default("en") @map("default_locale")
   activeLocales String[] @default(["en", "es", "fr", "de", "it", "pt", "nl", "ar"]) @map("active_locales")
+
+  // Robots & sitemap
+  robotsCustomRules     String   @default("") @map("robots_custom_rules")
+  robotsAiCrawlerPolicy Json     @default("{}") @map("robots_ai_crawler_policy")
+  sitemapExcludedPaths  String[] @default([]) @map("sitemap_excluded_paths")
+  sitemapIncludeImages  Boolean  @default(true) @map("sitemap_include_images")
+
+  // IndexNow
+  indexNowKey     String  @default("") @map("indexnow_key")
+  indexNowEnabled Boolean @default(true) @map("indexnow_enabled")
 
   updatedAt DateTime @updatedAt @map("updated_at")
   updatedBy String?  @map("updated_by")
@@ -797,6 +840,8 @@ model OperationalAlert {
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
+  seoAuditTasks SeoAuditTask[] @relation("SeoAuditTaskAlert")
+
   @@unique([siteId, type, fingerprint])
   @@index([status, type])
   @@index([siteId, status])
@@ -868,6 +913,8 @@ model Redirect {
   reason     String?
   permanent  Boolean  @default(true)
   enabled    Boolean  @default(true)
+  /// Origin of the rule. One of MANUAL | CSV_IMPORT | SLUG_CHANGE | PAGE_DELETE.
+  source     String   @default("MANUAL")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -876,6 +923,7 @@ model Redirect {
   @@unique([siteId, fromPath, locale])
   @@index([siteId, enabled])
   @@index([siteId, fromPath])
+  @@index([siteId, source])
   @@map("redirects")
 }
 
@@ -912,6 +960,251 @@ model SiteStructuredData {
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@map("site_structured_data")
+}
+
+// ─── Search-engine submission log (IndexNow, etc.) ────────
+
+enum SearchEngineSubmissionTarget {
+  INDEXNOW_AUTO_PUBLISH
+  INDEXNOW_AUTO_UNPUBLISH
+  INDEXNOW_AUTO_DELETE
+  INDEXNOW_AUTO_REDIRECT_CREATE
+  INDEXNOW_AUTO_REDIRECT_REMOVE
+  INDEXNOW_MANUAL
+}
+
+enum SearchEngineSubmissionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+model SitemapSubmissionLog {
+  id             String                       @id @default(cuid())
+  siteId         String                       @map("site_id")
+  target         SearchEngineSubmissionTarget
+  status         SearchEngineSubmissionStatus @default(PENDING)
+  urls           String[]                     @default([])
+  urlCount       Int                          @default(0) @map("url_count")
+  responseStatus Int?                         @map("response_status")
+  responseBody   String?                      @map("response_body")
+  reason         String?
+  attempts       Int                          @default(1)
+  lastAttemptAt  DateTime?                    @map("last_attempt_at")
+  nextAttemptAt  DateTime?                    @map("next_attempt_at")
+  createdBy      String?                      @map("created_by")
+  createdAt      DateTime                     @default(now()) @map("created_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, createdAt(sort: Desc)])
+  @@index([status, nextAttemptAt])
+  @@map("sitemap_submission_log")
+}
+
+// ─── SEO Crawler (technical audit) ────────────────────────
+
+enum SeoCrawlJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum SeoCrawlIssueSeverity {
+  ERROR
+  WARNING
+  INFO
+}
+
+enum SeoCrawlIssueCategory {
+  META
+  CONTENT
+  LINKS
+  IMAGES
+  PERFORMANCE
+  INDEXABILITY
+  STRUCTURED_DATA
+  ACCESSIBILITY
+}
+
+enum ImageAltQuality {
+  MISSING
+  EMPTY
+  FILENAME_LIKE
+  TOO_SHORT
+  TOO_LONG
+  GOOD
+}
+
+model SeoCrawlJob {
+  id                  String            @id @default(cuid())
+  siteId              String            @map("site_id")
+  status              SeoCrawlJobStatus @default(PENDING)
+  startUrl            String            @map("start_url")
+  canonicalHost       String            @map("canonical_host")
+  urlLimit            Int               @map("url_limit")
+  maxDepth            Int               @map("max_depth")
+  totalUrls           Int               @default(0) @map("total_urls")
+  completedUrls       Int               @default(0) @map("completed_urls")
+  errorCount          Int               @default(0) @map("error_count")
+  warningCount        Int               @default(0) @map("warning_count")
+  infoCount           Int               @default(0) @map("info_count")
+  brokenLinkCount     Int               @default(0) @map("broken_link_count")
+  imageTotal          Int               @default(0) @map("image_total")
+  imageMissingAlt     Int               @default(0) @map("image_missing_alt")
+  imageFilenameAlt    Int               @default(0) @map("image_filename_alt")
+  imageOversizedOg    Int               @default(0) @map("image_oversized_og")
+  imageUndersizedOg   Int               @default(0) @map("image_undersized_og")
+  imageMissingDims    Int               @default(0) @map("image_missing_dims")
+  imageNotLazy        Int               @default(0) @map("image_not_lazy")
+  imageMissingSitemap Int               @default(0) @map("image_missing_sitemap")
+  durationMs          Int?              @map("duration_ms")
+  failureReason       String?           @map("failure_reason")
+  startedAt           DateTime?         @map("started_at")
+  completedAt         DateTime?         @map("completed_at")
+  createdBy           String?           @map("created_by")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  site          Site                   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  results       SeoCrawlUrlResult[]
+  issues        SeoCrawlIssue[]
+  imageFindings SeoCrawlImageFinding[]
+
+  @@index([siteId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("seo_crawl_job")
+}
+
+model SeoCrawlUrlResult {
+  id                   String   @id @default(cuid())
+  crawlJobId           String   @map("crawl_job_id")
+  url                  String
+  pathname             String
+  depth                Int      @default(0)
+  statusCode           Int      @map("status_code")
+  contentType          String?  @map("content_type")
+  contentLength        Int?     @map("content_length")
+  responseTimeMs       Int      @default(0) @map("response_time_ms")
+  title                String?
+  metaDescription      String?  @map("meta_description")
+  canonical            String?
+  h1Count              Int      @default(0) @map("h1_count")
+  h1First              String?  @map("h1_first")
+  h2Count              Int      @default(0) @map("h2_count")
+  h3Count              Int      @default(0) @map("h3_count")
+  wordCount            Int      @default(0) @map("word_count")
+  imageCount           Int      @default(0) @map("image_count")
+  imagesMissingAlt     Int      @default(0) @map("images_missing_alt")
+  internalLinks        Int      @default(0) @map("internal_links")
+  externalLinks        Int      @default(0) @map("external_links")
+  brokenLinks          Int      @default(0) @map("broken_links")
+  redirectChain        Json     @default("[]") @map("redirect_chain")
+  finalUrl             String?  @map("final_url")
+  robotsHeader         String?  @map("robots_header")
+  indexable            Boolean  @default(true)
+  noindexReason        String?  @map("noindex_reason")
+  errorCount           Int      @default(0) @map("error_count")
+  warningCount         Int      @default(0) @map("warning_count")
+  fetchError           String?  @map("fetch_error")
+  ogImage              String?  @map("og_image")
+  imageFindingsTotal   Int      @default(0) @map("image_findings_total")
+  imageFindingsMissing Int      @default(0) @map("image_findings_missing")
+  imageFindingsIssues  Int      @default(0) @map("image_findings_issues")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  job           SeoCrawlJob            @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
+  issues        SeoCrawlIssue[]
+  outboundLinks SeoCrawlPageLink[]     @relation("SeoCrawlPageLink_source")
+  inboundLinks  SeoCrawlPageLink[]     @relation("SeoCrawlPageLink_target")
+  imageFindings SeoCrawlImageFinding[]
+
+  @@unique([crawlJobId, url])
+  @@index([crawlJobId, statusCode])
+  @@index([crawlJobId, errorCount(sort: Desc)])
+  @@map("seo_crawl_url_result")
+}
+
+model SeoCrawlIssue {
+  id             String                @id @default(cuid())
+  crawlJobId     String                @map("crawl_job_id")
+  urlResultId    String                @map("url_result_id")
+  code           String
+  severity       SeoCrawlIssueSeverity
+  category       SeoCrawlIssueCategory
+  message        String
+  recommendation String?
+  context        Json?
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  job    SeoCrawlJob       @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
+  result SeoCrawlUrlResult @relation(fields: [urlResultId], references: [id], onDelete: Cascade)
+
+  @@index([crawlJobId, severity])
+  @@index([crawlJobId, category])
+  @@index([crawlJobId, code])
+  @@map("seo_crawl_issue")
+}
+
+/// Edge of the per-crawl link graph. One row per <a href> kept (capped per
+/// source page in the runner). `targetResultId` is back-filled once we know
+/// the destination was crawled in the same job, enabling fast orphan /
+/// inbound queries via index lookups instead of URL string joins.
+model SeoCrawlPageLink {
+  id             String   @id @default(cuid())
+  crawlJobId     String   @map("crawl_job_id")
+  sourceResultId String   @map("source_result_id")
+  targetUrl      String   @map("target_url")
+  targetPathname String?  @map("target_pathname")
+  targetResultId String?  @map("target_result_id")
+  anchorText     String?  @map("anchor_text")
+  rel            String?
+  nofollow       Boolean  @default(false)
+  isInternal     Boolean  @default(true) @map("is_internal")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  source SeoCrawlUrlResult  @relation("SeoCrawlPageLink_source", fields: [sourceResultId], references: [id], onDelete: Cascade)
+  target SeoCrawlUrlResult? @relation("SeoCrawlPageLink_target", fields: [targetResultId], references: [id], onDelete: SetNull)
+
+  @@index([crawlJobId, sourceResultId])
+  @@index([crawlJobId, targetResultId])
+  @@index([crawlJobId, targetUrl])
+  @@index([crawlJobId, isInternal])
+  @@map("seo_crawl_page_link")
+}
+
+/// One row per <img> emitted by the crawler (capped per page in the runner).
+/// Powers the dashboard Images tab — aggregate counts come from the job-level
+/// rollups on SeoCrawlJob, and per-page drill-downs read this table directly.
+model SeoCrawlImageFinding {
+  id          String          @id @default(cuid())
+  crawlJobId  String          @map("crawl_job_id")
+  urlResultId String          @map("url_result_id")
+  src         String
+  filename    String?
+  alt         String?
+  hasAlt      Boolean         @default(false) @map("has_alt")
+  altQuality  ImageAltQuality @map("alt_quality")
+  widthAttr   Int?            @map("width_attr")
+  heightAttr  Int?            @map("height_attr")
+  loadingAttr String?         @map("loading_attr")
+  isOgImage   Boolean         @default(false) @map("is_og_image")
+  inSitemap   Boolean         @default(false) @map("in_sitemap")
+  aboveFold   Boolean         @default(false) @map("above_fold")
+  flags       Json            @default("[]")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  job    SeoCrawlJob       @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
+  result SeoCrawlUrlResult @relation(fields: [urlResultId], references: [id], onDelete: Cascade)
+
+  @@index([crawlJobId])
+  @@index([crawlJobId, altQuality])
+  @@index([crawlJobId, hasAlt])
+  @@index([urlResultId])
+  @@map("seo_crawl_image_finding")
 }
 
 // ─── Translation Jobs ─────────────────────────────────────
@@ -1107,4 +1400,726 @@ model NotificationPreference {
   @@unique([userId, tenantId, category, channel])
   @@index([userId, tenantId])
   @@map("notification_preferences")
+}
+
+// ─── Google Search Console (Phase B.1) ────────────────────
+
+enum SearchConsoleConnectionStatus {
+  ACTIVE
+  REVOKED
+  ERROR
+  EXPIRED
+}
+
+enum SearchConsoleSyncJobType {
+  DAILY
+  ON_DEMAND
+  SITEMAP_SUBMIT
+  URL_INSPECTION
+}
+
+enum SearchConsoleSyncJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+/// One row per (site, Google account). Holds the encrypted refresh token and
+/// the Search Console property URL (siteUrl) to use for API calls.
+model SearchConsoleConnection {
+  id                    String                        @id @default(cuid())
+  siteId                String                        @unique @map("site_id")
+  status                SearchConsoleConnectionStatus @default(ACTIVE)
+  googleAccountEmail    String?                       @map("google_account_email")
+  googleAccountSubject  String?                       @map("google_account_subject")
+  /// Search Console "siteUrl" property — e.g. "https://example.com/" or "sc-domain:example.com".
+  propertyUrl           String                        @map("property_url")
+  scope                 String
+  encryptedRefreshToken String                        @map("encrypted_refresh_token") @db.Text
+  /// Cached access token + expiry, refreshed lazily.
+  accessTokenCache      String?                       @map("access_token_cache") @db.Text
+  accessTokenExpiresAt  DateTime?                     @map("access_token_expires_at")
+  lastSyncedAt          DateTime?                     @map("last_synced_at")
+  lastSuccessfulSyncAt  DateTime?                     @map("last_successful_sync_at")
+  lastError             String?                       @map("last_error")
+  consecutiveFailures   Int                           @default(0) @map("consecutive_failures")
+  connectedByUserId     String?                       @map("connected_by_user_id")
+  createdAt             DateTime                      @default(now()) @map("created_at")
+  updatedAt             DateTime                      @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([lastSyncedAt])
+  @@map("search_console_connection")
+}
+
+/// Sync job history (daily cron + on-demand). One row per attempted run.
+model SearchConsoleSyncJob {
+  id             String                     @id @default(cuid())
+  siteId         String                     @map("site_id")
+  type           SearchConsoleSyncJobType
+  status         SearchConsoleSyncJobStatus @default(PENDING)
+  rangeStart     DateTime?                  @map("range_start")
+  rangeEnd       DateTime?                  @map("range_end")
+  pagesSynced    Int                        @default(0) @map("pages_synced")
+  queriesSynced  Int                        @default(0) @map("queries_synced")
+  sitemapsSynced Int                        @default(0) @map("sitemaps_synced")
+  inspectionsRun Int                        @default(0) @map("inspections_run")
+  failureReason  String?                    @map("failure_reason")
+  startedAt      DateTime?                  @map("started_at")
+  completedAt    DateTime?                  @map("completed_at")
+  triggeredBy    String?                    @map("triggered_by")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, createdAt])
+  @@index([status])
+  @@map("search_console_sync_job")
+}
+
+/// Daily per-page performance roll-up. Unique on (siteId, date, page).
+model SearchConsolePagePerformance {
+  id          String   @id @default(cuid())
+  siteId      String   @map("site_id")
+  date        DateTime @db.Date
+  page        String
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  ctr         Float    @default(0)
+  position    Float    @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, date, page])
+  @@index([siteId, date])
+  @@index([siteId, page])
+  @@map("search_console_page_performance")
+}
+
+/// Daily per-query (search term) performance roll-up.
+model SearchConsoleQueryPerformance {
+  id          String   @id @default(cuid())
+  siteId      String   @map("site_id")
+  date        DateTime @db.Date
+  query       String
+  page        String?
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  ctr         Float    @default(0)
+  position    Float    @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, date, query, page])
+  @@index([siteId, date])
+  @@index([siteId, query])
+  @@map("search_console_query_performance")
+}
+
+/// Last-known Search Console sitemap status per (site, sitemap URL).
+model SearchConsoleSitemap {
+  id              String    @id @default(cuid())
+  siteId          String    @map("site_id")
+  sitemapUrl      String    @map("sitemap_url")
+  type            String?
+  isPending       Boolean   @default(false) @map("is_pending")
+  isSitemapsIndex Boolean   @default(false) @map("is_sitemaps_index")
+  lastSubmitted   DateTime? @map("last_submitted")
+  lastDownloaded  DateTime? @map("last_downloaded")
+  errors          Int       @default(0)
+  warnings        Int       @default(0)
+  contents        Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, sitemapUrl])
+  @@index([siteId])
+  @@map("search_console_sitemap")
+}
+
+/// Cached URL Inspection API result per (site, url).
+model SearchConsoleUrlInspection {
+  id               String    @id @default(cuid())
+  siteId           String    @map("site_id")
+  url              String
+  verdict          String?
+  coverageState    String?   @map("coverage_state")
+  indexingState    String?   @map("indexing_state")
+  robotsTxtState   String?   @map("robots_txt_state")
+  pageFetchState   String?   @map("page_fetch_state")
+  lastCrawlTime    DateTime? @map("last_crawl_time")
+  googleCanonical  String?   @map("google_canonical")
+  userCanonical    String?   @map("user_canonical")
+  mobileUsability  String?   @map("mobile_usability")
+  richResultsItems Int       @default(0) @map("rich_results_items")
+  inspectionResult Json
+  lastInspectedAt  DateTime  @map("last_inspected_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, url])
+  @@index([siteId, lastInspectedAt])
+  @@map("search_console_url_inspection")
+}
+
+// ─── PageSpeed Insights + CrUX (Phase B.3) ─────────────────────
+
+enum PsiStrategy {
+  MOBILE
+  DESKTOP
+}
+
+enum PsiAuditStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum CruxFormFactor {
+  PHONE
+  DESKTOP
+  TABLET
+  ALL
+}
+
+/// One PageSpeed Insights run for a URL on a given strategy.
+model PsiAudit {
+  id       String         @id @default(cuid())
+  siteId   String         @map("site_id")
+  url      String
+  strategy PsiStrategy
+  status   PsiAuditStatus @default(PENDING)
+
+  // Lighthouse category scores in [0,1] (null on failure).
+  performanceScore   Float? @map("performance_score")
+  accessibilityScore Float? @map("accessibility_score")
+  bestPracticesScore Float? @map("best_practices_score")
+  seoScore           Float? @map("seo_score")
+  pwaScore           Float? @map("pwa_score")
+
+  // Core Web Vitals & key audits (numericValue, ms / unitless for CLS).
+  largestContentfulPaintMs Float? @map("lcp_ms")
+  firstContentfulPaintMs   Float? @map("fcp_ms")
+  cumulativeLayoutShift    Float? @map("cls")
+  totalBlockingTimeMs      Float? @map("tbt_ms")
+  interactionToNextPaintMs Float? @map("inp_ms")
+  speedIndexMs             Float? @map("si_ms")
+  timeToInteractiveMs      Float? @map("tti_ms")
+
+  // Provenance.
+  lighthouseVersion String?   @map("lighthouse_version")
+  userAgent         String?   @map("user_agent")
+  fetchTime         DateTime? @map("fetch_time")
+  finalUrl          String?   @map("final_url")
+  totalByteWeight   Int?      @map("total_byte_weight")
+  numRequests       Int?      @map("num_requests")
+
+  // Full responses for drill-down (Lighthouse + loadingExperience snapshots).
+  lighthouseResult        Json? @map("lighthouse_result")
+  loadingExperience       Json? @map("loading_experience")
+  originLoadingExperience Json? @map("origin_loading_experience")
+
+  failureReason String?   @map("failure_reason")
+  triggeredBy   String?   @map("triggered_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  completedAt   DateTime? @map("completed_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, createdAt])
+  @@index([siteId, url, strategy, createdAt])
+  @@index([siteId, status])
+  @@map("psi_audits")
+}
+
+/// Latest cached Chrome UX Report record per (site, scope, key, formFactor).
+/// scope is "URL" or "ORIGIN"; key is either the full URL or the origin.
+model CruxRecord {
+  id         String         @id @default(cuid())
+  siteId     String         @map("site_id")
+  scope      String // "URL" | "ORIGIN"
+  recordKey  String         @map("record_key") // url or origin
+  formFactor CruxFormFactor @map("form_factor")
+
+  // p75 values for headline metrics.
+  lcpP75Ms  Int?   @map("lcp_p75_ms")
+  fcpP75Ms  Int?   @map("fcp_p75_ms")
+  clsP75    Float? @map("cls_p75")
+  inpP75Ms  Int?   @map("inp_p75_ms")
+  ttfbP75Ms Int?   @map("ttfb_p75_ms")
+  fidP75Ms  Int?   @map("fid_p75_ms")
+
+  // Full payload incl. histograms / fractions / collectionPeriod.
+  record Json
+
+  collectionPeriodStart DateTime? @map("collection_period_start")
+  collectionPeriodEnd   DateTime? @map("collection_period_end")
+  fetchedAt             DateTime  @default(now()) @map("fetched_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, scope, recordKey, formFactor])
+  @@index([siteId, fetchedAt])
+  @@map("crux_records")
+}
+
+// ─── Hreflang Matrix (Phase C.1) ──────────────────────────
+
+enum HreflangScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum HreflangIssueType {
+  MISSING_LOCALE
+  ORPHAN_ALTERNATE
+  MISSING_X_DEFAULT
+  UNPUBLISHED_SIBLING
+  INVALID_LOCALE_CODE
+}
+
+enum HreflangIssueSeverity {
+  ERROR
+  WARNING
+  INFO
+}
+
+/// One hreflang validation run per site.
+model HreflangScan {
+  id            String             @id @default(cuid())
+  siteId        String             @map("site_id")
+  status        HreflangScanStatus @default(PENDING)
+  totalSlugs    Int                @default(0) @map("total_slugs")
+  totalPages    Int                @default(0) @map("total_pages")
+  errorCount    Int                @default(0) @map("error_count")
+  warningCount  Int                @default(0) @map("warning_count")
+  infoCount     Int                @default(0) @map("info_count")
+  defaultLocale String             @map("default_locale")
+  activeLocales String[]           @map("active_locales")
+  failureReason String?            @map("failure_reason")
+  triggeredBy   String?            @map("triggered_by")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  completedAt   DateTime?          @map("completed_at")
+
+  site   Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  issues HreflangIssue[]
+
+  @@index([siteId, createdAt])
+  @@index([siteId, status])
+  @@map("hreflang_scans")
+}
+
+/// Individual hreflang issue produced by a scan.
+model HreflangIssue {
+  id          String                @id @default(cuid())
+  scanId      String                @map("scan_id")
+  siteId      String                @map("site_id")
+  type        HreflangIssueType
+  severity    HreflangIssueSeverity
+  slug        String
+  locale      String?
+  pageId      String?               @map("page_id")
+  details     Json                  @default("{}")
+  dismissedAt DateTime?             @map("dismissed_at")
+  dismissedBy String?               @map("dismissed_by")
+  createdAt   DateTime              @default(now()) @map("created_at")
+
+  scan HreflangScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  site Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@index([siteId, type])
+  @@index([siteId, slug])
+  @@map("hreflang_issues")
+}
+
+// ─── Bing Webmaster Tools (Phase B.2) ──────────────────────
+
+enum BingWebmasterConnectionStatus {
+  ACTIVE
+  REVOKED
+  ERROR
+}
+
+enum BingSyncJobType {
+  DAILY
+  ON_DEMAND
+  SITEMAP_SUBMIT
+}
+
+enum BingSyncJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum BingCrawlIssueSeverity {
+  ERROR
+  WARNING
+  INFO
+}
+
+/// One row per (site, Bing Webmaster API key). Stores the encrypted API key
+/// and the Bing-verified site URL (`siteUrl`) used as the API parameter.
+model BingWebmasterConnection {
+  id                   String                        @id @default(cuid())
+  siteId               String                        @unique @map("site_id")
+  status               BingWebmasterConnectionStatus @default(ACTIVE)
+  /// The Bing-verified site, e.g. `https://example.com`. Used as the
+  /// `siteUrl` parameter on all Bing Webmaster API calls.
+  propertyUrl          String                        @map("property_url")
+  /// AES-256-GCM ciphertext of the user-pasted API key.
+  encryptedApiKey      String                        @map("encrypted_api_key") @db.Text
+  /// First 4 + last 4 chars of the key with `***` in the middle, for UI.
+  apiKeyFingerprint    String?                       @map("api_key_fingerprint")
+  lastSyncedAt         DateTime?                     @map("last_synced_at")
+  lastSuccessfulSyncAt DateTime?                     @map("last_successful_sync_at")
+  lastError            String?                       @map("last_error")
+  consecutiveFailures  Int                           @default(0) @map("consecutive_failures")
+  connectedByUserId    String?                       @map("connected_by_user_id")
+  createdAt            DateTime                      @default(now()) @map("created_at")
+  updatedAt            DateTime                      @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([lastSyncedAt])
+  @@map("bing_webmaster_connection")
+}
+
+model BingSyncJob {
+  id                String            @id @default(cuid())
+  siteId            String            @map("site_id")
+  type              BingSyncJobType
+  status            BingSyncJobStatus @default(PENDING)
+  rangeStart        DateTime?         @map("range_start")
+  rangeEnd          DateTime?         @map("range_end")
+  pagesSynced       Int               @default(0) @map("pages_synced")
+  queriesSynced     Int               @default(0) @map("queries_synced")
+  sitemapsSynced    Int               @default(0) @map("sitemaps_synced")
+  crawlIssuesSynced Int               @default(0) @map("crawl_issues_synced")
+  failureReason     String?           @map("failure_reason")
+  startedAt         DateTime?         @map("started_at")
+  completedAt       DateTime?         @map("completed_at")
+  triggeredBy       String?           @map("triggered_by")
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, createdAt])
+  @@index([status])
+  @@map("bing_sync_job")
+}
+
+/// Daily per-page performance roll-up from Bing GetPageStats.
+model BingPagePerformance {
+  id          String   @id @default(cuid())
+  siteId      String   @map("site_id")
+  date        DateTime @db.Date
+  page        String
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  ctr         Float    @default(0)
+  position    Float    @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, date, page])
+  @@index([siteId, date])
+  @@index([siteId, page])
+  @@map("bing_page_performance")
+}
+
+/// Daily per-query performance roll-up from Bing GetQueryStats (+ optional page).
+model BingQueryPerformance {
+  id          String   @id @default(cuid())
+  siteId      String   @map("site_id")
+  date        DateTime @db.Date
+  query       String
+  /// Optional page dimension. Empty string `""` means "all pages aggregate"
+  /// — Postgres treats NULL as distinct in unique indexes, so we use the
+  /// empty-string sentinel to make `@@unique([siteId, date, query, page])`
+  /// enforce upsert idempotency.
+  page        String   @default("")
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  ctr         Float    @default(0)
+  position    Float    @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, date, query, page])
+  @@index([siteId, date])
+  @@index([siteId, query])
+  @@map("bing_query_performance")
+}
+
+model BingSitemap {
+  id             String    @id @default(cuid())
+  siteId         String    @map("site_id")
+  sitemapUrl     String    @map("sitemap_url")
+  /// Free-form Bing-reported status (e.g. `Submitted`, `PendingDownload`).
+  status         String?
+  lastSubmitted  DateTime? @map("last_submitted")
+  lastDownloaded DateTime? @map("last_downloaded")
+  errors         Int       @default(0)
+  warnings       Int       @default(0)
+  urlCount       Int       @default(0) @map("url_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, sitemapUrl])
+  @@index([siteId])
+  @@map("bing_sitemap")
+}
+
+/// One row per crawl issue detected by Bing for a given (site, URL, issue code).
+model BingCrawlIssue {
+  id              String                 @id @default(cuid())
+  siteId          String                 @map("site_id")
+  url             String
+  /// Bing's numeric or string issue code. We store as string for portability.
+  issueCode       String                 @map("issue_code")
+  /// Bing's human-readable category (e.g. `Server errors`).
+  category        String?
+  severity        BingCrawlIssueSeverity @default(WARNING)
+  httpCode        Int?                   @map("http_code")
+  firstDetectedAt DateTime               @map("first_detected_at")
+  lastSeenAt      DateTime               @map("last_seen_at")
+  resolvedAt      DateTime?              @map("resolved_at")
+  details         Json?
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, url, issueCode])
+  @@index([siteId, lastSeenAt])
+  @@index([siteId, severity])
+  @@map("bing_crawl_issue")
+}
+
+/// Per-site backlink snapshot from Bing GetLinkCounts.
+model BingLinkSummary {
+  id         String   @id @default(cuid())
+  siteId     String   @unique @map("site_id")
+  totalLinks Int      @default(0) @map("total_links")
+  fetchedAt  DateTime @map("fetched_at")
+  /// Top referring domains (top 50) — array of `{ domain, count }`.
+  topDomains Json?    @map("top_domains")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("bing_link_summary")
+}
+
+// ─── Phase E.2: AI Citation Readiness Audit ─────────────────
+//
+// Per (site, slug, locale) readiness score for citation by LLM answer
+// engines (ChatGPT, Perplexity, Claude, Gemini, etc.). Scores are heuristic
+// — not predictions — and re-computed on demand or after publish.
+model AiCitationAudit {
+  id     String @id @default(cuid())
+  siteId String @map("site_id")
+  slug   String
+  locale String
+
+  /// Overall readiness score 0–100.
+  score Int
+  /// Letter grade derived from score (A/B/C/D/F).
+  grade String
+
+  /// Number of distinct entity facts detected (name, address, prices, etc.).
+  entityFactCount  Int  @default(0) @map("entity_fact_count")
+  /// Number of answer-ready sections (Q&A patterns, definitional sentences).
+  answerReadyCount Int  @default(0) @map("answer_ready_count")
+  /// Days since the source page was last updated; null if unknown.
+  freshnessDays    Int? @map("freshness_days")
+
+  /// Array of `{ code, severity, message, snippet?, locator? }` items.
+  findings Json
+  /// `{ entityFacts, answerReady, freshness, robots, structuredData }`.
+  signals  Json
+
+  analyzedAt DateTime @default(now()) @map("analyzed_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, slug, locale])
+  @@index([siteId, score])
+  @@index([siteId, analyzedAt])
+  @@map("ai_citation_audits")
+}
+
+// ─── Phase E.3: Scheduled SEO audits + history + in-app alerts ──────────
+
+enum SeoAuditScheduleCadence {
+  OFF
+  DAILY
+  WEEKLY
+}
+
+enum SeoAuditRunKind {
+  SCHEDULED
+  MANUAL
+}
+
+enum SeoAuditRunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+/// Per-site cadence configuration for automated SEO audit runs.
+model SeoAuditSchedule {
+  id        String                  @id @default(cuid())
+  siteId    String                  @unique @map("site_id")
+  cadence   SeoAuditScheduleCadence @default(WEEKLY)
+  enabled   Boolean                 @default(true)
+  /// 0–23 UTC; used as the hour-of-day the next run is scheduled at.
+  hourUtc   Int                     @default(3) @map("hour_utc")
+  /// 0 = Sunday … 6 = Saturday. Only used when cadence = WEEKLY.
+  dayOfWeek Int?                    @map("day_of_week")
+
+  lastRunAt DateTime? @map("last_run_at")
+  nextRunAt DateTime? @map("next_run_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, nextRunAt])
+  @@map("seo_audit_schedules")
+}
+
+/// One row per audit run (scheduled or manually triggered). Aggregates the
+/// per-page snapshots recorded under `SeoAuditSnapshot`.
+model SeoAuditRun {
+  id            String            @id @default(cuid())
+  siteId        String            @map("site_id")
+  kind          SeoAuditRunKind   @default(SCHEDULED)
+  status        SeoAuditRunStatus @default(RUNNING)
+  startedAt     DateTime          @default(now()) @map("started_at")
+  finishedAt    DateTime?         @map("finished_at")
+  durationMs    Int?              @map("duration_ms")
+  pagesAudited  Int               @default(0) @map("pages_audited")
+  alertsCreated Int               @default(0) @map("alerts_created")
+  /// Average AI-citation score across pages audited in this run.
+  averageScore  Int?              @map("average_score")
+  /// First error message if `status = FAILED`.
+  error         String?
+  triggeredBy   String?           @map("triggered_by")
+
+  site      Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  snapshots SeoAuditSnapshot[]
+
+  @@index([siteId, startedAt])
+  @@index([status])
+  @@map("seo_audit_runs")
+}
+
+/// Per-page snapshot recorded by an audit run. Used to render score-history
+/// sparklines and to diff against previous runs to surface regressions.
+model SeoAuditSnapshot {
+  id               String   @id @default(cuid())
+  runId            String   @map("run_id")
+  siteId           String   @map("site_id")
+  slug             String
+  locale           String
+  score            Int
+  grade            String
+  entityFactCount  Int      @default(0) @map("entity_fact_count")
+  answerReadyCount Int      @default(0) @map("answer_ready_count")
+  findingsCount    Int      @default(0) @map("findings_count")
+  allowsCitation   Boolean  @default(true) @map("allows_citation")
+  recordedAt       DateTime @default(now()) @map("recorded_at")
+
+  run  SeoAuditRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  site Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, slug, locale, recordedAt])
+  @@index([runId])
+  @@map("seo_audit_snapshots")
+}
+
+// ─── Phase E.4: Bulk SEO audit workflow (tasks + assignment) ────────────
+
+enum SeoAuditTaskStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+enum SeoAuditTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SeoAuditTaskSource {
+  ALERT
+  MANUAL
+}
+
+/// Triage item layered on top of audit findings. Each task corresponds to a
+/// single page (slug + locale) and may optionally link to the originating
+/// `OperationalAlert`. `assigneeUserId` is nullable — unassigned is valid.
+model SeoAuditTask {
+  id              String               @id @default(cuid())
+  siteId          String               @map("site_id")
+  sourceAlertId   String?              @unique @map("source_alert_id")
+  source          SeoAuditTaskSource   @default(MANUAL)
+  slug            String
+  locale          String
+  title           String
+  description     String?
+  status          SeoAuditTaskStatus   @default(OPEN)
+  priority        SeoAuditTaskPriority @default(MEDIUM)
+  /// Tenant-scoped assignee. Null means unassigned. Validated against
+  /// TenantMembership at the service layer.
+  assigneeUserId  String?              @map("assignee_user_id")
+  createdByUserId String?              @map("created_by_user_id")
+  resolvedAt      DateTime?            @map("resolved_at")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  site        Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sourceAlert OperationalAlert? @relation("SeoAuditTaskAlert", fields: [sourceAlertId], references: [id], onDelete: SetNull)
+  assignee    User?             @relation("SeoAuditTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  createdBy   User?             @relation("SeoAuditTaskCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([siteId, status])
+  @@index([siteId, assigneeUserId, status])
+  @@index([siteId, priority, status])
+  @@index([siteId, slug, locale])
+  @@map("seo_audit_tasks")
 }
