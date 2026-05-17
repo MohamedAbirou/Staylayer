@@ -269,7 +269,12 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       );
       const config = await this.getDomainConfig(input).catch(() => null);
 
-      return this.toDomainAttachmentSnapshot(input.domain, domain, config);
+      return this.toDomainAttachmentSnapshot(
+        input.domain,
+        domain,
+        config,
+        input.projectId,
+      );
     } catch (error) {
       if (
         error instanceof DeploymentProviderError &&
@@ -295,7 +300,12 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       this.getDomainConfig(input).catch(() => null),
     ]);
 
-    return this.toDomainAttachmentSnapshot(input.domain, domain, config);
+    return this.toDomainAttachmentSnapshot(
+      input.domain,
+      domain,
+      config,
+      input.projectId,
+    );
   }
 
   private async request<T>(
@@ -817,6 +827,7 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     requestedDomain: string,
     payload: VercelProjectDomainResponse,
     dnsConfig: VercelDomainConfigResponse | null = null,
+    projectId: string | null = null,
   ): DomainAttachmentSnapshot {
     const verification = Array.isArray(payload.verification)
       ? payload.verification
@@ -845,6 +856,7 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         payload.apexName ?? null,
         dnsConfig,
         verification,
+        projectId,
       ),
       isAssigned: Boolean(payload.id || payload.name),
       isVerified: payload.verified === true,
@@ -866,14 +878,24 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     apexName: string | null,
     dnsConfig: VercelDomainConfigResponse | null,
     verification: VercelDomainVerificationRecord[] = [],
+    projectId: string | null = null,
   ): DomainDnsConfigSnapshot | null {
     const verificationRecords = this.toVerificationRecommendedRecords(
       requestedDomain,
       apexName,
       verification,
     );
+    const configuredRecords = this.toConfiguredRecommendedRecords(
+      projectId,
+      requestedDomain,
+      apexName,
+    );
 
-    if (!dnsConfig && verificationRecords.length === 0) {
+    if (
+      !dnsConfig &&
+      verificationRecords.length === 0 &&
+      configuredRecords.length === 0
+    ) {
       return null;
     }
 
@@ -923,7 +945,15 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     const recommendedRecords =
       verificationRecords.length > 0
         ? verificationRecords
-        : [...recommendedA, ...recommendedCname];
+        : configuredRecords.length > 0
+          ? configuredRecords
+          : [...recommendedA, ...recommendedCname].filter((record) =>
+              this.isRecommendedRecordTypeApplicable(
+                record.type,
+                requestedDomain,
+                apexName,
+              ),
+            );
 
     return {
       configuredBy:
@@ -939,6 +969,122 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         dnsConfig?.misconfigured === true || verificationRecords.length > 0,
       recommendedRecords,
     };
+  }
+
+  private toConfiguredRecommendedRecords(
+    projectId: string | null,
+    requestedDomain: string,
+    apexName: string | null,
+  ): DomainDnsConfigSnapshot["recommendedRecords"] {
+    if (!this.isSharedRuntimeProject(projectId)) {
+      return [];
+    }
+
+    const recordName = this.toRecordName(requestedDomain, apexName);
+
+    if (this.isApexDomain(requestedDomain, apexName)) {
+      const acceptedValues = this.getConfiguredSharedRuntimeApexIpv4Values();
+
+      if (acceptedValues.length === 0) {
+        return [];
+      }
+
+      return [
+        {
+          type: "A",
+          name: recordName,
+          host: requestedDomain,
+          value: acceptedValues[0],
+          acceptedValues,
+          rank: 0,
+        },
+      ];
+    }
+
+    const cname = this.getConfiguredSharedRuntimeCname();
+
+    if (!cname) {
+      return [];
+    }
+
+    return [
+      {
+        type: "CNAME",
+        name: recordName,
+        host: requestedDomain,
+        value: cname,
+        acceptedValues: [cname],
+        rank: 0,
+      },
+    ];
+  }
+
+  private isRecommendedRecordTypeApplicable(
+    type: "A" | "CNAME",
+    requestedDomain: string,
+    apexName: string | null,
+  ): boolean {
+    if (!apexName) {
+      return true;
+    }
+
+    return this.isApexDomain(requestedDomain, apexName)
+      ? type === "A"
+      : type === "CNAME";
+  }
+
+  private isApexDomain(
+    requestedDomain: string,
+    apexName: string | null,
+  ): boolean {
+    return Boolean(apexName && requestedDomain === apexName);
+  }
+
+  private isSharedRuntimeProject(projectId: string | null): boolean {
+    const sharedRuntimeProjectId = this.getOptionalConfig(
+      "WEBSITE_VERCEL_PROJECT_ID",
+    );
+
+    return Boolean(
+      projectId &&
+      sharedRuntimeProjectId &&
+      projectId === sharedRuntimeProjectId,
+    );
+  }
+
+  private getConfiguredSharedRuntimeApexIpv4Values(): string[] {
+    const configured = this.getOptionalConfig(
+      "WEBSITE_VERCEL_RECOMMENDED_APEX_IPV4",
+    );
+
+    if (!configured) {
+      return [];
+    }
+
+    return configured
+      .split(/[\s,]+/)
+      .map((value) => value.trim())
+      .filter((value) => this.isIpv4Address(value));
+  }
+
+  private getConfiguredSharedRuntimeCname(): string | null {
+    return this.getOptionalConfig("WEBSITE_VERCEL_RECOMMENDED_CNAME") ?? null;
+  }
+
+  private isIpv4Address(value: string): boolean {
+    const parts = value.split(".");
+
+    return (
+      parts.length === 4 &&
+      parts.every((part) => {
+        if (!/^\d{1,3}$/.test(part)) {
+          return false;
+        }
+
+        const number = Number(part);
+        return number >= 0 && number <= 255;
+      })
+    );
   }
 
   private toVerificationRecommendedRecords(
@@ -1069,6 +1215,12 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       teamId: teamId ?? "",
       slug: slug ?? "",
     };
+  }
+
+  private getOptionalConfig(key: string): string | null {
+    const value = this.configService.get<string>(key)?.trim();
+
+    return value ? value : null;
   }
 
   private getRequiredConfig(key: string): string {

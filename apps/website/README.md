@@ -59,7 +59,7 @@ DASHBOARD_APP_ORIGIN=http://localhost:5173
 PUBLIC_IMAGE_HOSTS=images.example.com,assets.example.com
 ```
 
-Production also needs the matching API-side values: `WEBSITE_RUNTIME_SECRET`, `PREVIEW_TOKEN_SECRET`, `PLATFORM_ROOT_DOMAIN`, `MARKETING_APP_ORIGIN`, `DASHBOARD_APP_ORIGIN`, `WEBSITE_VERCEL_PROJECT_ID`, `WEBSITE_VERCEL_PROJECT_NAME`, and optional Upstash Redis credentials.
+Production also needs the matching API-side values: `WEBSITE_RUNTIME_SECRET`, `PREVIEW_TOKEN_SECRET`, `PLATFORM_ROOT_DOMAIN`, `MARKETING_APP_ORIGIN`, `DASHBOARD_APP_ORIGIN`, `WEBSITE_VERCEL_PROJECT_ID`, `WEBSITE_VERCEL_PROJECT_NAME`, and optional Upstash Redis credentials. Set `WEBSITE_VERCEL_RECOMMENDED_APEX_IPV4` and `WEBSITE_VERCEL_RECOMMENDED_CNAME` to the A and CNAME values shown in the Vercel dashboard for the shared Website project so customer DNS diagnostics match Vercel's current generated records.
 
 ## API Contract
 

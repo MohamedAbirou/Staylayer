@@ -8,12 +8,13 @@ describe("VercelDeploymentProvider", () => {
 
   let provider: VercelDeploymentProvider;
   let fetchMock: jest.Mock;
+  let configService: { get: jest.Mock };
 
   beforeEach(() => {
     fetchMock = jest.fn();
     global.fetch = fetchMock as typeof fetch;
 
-    const configService = {
+    configService = {
       get: jest.fn((key: string) => {
         const values: Record<string, string> = {
           DEPLOYMENTS_VERCEL_ACCESS_TOKEN: "vercel-token",
@@ -371,6 +372,179 @@ describe("VercelDeploymentProvider", () => {
         },
       ],
     });
+  });
+
+  it("uses shared runtime Vercel DNS overrides before legacy API recommendations", async () => {
+    configService.get.mockImplementation((key: string) => {
+      const values: Record<string, string> = {
+        DEPLOYMENTS_VERCEL_ACCESS_TOKEN: "vercel-token",
+        DEPLOYMENTS_VERCEL_GIT_REPO: "owner/repo",
+        DEPLOYMENTS_VERCEL_GIT_REPO_ID: "repo_123",
+        DEPLOYMENTS_VERCEL_GIT_PROVIDER: "github",
+        DEPLOYMENTS_VERCEL_PRODUCTION_BRANCH: "master",
+        WEBSITE_VERCEL_PROJECT_ID: "prj_website",
+        WEBSITE_VERCEL_RECOMMENDED_CNAME:
+          "8554cd63a71398d3.vercel-dns-017.com.",
+      };
+
+      return values[key];
+    });
+    fetchMock
+      .mockResolvedValueOnce(
+        createResponse({
+          id: "domain_123",
+          name: "www.stay.example.com",
+          apexName: "stay.example.com",
+          verified: true,
+          serviceType: "vercel",
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          configuredBy: "CNAME",
+          acceptedChallenges: ["http-01"],
+          recommendedIPv4: [
+            {
+              rank: 1,
+              value: ["76.76.21.21"],
+            },
+          ],
+          recommendedCNAME: [
+            {
+              rank: 1,
+              value: "cname.vercel-dns.com.",
+            },
+          ],
+          misconfigured: false,
+        }),
+      );
+
+    const result = await provider.getDomainAttachmentStatus({
+      projectId: "prj_website",
+      domain: "www.stay.example.com",
+    });
+
+    expect(result.dnsConfig?.recommendedRecords).toEqual([
+      {
+        type: "CNAME",
+        name: "www",
+        host: "www.stay.example.com",
+        value: "8554cd63a71398d3.vercel-dns-017.com.",
+        acceptedValues: ["8554cd63a71398d3.vercel-dns-017.com."],
+        rank: 0,
+      },
+    ]);
+  });
+
+  it("uses only the apex A record for shared runtime apex domains", async () => {
+    configService.get.mockImplementation((key: string) => {
+      const values: Record<string, string> = {
+        DEPLOYMENTS_VERCEL_ACCESS_TOKEN: "vercel-token",
+        DEPLOYMENTS_VERCEL_GIT_REPO: "owner/repo",
+        DEPLOYMENTS_VERCEL_GIT_REPO_ID: "repo_123",
+        DEPLOYMENTS_VERCEL_GIT_PROVIDER: "github",
+        DEPLOYMENTS_VERCEL_PRODUCTION_BRANCH: "master",
+        WEBSITE_VERCEL_PROJECT_ID: "prj_website",
+        WEBSITE_VERCEL_RECOMMENDED_APEX_IPV4: "216.198.79.1",
+        WEBSITE_VERCEL_RECOMMENDED_CNAME:
+          "8554cd63a71398d3.vercel-dns-017.com.",
+      };
+
+      return values[key];
+    });
+    fetchMock
+      .mockResolvedValueOnce(
+        createResponse({
+          id: "domain_123",
+          name: "stay.example.com",
+          apexName: "stay.example.com",
+          verified: true,
+          serviceType: "vercel",
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          configuredBy: "A",
+          acceptedChallenges: ["http-01"],
+          recommendedIPv4: [
+            {
+              rank: 1,
+              value: ["76.76.21.21"],
+            },
+          ],
+          recommendedCNAME: [
+            {
+              rank: 1,
+              value: "cname.vercel-dns.com.",
+            },
+          ],
+          misconfigured: true,
+        }),
+      );
+
+    const result = await provider.getDomainAttachmentStatus({
+      projectId: "prj_website",
+      domain: "stay.example.com",
+    });
+
+    expect(result.dnsConfig?.recommendedRecords).toEqual([
+      {
+        type: "A",
+        name: "@",
+        host: "stay.example.com",
+        value: "216.198.79.1",
+        acceptedValues: ["216.198.79.1"],
+        rank: 0,
+      },
+    ]);
+  });
+
+  it("filters legacy Vercel API recommendations to the applicable record type", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        createResponse({
+          id: "domain_123",
+          name: "stay.example.com",
+          apexName: "stay.example.com",
+          verified: false,
+          serviceType: "vercel",
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          configuredBy: "A",
+          acceptedChallenges: ["dns-01"],
+          recommendedIPv4: [
+            {
+              rank: 1,
+              value: ["76.76.21.21"],
+            },
+          ],
+          recommendedCNAME: [
+            {
+              rank: 1,
+              value: "cname.vercel-dns.com.",
+            },
+          ],
+          misconfigured: true,
+        }),
+      );
+
+    const result = await provider.getDomainAttachmentStatus({
+      projectId: "prj_123",
+      domain: "stay.example.com",
+    });
+
+    expect(result.dnsConfig?.recommendedRecords).toEqual([
+      {
+        type: "A",
+        name: "@",
+        host: "stay.example.com",
+        value: "76.76.21.21",
+        acceptedValues: ["76.76.21.21"],
+        rank: 1,
+      },
+    ]);
   });
 
   it("prefers Vercel project verification DNS records over legacy config recommendations", async () => {
