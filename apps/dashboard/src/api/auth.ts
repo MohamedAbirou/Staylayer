@@ -22,6 +22,13 @@ export async function refresh(
   return refreshSession(context) as Promise<AuthApiResponse>;
 }
 
+export async function switchWorkspaceContext(
+  context: AuthContextRequest,
+): Promise<AuthApiResponse> {
+  const { data } = await client.post<AuthApiResponse>("/auth/context", context);
+  return data;
+}
+
 export async function logout(): Promise<void> {
   await client.post("/auth/logout");
 }

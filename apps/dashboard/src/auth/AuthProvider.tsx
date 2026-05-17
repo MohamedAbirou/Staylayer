@@ -12,6 +12,7 @@ import {
   login as loginApi,
   refresh as refreshApi,
   logout as logoutApi,
+  switchWorkspaceContext as switchWorkspaceContextApi,
 } from "../api/auth";
 import {
   getAccessToken,
@@ -170,9 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchWorkspace = useCallback(
     async (context: AuthContextRequest) => {
-      return refreshCurrentSession(context);
+      const response = await switchWorkspaceContextApi(context);
+      syncSession(response);
+      return extractSession(response);
     },
-    [refreshCurrentSession],
+    [syncSession],
   );
 
   const logout = useCallback(async () => {

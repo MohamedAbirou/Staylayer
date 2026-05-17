@@ -101,6 +101,22 @@ export class AuthService {
     return this.buildAuthResponse(authUser, context);
   }
 
+  async switchContext(
+    userId: string,
+    context: AuthContextRequest = {},
+  ): Promise<AuthResponse> {
+    const authUser = await this.usersService.findAuthUserById(userId);
+
+    if (!authUser) {
+      throw new UnauthorizedException({
+        code: "USER_NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    return this.buildAuthResponse(authUser, context);
+  }
+
   async generateRefreshToken(userId: string): Promise<string> {
     return this.jwtService.signAsync(
       { sub: userId, type: "refresh" },

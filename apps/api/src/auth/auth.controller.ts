@@ -13,10 +13,10 @@ import { AuthGuard } from "@nestjs/passport";
 import { Throttle } from "@nestjs/throttler";
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
+import { AuthenticatedRequestUser, AuthResponse } from "./auth.types";
 import { AuthContextDto } from "./dto/auth-context.dto";
 import { LoginDto } from "./dto/login.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
-import { AuthResponse } from "./auth.types";
 
 @Controller("auth")
 export class AuthController {
@@ -75,6 +75,17 @@ export class AuthController {
     );
 
     return result;
+  }
+
+  @Post("context")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async switchContext(
+    @Body() context: AuthContextDto,
+    @Req() req: Request,
+  ): Promise<AuthResponse> {
+    const user = req.user as AuthenticatedRequestUser;
+    return this.authService.switchContext(user.sub, context);
   }
 
   @Post("logout")
