@@ -84,12 +84,19 @@ type VercelProjectDomainResponse = {
   redirectStatusCode?: number | null;
   gitBranch?: string | null;
   serviceType?: string | null;
-  verification?: Array<Record<string, unknown>>;
+  verification?: VercelDomainVerificationRecord[];
   misconfigured?: boolean;
   error?: {
     code?: string;
     message?: string;
   } | null;
+};
+
+type VercelDomainVerificationRecord = {
+  type?: unknown;
+  domain?: unknown;
+  value?: unknown;
+  reason?: unknown;
 };
 
 type VercelDomainConfigResponse = {
@@ -837,6 +844,7 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         payload.name ?? requestedDomain,
         payload.apexName ?? null,
         dnsConfig,
+        verification,
       ),
       isAssigned: Boolean(payload.id || payload.name),
       isVerified: payload.verified === true,
@@ -857,13 +865,20 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     requestedDomain: string,
     apexName: string | null,
     dnsConfig: VercelDomainConfigResponse | null,
+    verification: VercelDomainVerificationRecord[] = [],
   ): DomainDnsConfigSnapshot | null {
-    if (!dnsConfig) {
+    const verificationRecords = this.toVerificationRecommendedRecords(
+      requestedDomain,
+      apexName,
+      verification,
+    );
+
+    if (!dnsConfig && verificationRecords.length === 0) {
       return null;
     }
 
     const recordName = this.toRecordName(requestedDomain, apexName);
-    const recommendedA = Array.isArray(dnsConfig.recommendedIPv4)
+    const recommendedA = Array.isArray(dnsConfig?.recommendedIPv4)
       ? dnsConfig.recommendedIPv4.flatMap((entry) => {
           const acceptedValues = Array.isArray(entry.value)
             ? entry.value.filter(
@@ -887,7 +902,7 @@ export class VercelDeploymentProvider implements DeploymentProvider {
           ];
         })
       : [];
-    const recommendedCname = Array.isArray(dnsConfig.recommendedCNAME)
+    const recommendedCname = Array.isArray(dnsConfig?.recommendedCNAME)
       ? dnsConfig.recommendedCNAME.flatMap((entry) => {
           if (typeof entry.value !== "string" || entry.value.length === 0) {
             return [];
@@ -905,20 +920,98 @@ export class VercelDeploymentProvider implements DeploymentProvider {
           ];
         })
       : [];
+    const recommendedRecords =
+      verificationRecords.length > 0
+        ? verificationRecords
+        : [...recommendedA, ...recommendedCname];
 
     return {
       configuredBy:
-        typeof dnsConfig.configuredBy === "string"
+        typeof dnsConfig?.configuredBy === "string"
           ? dnsConfig.configuredBy
-          : null,
-      acceptedChallenges: Array.isArray(dnsConfig.acceptedChallenges)
+          : (recommendedRecords[0]?.type ?? null),
+      acceptedChallenges: Array.isArray(dnsConfig?.acceptedChallenges)
         ? dnsConfig.acceptedChallenges.filter(
             (value): value is string => typeof value === "string",
           )
         : [],
-      misconfigured: dnsConfig.misconfigured === true,
-      recommendedRecords: [...recommendedA, ...recommendedCname],
+      misconfigured:
+        dnsConfig?.misconfigured === true || verificationRecords.length > 0,
+      recommendedRecords,
     };
+  }
+
+  private toVerificationRecommendedRecords(
+    requestedDomain: string,
+    apexName: string | null,
+    verification: VercelDomainVerificationRecord[],
+  ): DomainDnsConfigSnapshot["recommendedRecords"] {
+    return verification.flatMap((entry) => {
+      const type =
+        typeof entry.type === "string" ? entry.type.toUpperCase() : null;
+      const value = typeof entry.value === "string" ? entry.value.trim() : null;
+
+      if ((type !== "A" && type !== "CNAME") || !value) {
+        return [];
+      }
+
+      const recordDomain =
+        typeof entry.domain === "string" && entry.domain.trim().length > 0
+          ? entry.domain.trim()
+          : requestedDomain;
+      const name = this.toVerificationRecordName(
+        recordDomain,
+        requestedDomain,
+        apexName,
+      );
+
+      return [
+        {
+          type,
+          name,
+          host: this.toVerificationRecordHost(recordDomain, name, apexName),
+          value,
+          acceptedValues: [value],
+          rank: 0,
+        },
+      ];
+    });
+  }
+
+  private toVerificationRecordName(
+    recordDomain: string,
+    requestedDomain: string,
+    apexName: string | null,
+  ): string {
+    if (recordDomain === "@") {
+      return "@";
+    }
+
+    if (!recordDomain.includes(".")) {
+      return recordDomain;
+    }
+
+    return this.toRecordName(recordDomain || requestedDomain, apexName);
+  }
+
+  private toVerificationRecordHost(
+    recordDomain: string,
+    name: string,
+    apexName: string | null,
+  ): string {
+    if (recordDomain.includes(".")) {
+      return recordDomain;
+    }
+
+    if (name === "@" && apexName) {
+      return apexName;
+    }
+
+    if (apexName) {
+      return `${name}.${apexName}`;
+    }
+
+    return recordDomain;
   }
 
   private toRecordName(

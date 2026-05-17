@@ -233,7 +233,14 @@ export class DomainVerificationService
 
         if (sslState.active) {
           details.sslStatus = "active";
-          details.dnsMatchesExpected = true;
+          if (
+            details.recommendedRecords.length === 0 ||
+            details.recommendedRecords.every(
+              (record) => record.isMatch !== false,
+            )
+          ) {
+            details.dnsMatchesExpected = true;
+          }
           nextStatus = DomainStatus.ACTIVE;
           verifiedAt = now;
           lastError = null;
@@ -335,7 +342,12 @@ export class DomainVerificationService
       return false;
     }
 
-    return acceptedValues.some((value) => dnsState.addresses.includes(value));
+    const acceptedAddressSet = new Set(acceptedValues);
+
+    return (
+      dnsState.addresses.every((address) => acceptedAddressSet.has(address)) &&
+      acceptedValues.some((value) => dnsState.addresses.includes(value))
+    );
   }
 
   private describeRecommendedRecordIssue(

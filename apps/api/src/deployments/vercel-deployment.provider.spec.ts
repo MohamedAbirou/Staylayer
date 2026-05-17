@@ -156,8 +156,7 @@ describe("VercelDeploymentProvider", () => {
           projectSettings: {
             framework: "nextjs",
             rootDirectory: "apps/website",
-            buildCommand:
-              "cd ../.. && pnpm --filter @staylayer/website build",
+            buildCommand: "cd ../.. && pnpm --filter @staylayer/website build",
             outputDirectory: ".next",
             installCommand: "cd ../.. && pnpm install --frozen-lockfile",
           },
@@ -369,6 +368,67 @@ describe("VercelDeploymentProvider", () => {
           value: "cname.vercel-dns.com",
           acceptedValues: ["cname.vercel-dns.com"],
           rank: 1,
+        },
+      ],
+    });
+  });
+
+  it("prefers Vercel project verification DNS records over legacy config recommendations", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        createResponse({
+          id: "domain_123",
+          name: "www.stay.example.com",
+          apexName: "stay.example.com",
+          verified: true,
+          serviceType: "vercel",
+          verification: [
+            {
+              type: "CNAME",
+              domain: "www.stay.example.com",
+              value: "8554cd63a71398d3.vercel-dns-017.com.",
+              reason: "DNS Change Recommended",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          configuredBy: "CNAME",
+          acceptedChallenges: ["http-01"],
+          recommendedIPv4: [
+            {
+              rank: 1,
+              value: ["76.76.21.21"],
+            },
+          ],
+          recommendedCNAME: [
+            {
+              rank: 1,
+              value: "cname.vercel-dns.com.",
+            },
+          ],
+          misconfigured: false,
+        }),
+      );
+
+    const result = await provider.getDomainAttachmentStatus({
+      projectId: "prj_123",
+      domain: "www.stay.example.com",
+    });
+
+    expect(result.dnsConfig).toEqual({
+      configuredBy: "CNAME",
+      acceptedChallenges: ["http-01"],
+      misconfigured: true,
+      recommendedRecords: [
+        {
+          type: "CNAME",
+          name: "www",
+          host: "www.stay.example.com",
+          value: "8554cd63a71398d3.vercel-dns-017.com.",
+          acceptedValues: ["8554cd63a71398d3.vercel-dns-017.com."],
+          rank: 0,
         },
       ],
     });

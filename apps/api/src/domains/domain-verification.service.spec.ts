@@ -157,6 +157,75 @@ describe("DomainVerificationService", () => {
     );
   });
 
+  it("keeps DNS recommendation state when an active domain still has stale A records", async () => {
+    deploymentProvider.ensureDomainAttachment.mockResolvedValueOnce({
+      domain: "stay.example.com",
+      providerDomainId: "vercel-domain-1",
+      providerStatus: "vercel",
+      verificationStatus: "verified",
+      dnsConfig: {
+        configuredBy: "A",
+        acceptedChallenges: ["http-01"],
+        misconfigured: true,
+        recommendedRecords: [
+          {
+            type: "A",
+            name: "@",
+            host: "stay.example.com",
+            value: "216.198.79.1",
+            acceptedValues: ["216.198.79.1"],
+            rank: 0,
+          },
+        ],
+      },
+      isAssigned: true,
+      isVerified: true,
+      isFailed: true,
+      errorMessage:
+        "The deployment provider reports this domain as misconfigured",
+      metadata: {},
+    });
+    prisma.domain.findUnique.mockResolvedValue({
+      id: "domain-1",
+      siteId: "site-1",
+      host: "stay.example.com",
+      status: DomainStatus.ACTIVE,
+      createdAt: new Date("2026-05-05T10:00:00.000Z"),
+      verificationRequestedAt: new Date("2026-05-05T10:00:00.000Z"),
+      verifiedAt: new Date("2026-05-05T10:00:00.000Z"),
+    });
+    jest.spyOn(service as never, "resolveDnsState").mockResolvedValue({
+      cname: null,
+      addresses: ["216.198.79.1", "76.76.21.21"],
+    } as never);
+    jest.spyOn(service as never, "probeHttps").mockResolvedValue({
+      active: true,
+      httpStatus: 200,
+      errorMessage: null,
+    } as never);
+
+    await service.verifyDomain("domain-1", "manual");
+
+    expect(prisma.domain.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: DomainStatus.ACTIVE,
+          lastError: null,
+          verificationDetails: expect.objectContaining({
+            dnsMatchesExpected: false,
+            recommendedRecords: [
+              expect.objectContaining({
+                type: "A",
+                value: "216.198.79.1",
+                isMatch: false,
+              }),
+            ],
+          }),
+        }),
+      }),
+    );
+  });
+
   it("marks the domain as provider_attach_pending when provider verification is incomplete", async () => {
     deploymentProvider.ensureDomainAttachment.mockResolvedValueOnce({
       domain: "stay.example.com",

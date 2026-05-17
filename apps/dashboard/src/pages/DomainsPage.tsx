@@ -415,6 +415,7 @@ function DomainRow({
     domain.apexHost === canonicalApexHost &&
     hostname !== canonicalHost;
   const canSelectDomainGroup = canManageDomains && !isSelectedDomainGroup;
+  const dnsStateChip = getDnsStateChip(domain);
 
   function copyDnsTarget() {
     if (!dnsTarget) return;
@@ -475,18 +476,8 @@ function DomainRow({
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
             <DomainStateChip
-              label={
-                domain.dnsConfigured
-                  ? domain.dnsMatchesExpected === false
-                    ? "DNS mismatch"
-                    : "DNS detected"
-                  : "DNS missing"
-              }
-              tone={
-                !domain.dnsConfigured || domain.dnsMatchesExpected === false
-                  ? "warning"
-                  : "success"
-              }
+              label={dnsStateChip.label}
+              tone={dnsStateChip.tone}
             />
             {domain.providerAttachmentStatus ? (
               <DomainStateChip
@@ -628,6 +619,26 @@ function DomainStateChip({
       {label}
     </span>
   );
+}
+
+function getDnsStateChip(domain: SiteDomain): {
+  label: string;
+  tone: "success" | "warning" | "info";
+} {
+  if (!domain.dnsConfigured) {
+    return { label: "DNS missing", tone: "warning" };
+  }
+
+  if (domain.dnsMatchesExpected === false) {
+    const domainIsLive = domain.status === "ACTIVE" || domain.sslActive;
+
+    return {
+      label: domainIsLive ? "DNS update recommended" : "DNS mismatch",
+      tone: "warning",
+    };
+  }
+
+  return { label: "DNS detected", tone: "success" };
 }
 
 function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
