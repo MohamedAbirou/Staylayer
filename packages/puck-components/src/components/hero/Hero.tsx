@@ -6,9 +6,11 @@ import {
   textColorField,
   imageField,
 } from "../../lib/fields";
+import { applyPreset, buildPresetField } from "../../lib/presets";
 import { parseMarkup } from "../../lib/parse-markup";
 
 export interface HeroProps {
+  preset: string;
   heading: string;
   subheading: string;
   alignment: string;
@@ -53,34 +55,72 @@ const heightValueMap: Record<string, string | undefined> = {
   full: "100vh", // matches min-h-screen behaviour
 };
 
-export const Hero = ({
-  heading = "Build something amazing",
-  subheading = "Create stunning marketing pages with our drag-and-drop editor. No coding required.",
-  alignment = "center",
-  minHeight = "md",
-  showActions = "show",
-  backgroundColor = "#0f172a",
-  backgroundImage = "",
-  overlayOpacity = 60,
-  textColor = "#ffffff",
-  headingColor = "",
-  headingFontSize = 0,
-  headingWeight = "extrabold",
-  headingMaxWidth = 800,
-  subheadingColor = "",
-  subheadingFontSize = 0,
-  subheadingWeight = "normal",
-  subheadingOpacity = 90,
-  subheadingMaxWidth = 850,
-  headingPrefix = "",
-  headingHighlight = "",
-  headingSuffix = "",
-  highlightAnimation = "none",
-  showHighlightUnderline = false,
-  highlightColors = "#3B82F6,#8B5CF6,#EC4899,#F59E0B",
-  highlightUnderlineColor = "rgba(147,197,253,0.7)",
-  actions: Actions,
-}: HeroProps) => {
+const heroPresetMap: Record<string, Partial<HeroProps>> = {
+  "lifestyle-photo": {
+    minHeight: "lg",
+    alignment: "left",
+    backgroundColor: "#0f172a",
+    textColor: "#ffffff",
+    overlayOpacity: 55,
+    headingWeight: "extrabold",
+    headingMaxWidth: 820,
+    subheadingMaxWidth: 580,
+    subheadingOpacity: 92,
+  },
+  "minimal-editorial": {
+    minHeight: "md",
+    alignment: "center",
+    backgroundColor: "#faf7f2",
+    textColor: "#1a1a1a",
+    overlayOpacity: 0,
+    headingWeight: "semibold",
+    headingMaxWidth: 760,
+    subheadingMaxWidth: 620,
+    subheadingOpacity: 85,
+  },
+  "inquiry-focus": {
+    minHeight: "md",
+    alignment: "center",
+    backgroundColor: "#0b3d2e",
+    textColor: "#ffffff",
+    overlayOpacity: 65,
+    headingWeight: "bold",
+    headingMaxWidth: 780,
+    subheadingMaxWidth: 640,
+    subheadingOpacity: 95,
+  },
+};
+
+export const Hero = (rawProps: HeroProps) => {
+  const props = applyPreset(rawProps.preset, rawProps, heroPresetMap);
+  const {
+    heading = "Your quiet escape, framed by pine and lake",
+    subheading = "A handful of light-filled rooms and cabins, hosted in person, with breakfast on the porch and the trailhead five minutes from your door.",
+    alignment = "center",
+    minHeight = "md",
+    showActions = "show",
+    backgroundColor = "#0f172a",
+    backgroundImage = "",
+    overlayOpacity = 60,
+    textColor = "#ffffff",
+    headingColor = "",
+    headingFontSize = 0,
+    headingWeight = "extrabold",
+    headingMaxWidth = 800,
+    subheadingColor = "",
+    subheadingFontSize = 0,
+    subheadingWeight = "normal",
+    subheadingOpacity = 90,
+    subheadingMaxWidth = 850,
+    headingPrefix = "",
+    headingHighlight = "",
+    headingSuffix = "",
+    highlightAnimation = "none",
+    showHighlightUnderline = false,
+    highlightColors = "#3B82F6,#8B5CF6,#EC4899,#F59E0B",
+    highlightUnderlineColor = "rgba(147,197,253,0.7)",
+    actions: Actions,
+  } = props;
   const hlColors = (highlightColors || "#3B82F6,#8B5CF6,#EC4899,#F59E0B")
     .split(",")
     .map((c) => c.trim());
@@ -219,6 +259,26 @@ export const Hero = ({
 export const heroConfig: ComponentConfig<HeroProps> = {
   label: "Hero",
   fields: {
+    preset: buildPresetField({
+      label: "Preset look",
+      options: [
+        {
+          label: "Lifestyle photo",
+          value: "lifestyle-photo",
+          description: "Full-bleed image, left-aligned, dark overlay",
+        },
+        {
+          label: "Minimal editorial",
+          value: "minimal-editorial",
+          description: "Warm off-white, centered, refined type",
+        },
+        {
+          label: "Inquiry focus",
+          value: "inquiry-focus",
+          description: "Forest-green band, centered, calls to act",
+        },
+      ],
+    }),
     heading: {
       type: "text",
       label: "Heading",
@@ -386,15 +446,16 @@ export const heroConfig: ComponentConfig<HeroProps> = {
     },
   },
   defaultProps: {
-    heading: "Build something amazing",
+    preset: "lifestyle-photo",
+    heading: "Your quiet escape, framed by pine and lake",
     subheading:
-      "Create stunning marketing pages with our drag-and-drop editor. No coding required.",
+      "A handful of light-filled rooms and cabins, hosted in person, with breakfast on the porch and the trailhead five minutes from your door.",
     alignment: "center",
-    minHeight: "md",
+    minHeight: "lg",
     showActions: "show",
     backgroundColor: "#0f172a",
     backgroundImage: "",
-    overlayOpacity: 60,
+    overlayOpacity: 50,
     textColor: "#ffffff",
     headingColor: "",
     headingFontSize: 0,

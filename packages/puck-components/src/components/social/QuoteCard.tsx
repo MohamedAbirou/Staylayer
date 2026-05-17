@@ -179,8 +179,8 @@ export const quoteCardConfig: ComponentConfig<QuoteCardProps> = {
   },
   defaultProps: {
     quote:
-      "This product has completely transformed how we work. The tools are intuitive and the support is world-class.",
-    author: "Jane Smith",
+      "A small, beautifully kept place that feels personal from the moment you arrive. We'll be back for a longer stay.",
+    author: "Maya & Tom, returning guests",
     withBorder: true,
     backgroundColor: "#ffffff",
     textColor: "",

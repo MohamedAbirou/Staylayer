@@ -13,8 +13,16 @@ import {
   Image,
   HelpCircle,
   Mail,
+  FileText,
+  Sparkles,
+  BookOpen,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  pageTemplates,
+  BLANK_TEMPLATE,
+  type PuckTemplate,
+} from "@staylayer/puck-components";
 
 // ─── Hospitality page presets ─────────────────────────────────────────────────
 const HOSPITALITY_PRESETS = [
@@ -27,10 +35,22 @@ const HOSPITALITY_PRESETS = [
   { label: "Contact & Inquiry", slug: "contact", icon: Mail },
 ] as const;
 
+// ─── Starter template icons ──────────────────────────────────────────────────
+const TEMPLATE_ICONS: Record<string, typeof Home> = {
+  blank: FileText,
+  "boutique-lodge-home": Home,
+  "villa-rental-home": Sparkles,
+  "accommodation-detail": Bed,
+  "contact-inquiry": Mail,
+  "local-guide": BookOpen,
+};
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
     .trim()
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/[\/_]+/g, "-")
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
@@ -43,6 +63,10 @@ export default function NewPagePage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [locale, setLocale] = useState("en");
   const [error, setError] = useState("");
+  const [templateId, setTemplateId] = useState<string>(BLANK_TEMPLATE.id);
+
+  const selectedTemplate: PuckTemplate =
+    pageTemplates.find((t) => t.id === templateId) ?? BLANK_TEMPLATE;
 
   const mutation = useMutation({
     mutationFn: createPage,
@@ -76,6 +100,19 @@ export default function NewPagePage() {
     setSlugTouched(true);
   };
 
+  const handleSelectTemplate = (id: string) => {
+    setTemplateId(id);
+    const tpl = pageTemplates.find((t) => t.id === id);
+    if (!tpl) return;
+    // Only prefill title/slug when user hasn't typed their own values yet.
+    if (!title && tpl.suggestedTitle) {
+      setTitle(tpl.suggestedTitle);
+    }
+    if (!slugTouched && tpl.suggestedSlug) {
+      setSlug(slugify(tpl.suggestedSlug));
+    }
+  };
+
   const isValidSlug = /^[a-z0-9-]+$/.test(slug) && slug.length > 0;
 
   const handleSubmit = (e: FormEvent) => {
@@ -91,7 +128,7 @@ export default function NewPagePage() {
       title,
       slug,
       locale,
-      puckData: { content: [], root: { props: { title: "" } } },
+      puckData: selectedTemplate.puckData as unknown as Record<string, unknown>,
     });
   };
 
@@ -105,19 +142,60 @@ export default function NewPagePage() {
         Back to Pages
       </button>
 
-      <div className="mx-auto max-w-lg">
+      <div className="mx-auto max-w-3xl">
         <h1 className="mb-2 text-2xl font-bold text-gray-900">
           Create New Page
         </h1>
         <p className="mb-5 text-sm text-gray-500">
-          Pick a hospitality preset to prefill the title and slug, or enter your
-          own.
+          Start from a ready-made hospitality template, or pick a blank page and
+          assemble it yourself.
         </p>
+
+        {/* Starter templates */}
+        <div className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Starter template
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {pageTemplates.map((tpl) => {
+              const Icon = TEMPLATE_ICONS[tpl.id] ?? FileText;
+              const isSelected = templateId === tpl.id;
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => handleSelectTemplate(tpl.id)}
+                  className={`flex flex-col items-start gap-1.5 rounded-lg border-2 p-3 text-left transition-all ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-50/50 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-blue-300"
+                  }`}
+                >
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-md ${
+                      isSelected
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {tpl.label}
+                  </span>
+                  <span className="text-xs leading-snug text-gray-500">
+                    {tpl.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Hospitality presets */}
         <div className="mb-6 rounded-xl border border-gray-100 bg-gray-50 p-4">
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Hospitality presets
+            Title & slug presets
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {HOSPITALITY_PRESETS.map(

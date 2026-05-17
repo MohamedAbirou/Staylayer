@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Link, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { AdminLayout } from "./components/AdminLayout";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
@@ -46,6 +46,42 @@ function LegacyOnboardingRedirect() {
       to={hasActiveSite(session) ? "/pages/new" : "/workspace"}
       replace
     />
+  );
+}
+
+interface NotFoundPageProps {
+  title?: string;
+  description?: string;
+  backTo?: string;
+  backLabel?: string;
+}
+
+function NotFoundPage({
+  title = "Page not found",
+  description = "The page you requested does not exist or is no longer available.",
+  backTo = "/",
+  backLabel = "Back to Dashboard",
+}: NotFoundPageProps) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16">
+      <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-xl shadow-slate-200/60">
+        <span className="text-xs font-semibold uppercase tracking-[0.32em] text-sky-600">
+          StayLayer
+        </span>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
+          {title}
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+        <div className="mt-8 flex justify-center">
+          <Link
+            to={backTo}
+            className="inline-flex items-center rounded-full bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            {backLabel}
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -271,6 +307,10 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      },
     ],
   },
 
@@ -340,6 +380,17 @@ export const router = createBrowserRouter([
           <ErrorBoundary>
             <AdminAuditPage />
           </ErrorBoundary>
+        ),
+      },
+      {
+        path: "*",
+        element: (
+          <NotFoundPage
+            title="Admin page not found"
+            description="The admin route you requested does not exist or is no longer available."
+            backTo="/admin/overview"
+            backLabel="Back to Admin"
+          />
         ),
       },
     ],

@@ -174,12 +174,20 @@ export const statsBarConfig: ComponentConfig<StatsBarProps> = {
   defaultProps: {
     stats: [
       {
-        value: "10,000+",
-        label: "Properties",
-        description: "Managed worldwide",
+        value: "12",
+        label: "Rooms & cabins",
+        description: "Each individually styled",
       },
-      { value: "99.9%", label: "Uptime", description: "System reliability" },
-      { value: "50+", label: "Countries", description: "Global reach" },
+      {
+        value: "4.9★",
+        label: "Guest rating",
+        description: "From 200+ direct stays",
+      },
+      {
+        value: "< 24h",
+        label: "Inquiry response",
+        description: "Replied by the host team",
+      },
     ],
     columns: "3",
     alignment: "center",

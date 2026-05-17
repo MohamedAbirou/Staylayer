@@ -1,5 +1,10 @@
 import type { Config } from "@puckeditor/core";
 import type { ReactNode } from "react";
+import {
+  fontFamilyOptions,
+  googleFontsStylesheetUrl,
+  resolveFontFamilyCss,
+} from "./lib/fonts";
 
 // ─── Layout ─────────────────────────────────────────────────────────────────
 import { containerConfig } from "./components/layout/Container";
@@ -69,6 +74,16 @@ import { stepListConfig } from "./components/interactive/StepList";
 import { tabsConfig } from "./components/interactive/Tabs";
 import { progressConfig } from "./components/interactive/Progress";
 import { countdownConfig } from "./components/interactive/Countdown";
+
+// ─── Hospitality ────────────────────────────────────────────────────────────
+import { accommodationCardConfig } from "./components/hospitality/AccommodationCard";
+import { accommodationGridConfig } from "./components/hospitality/AccommodationGrid";
+import { amenitiesGridConfig } from "./components/hospitality/AmenitiesGrid";
+import { gallerySectionConfig } from "./components/hospitality/GallerySection";
+import { destinationGuideConfig } from "./components/hospitality/DestinationGuide";
+import { offerCardsConfig } from "./components/hospitality/OfferCards";
+import { hostStoryConfig } from "./components/hospitality/HostStory";
+import { inquiryBandConfig } from "./components/hospitality/InquiryBand";
 
 // ─── Navigation ─────────────────────────────────────────────────────────────
 import { navbarConfig } from "./components/navigation/Navbar";
@@ -157,6 +172,16 @@ const components = withMarkupHintsForComponents({
   Footer: footerConfig,
   Banner: bannerConfig,
   Breadcrumb: breadcrumbConfig,
+
+  // Hospitality
+  AccommodationCard: accommodationCardConfig,
+  AccommodationGrid: accommodationGridConfig,
+  AmenitiesGrid: amenitiesGridConfig,
+  GallerySection: gallerySectionConfig,
+  DestinationGuide: destinationGuideConfig,
+  OfferCards: offerCardsConfig,
+  HostStory: hostStoryConfig,
+  InquiryBand: inquiryBandConfig,
 });
 
 // ─── Puck Config ────────────────────────────────────────────────────────────
@@ -181,12 +206,7 @@ export const puckConfig: Config = {
       fontFamily: {
         type: "select",
         label: "Font Family",
-        options: [
-          { label: "System Default", value: "system" },
-          { label: "Inter", value: "Inter" },
-          { label: "Plus Jakarta Sans", value: "'Plus Jakarta Sans'" },
-          { label: "DM Sans", value: "'DM Sans'" },
-        ],
+        options: fontFamilyOptions(),
       },
     },
     defaultProps: {
@@ -203,26 +223,43 @@ export const puckConfig: Config = {
       backgroundColor?: string;
       fontFamily?: string;
       [key: string]: unknown;
-    }) => (
-      <div
-        className="min-h-full bg-(--bg) [font-family:var(--font)]"
-        style={
-          {
-            "--bg": backgroundColor || "#ffffff",
-            "--font":
-              fontFamily === "system"
-                ? '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                : `${fontFamily || "system-ui"}, sans-serif`,
-          } as React.CSSProperties
-        }
-      >
-        <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
-        {children}
-      </div>
-    ),
+    }) => {
+      const stylesheetHref = googleFontsStylesheetUrl(fontFamily);
+      return (
+        <div
+          className="min-h-full bg-(--bg) [font-family:var(--font)]"
+          style={
+            {
+              "--bg": backgroundColor || "#ffffff",
+              "--font": resolveFontFamilyCss(fontFamily),
+            } as React.CSSProperties
+          }
+        >
+          {stylesheetHref ? (
+            <link rel="stylesheet" href={stylesheetHref} />
+          ) : null}
+          <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
+          {children}
+        </div>
+      );
+    },
   },
 
   categories: {
+    hospitality: {
+      title: "Hospitality Sections",
+      components: [
+        "AccommodationGrid",
+        "AmenitiesGrid",
+        "GallerySection",
+        "DestinationGuide",
+        "OfferCards",
+        "HostStory",
+        "InquiryBand",
+        "AccommodationCard",
+      ],
+      defaultExpanded: true,
+    },
     navigation: {
       title: "Navigation",
       components: [

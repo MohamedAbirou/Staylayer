@@ -142,8 +142,8 @@ function StaticContactFormPreview() {
 }
 export const ContactForm = ({
   formKey = "",
-  submitLabel = "Send Message",
-  successText = "Thanks. We received your message and will follow up soon.",
+  submitLabel = "Send Inquiry",
+  successText = "Thanks. We received your inquiry and will reply within one business day.",
   width = "medium",
   alignment = "center",
 }: ContactFormProps) => (
@@ -169,8 +169,8 @@ export const ContactSection = ({
     { text: "Special occasion support" },
   ],
   badgeText = "Direct booking assistance",
-  submitLabel = "Send Message",
-  successText = "Thanks. We received your message and will follow up soon.",
+  submitLabel = "Send Inquiry",
+  successText = "Thanks. We received your inquiry and will reply within one business day.",
   emailAddress = "reservations@example.com",
   emailLabel = "reservations@example.com",
   emailNote = "Most inquiries receive a reply within one business day.",
@@ -313,8 +313,9 @@ export const contactFormConfig: ComponentConfig<ContactFormProps> = {
   },
   defaultProps: {
     formKey: "",
-    submitLabel: "Send Message",
-    successText: "Thanks. We received your message and will follow up soon.",
+    submitLabel: "Send Inquiry",
+    successText:
+      "Thanks. We received your inquiry and will reply within one business day.",
     width: "medium",
     alignment: "center",
   },
@@ -424,8 +425,9 @@ export const contactSectionConfig: ComponentConfig<ContactSectionProps> = {
       { text: "Special occasion support" },
     ],
     badgeText: "Direct booking assistance",
-    submitLabel: "Send Message",
-    successText: "Thanks. We received your message and will follow up soon.",
+    submitLabel: "Send Inquiry",
+    successText:
+      "Thanks. We received your inquiry and will reply within one business day.",
     emailAddress: "reservations@example.com",
     emailLabel: "reservations@example.com",
     emailNote: "Most inquiries receive a reply within one business day.",

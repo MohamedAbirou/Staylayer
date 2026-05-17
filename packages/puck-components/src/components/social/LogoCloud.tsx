@@ -156,131 +156,31 @@ export const logoCloudConfig: ComponentConfig<LogoCloudProps> = {
     },
   },
   defaultProps: {
-    title: "Trusted by leading companies",
+    title: "As featured in",
     logos: [
       {
-        url: "/images/otas/agoda.svg",
-        alt: "Agoda",
+        url: "https://placehold.co/160x48/f5f5f4/57534e?text=Travel+%2B+Leisure",
+        alt: "Travel + Leisure",
         link: "",
       },
       {
-        url: "/images/otas/airbnb.svg",
-        alt: "Airbnb",
+        url: "https://placehold.co/160x48/f5f5f4/57534e?text=Cond%C3%A9+Nast",
+        alt: "Condé Nast Traveler",
         link: "",
       },
       {
-        url: "/images/otas/booking.svg",
-        alt: "Booking",
+        url: "https://placehold.co/160x48/f5f5f4/57534e?text=Tatler",
+        alt: "Tatler",
         link: "",
       },
       {
-        url: "/images/otas/despegar.svg",
-        alt: "Despegar",
+        url: "https://placehold.co/160x48/f5f5f4/57534e?text=The+Times",
+        alt: "The Times",
         link: "",
       },
       {
-        url: "/images/otas/didatravel.png",
-        alt: "Didatravel",
-        link: "",
-      },
-      {
-        url: "/images/otas/expedia.svg",
-        alt: "Expedia",
-        link: "",
-      },
-      {
-        url: "/images/otas/hipcamp.svg",
-        alt: "Hipcamp",
-        link: "",
-      },
-      {
-        url: "/images/otas/hopper.svg",
-        alt: "Hopper",
-        link: "",
-      },
-      {
-        url: "/images/otas/hotelbeds.svg",
-        alt: "Hotelbeds",
-        link: "",
-      },
-      {
-        url: "/images/otas/hoterip.png",
-        alt: "Hoterip",
-        link: "",
-      },
-      {
-        url: "/images/otas/hrs.svg",
-        alt: "HRS",
-        link: "",
-      },
-      {
-        url: "/images/otas/inntopia.svg",
-        alt: "Inntopia",
-        link: "",
-      },
-      {
-        url: "/images/otas/makemytrip.svg",
-        alt: "MakeMyTrip",
-        link: "",
-      },
-      {
-        url: "/images/otas/moverii.avif",
-        alt: "Moverii",
-        link: "",
-      },
-      {
-        url: "/images/otas/pitchup.png",
-        alt: "Pitchup",
-        link: "",
-      },
-      {
-        url: "/images/otas/pricetravel.svg",
-        alt: "PriceTravel",
-        link: "",
-      },
-      {
-        url: "/images/otas/ratedock.svg",
-        alt: "RateDock",
-        link: "",
-      },
-      {
-        url: "/images/otas/roombeast.png",
-        alt: "Roombeast",
-        link: "",
-      },
-      {
-        url: "/images/otas/spot2nite.png",
-        alt: "Spot2nite",
-        link: "",
-      },
-      {
-        url: "/images/otas/szallas.svg",
-        alt: "Szallas",
-        link: "",
-      },
-      {
-        url: "/images/otas/tablethotels.svg",
-        alt: "TabletHotels",
-        link: "",
-      },
-      {
-        url: "/images/otas/traveloka.svg",
-        alt: "Traveloka",
-        link: "",
-      },
-      {
-        url: "/images/otas/trip.svg",
-        alt: "Trip",
-        link: "",
-      },
-      {
-        url: "/images/otas/tripadvisor.svg",
-        alt: "TripAdvisor",
-        link: "",
-      },
-      {
-        url: "/images/otas/vrbo.svg",
-        alt: "Vrbo",
+        url: "https://placehold.co/160x48/f5f5f4/57534e?text=Mr.+%26+Mrs.+Smith",
+        alt: "Mr. & Mrs. Smith",
         link: "",
       },
     ],

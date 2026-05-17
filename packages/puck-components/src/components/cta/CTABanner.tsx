@@ -6,9 +6,11 @@ import {
   imageField,
   textColorField,
 } from "../../lib/fields";
+import { applyPreset, buildPresetField } from "../../lib/presets";
 import { parseMarkup } from "../../lib/parse-markup";
 
 export interface CTABannerProps {
+  preset: string;
   heading: string;
   description: string;
   alignment: string;
@@ -53,25 +55,73 @@ const roundedValueMap: Record<string, string | undefined> = {
   "2xl": "rounded-2xl",
 };
 
-export const CTABanner = ({
-  heading = "Ready to get started?",
-  description = "Join thousands of businesses that already trust our platform.",
-  alignment = "center",
-  paddingY = "xl",
-  showActions = "show",
-  backgroundColor = "#2563eb",
-  textColor = "#ffffff",
-  backgroundImage = "/background-call-to-action.6a5a5672.jpg",
-  backgroundImageOpacity = 80,
-  rounded = "none",
-  headingColor = "",
-  headingFontSize = 0,
-  headingWeight = "bold",
-  descriptionColor = "",
-  descriptionFontSize = 0,
-  descriptionOpacity = 90,
-  actions: Actions,
-}: CTABannerProps) => {
+const ctaBannerPresetMap: Record<string, Partial<CTABannerProps>> = {
+  "direct-inquiry": {
+    alignment: "center",
+    paddingY: "lg",
+    rounded: "none",
+    backgroundColor: "#0b3d2e",
+    textColor: "#ffffff",
+    backgroundImage: "",
+    backgroundImageOpacity: 60,
+    headingWeight: "bold",
+    descriptionOpacity: 92,
+  },
+  "best-rate-promise": {
+    alignment: "center",
+    paddingY: "md",
+    rounded: "xl",
+    backgroundColor: "#fef6e4",
+    textColor: "#1a1a1a",
+    backgroundImage: "",
+    backgroundImageOpacity: 40,
+    headingWeight: "semibold",
+    descriptionOpacity: 85,
+  },
+  "seasonal-stay": {
+    alignment: "left",
+    paddingY: "lg",
+    rounded: "lg",
+    backgroundColor: "#7a4a2a",
+    textColor: "#fdf6ee",
+    backgroundImage: "",
+    backgroundImageOpacity: 70,
+    headingWeight: "bold",
+    descriptionOpacity: 90,
+  },
+  "contact-concierge": {
+    alignment: "center",
+    paddingY: "md",
+    rounded: "none",
+    backgroundColor: "#1f2937",
+    textColor: "#ffffff",
+    backgroundImage: "",
+    backgroundImageOpacity: 60,
+    headingWeight: "semibold",
+    descriptionOpacity: 88,
+  },
+};
+
+export const CTABanner = (rawProps: CTABannerProps) => {
+  const {
+    heading = "Ready to get started?",
+    description = "Join thousands of businesses that already trust our platform.",
+    alignment = "center",
+    paddingY = "xl",
+    showActions = "show",
+    backgroundColor = "#2563eb",
+    textColor = "#ffffff",
+    backgroundImage = "",
+    backgroundImageOpacity = 80,
+    rounded = "none",
+    headingColor = "",
+    headingFontSize = 0,
+    headingWeight = "bold",
+    descriptionColor = "",
+    descriptionFontSize = 0,
+    descriptionOpacity = 90,
+    actions: Actions,
+  } = applyPreset(rawProps.preset, rawProps, ctaBannerPresetMap);
   const ActionsSlot = Actions as unknown as React.FC<{ className?: string }>;
 
   return (
@@ -154,6 +204,31 @@ export const CTABanner = ({
 export const ctaBannerConfig: ComponentConfig<CTABannerProps> = {
   label: "CTA Banner",
   fields: {
+    preset: buildPresetField({
+      label: "Preset look",
+      options: [
+        {
+          label: "Direct inquiry",
+          value: "direct-inquiry",
+          description: "Forest-green band, centered, action-first",
+        },
+        {
+          label: "Best-rate promise",
+          value: "best-rate-promise",
+          description: "Warm cream card, refined, gentle",
+        },
+        {
+          label: "Seasonal stay",
+          value: "seasonal-stay",
+          description: "Earthy clay, editorial, left-aligned",
+        },
+        {
+          label: "Contact concierge",
+          value: "contact-concierge",
+          description: "Deep slate, refined, calls to write",
+        },
+      ],
+    }),
     heading: {
       type: "text",
       label: "Heading",
@@ -266,22 +341,24 @@ export const ctaBannerConfig: ComponentConfig<CTABannerProps> = {
     },
   },
   defaultProps: {
-    heading: "Ready to Take Control of Your Vacation Rental Business?",
-    description: "",
+    preset: "direct-inquiry",
+    heading: "Ready to plan your stay?",
+    description:
+      "Tell us your dates and what you have in mind. We'll personally help you choose the right room and put together the perfect stay.",
     alignment: "center",
     paddingY: "lg",
     rounded: "none",
     showActions: "show",
-    backgroundColor: "#2563eb",
+    backgroundColor: "#0f172a",
     textColor: "#FFFFFF",
-    backgroundImage: "/background-call-to-action.6a5a5672.jpg",
-    backgroundImageOpacity: 80,
+    backgroundImage: "",
+    backgroundImageOpacity: 70,
     headingColor: "",
-    headingFontSize: 38,
-    headingWeight: "light",
+    headingFontSize: 40,
+    headingWeight: "semibold",
     descriptionColor: "",
     descriptionFontSize: 0,
-    descriptionOpacity: 90,
+    descriptionOpacity: 85,
     actions: [],
   },
   render: CTABanner,

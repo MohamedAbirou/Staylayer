@@ -1,6 +1,19 @@
 // ─── Main Puck Configuration ────────────────────────────────────────────────
 export { puckConfig } from "./puck-config";
 
+// ─── Page Templates ─────────────────────────────────────────────────────────
+export {
+  pageTemplates,
+  hospitalityTemplates,
+  BLANK_TEMPLATE,
+  getPageTemplate,
+} from "./templates";
+export type {
+  PuckTemplate,
+  PuckTemplateData,
+  PuckTemplateNode,
+} from "./templates";
+
 // ─── Layout Components ─────────────────────────────────────────────────────
 export { Container, containerConfig } from "./components/layout/Container";
 export { Section, sectionConfig } from "./components/layout/Section";
@@ -138,6 +151,58 @@ export {
   Breadcrumb,
   breadcrumbConfig,
 } from "./components/navigation/Breadcrumb";
+
+// ─── Hospitality Components ────────────────────────────────────────────────
+export {
+  AccommodationCard,
+  accommodationCardConfig,
+} from "./components/hospitality/AccommodationCard";
+export type { AccommodationCardProps } from "./components/hospitality/AccommodationCard";
+export {
+  AccommodationGrid,
+  accommodationGridConfig,
+} from "./components/hospitality/AccommodationGrid";
+export type { AccommodationGridProps } from "./components/hospitality/AccommodationGrid";
+export {
+  AmenitiesGrid,
+  amenitiesGridConfig,
+} from "./components/hospitality/AmenitiesGrid";
+export type {
+  AmenitiesGridProps,
+  AmenityItem,
+} from "./components/hospitality/AmenitiesGrid";
+export {
+  GallerySection,
+  gallerySectionConfig,
+} from "./components/hospitality/GallerySection";
+export type {
+  GallerySectionProps,
+  GalleryImage,
+} from "./components/hospitality/GallerySection";
+export {
+  DestinationGuide,
+  destinationGuideConfig,
+} from "./components/hospitality/DestinationGuide";
+export type {
+  DestinationGuideProps,
+  GuideItem,
+} from "./components/hospitality/DestinationGuide";
+export {
+  OfferCards,
+  offerCardsConfig,
+} from "./components/hospitality/OfferCards";
+export type {
+  OfferCardsProps,
+  OfferItem,
+  OfferInclusion,
+} from "./components/hospitality/OfferCards";
+export { HostStory, hostStoryConfig } from "./components/hospitality/HostStory";
+export type { HostStoryProps } from "./components/hospitality/HostStory";
+export {
+  InquiryBand,
+  inquiryBandConfig,
+} from "./components/hospitality/InquiryBand";
+export type { InquiryBandProps } from "./components/hospitality/InquiryBand";
 
 // ─── Type Exports ──────────────────────────────────────────────────────────
 export type { ContainerProps } from "./components/layout/Container";

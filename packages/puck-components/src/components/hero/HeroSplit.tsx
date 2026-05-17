@@ -7,9 +7,11 @@ import {
   imageField,
   resolvePaddingClasses,
 } from "../../lib/fields";
+import { applyPreset, buildPresetField } from "../../lib/presets";
 import { parseMarkup } from "../../lib/parse-markup";
 
 export interface HeroSplitProps {
+  preset: string;
   heading: string;
   subheading: string;
   textAlignment: string;
@@ -59,28 +61,68 @@ const roundedMap: Record<string, string> = {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export const HeroSplit = ({
-  heading = "Grow your business with the right tools",
-  subheading = "Everything you need to manage your properties, automate your workflow, and increase your revenue.",
-  textAlignment = "left",
-  columnSpacing = 24,
-  imageUrl = "https://placehold.co/600x500/e2e8f0/64748b?text=Your+Image",
-  imageAlt = "Hero image",
-  imagePosition = "right",
-  imageRounded = "xl",
-  imageShadow = true,
-  paddingY = "md",
-  paddingX = "md",
-  backgroundColor = "#ffffff",
-  textColor = "#0f172a",
-  headingColor = "",
-  headingFontSize = 0,
-  headingWeight = "extrabold",
-  subheadingColor = "",
-  subheadingFontSize = 0,
-  subheadingOpacity = 80,
-  actions: Actions,
-}: HeroSplitProps) => {
+const heroSplitPresetMap: Record<string, Partial<HeroSplitProps>> = {
+  "lifestyle-photo": {
+    textAlignment: "left",
+    imagePosition: "right",
+    imageRounded: "2xl",
+    imageShadow: true,
+    paddingY: "lg",
+    paddingX: "md",
+    backgroundColor: "#ffffff",
+    textColor: "#0f172a",
+    headingWeight: "extrabold",
+    subheadingOpacity: 80,
+  },
+  "minimal-editorial": {
+    textAlignment: "left",
+    imagePosition: "left",
+    imageRounded: "md",
+    imageShadow: false,
+    paddingY: "lg",
+    paddingX: "md",
+    backgroundColor: "#faf7f2",
+    textColor: "#1a1a1a",
+    headingWeight: "semibold",
+    subheadingOpacity: 75,
+  },
+  "inquiry-focus": {
+    textAlignment: "left",
+    imagePosition: "right",
+    imageRounded: "xl",
+    imageShadow: true,
+    paddingY: "md",
+    paddingX: "md",
+    backgroundColor: "#0b3d2e",
+    textColor: "#ffffff",
+    headingWeight: "bold",
+    subheadingOpacity: 92,
+  },
+};
+
+export const HeroSplit = (rawProps: HeroSplitProps) => {
+  const {
+    heading = "Slow mornings, sea views, breakfast that locals talk about",
+    subheading = "Eight rooms, two suites, and a courtyard garden. Independently owned, lovingly run, and built for travellers who plan their trips one place at a time.",
+    textAlignment = "left",
+    columnSpacing = 24,
+    imageUrl = "https://placehold.co/600x500/e2e8f0/64748b?text=Your+Image",
+    imageAlt = "Hero image",
+    imagePosition = "right",
+    imageRounded = "xl",
+    imageShadow = true,
+    paddingY = "md",
+    paddingX = "md",
+    backgroundColor = "#ffffff",
+    textColor = "#0f172a",
+    headingColor = "",
+    headingFontSize = 0,
+    headingWeight = "extrabold",
+    subheadingColor = "",
+    subheadingFontSize = 0,
+    subheadingOpacity = 80,
+    actions: Actions,
+  } = applyPreset(rawProps.preset, rawProps, heroSplitPresetMap);
   const ActionsSlot = Actions as unknown as React.FC<{ className?: string }>;
 
   return (
@@ -175,6 +217,26 @@ export const HeroSplit = ({
 export const heroSplitConfig: ComponentConfig<HeroSplitProps> = {
   label: "Hero (Split)",
   fields: {
+    preset: buildPresetField({
+      label: "Preset look",
+      options: [
+        {
+          label: "Lifestyle photo",
+          value: "lifestyle-photo",
+          description: "Bold image right, generous spacing",
+        },
+        {
+          label: "Minimal editorial",
+          value: "minimal-editorial",
+          description: "Image left, off-white, calm type",
+        },
+        {
+          label: "Inquiry focus",
+          value: "inquiry-focus",
+          description: "Forest-green band, action-first",
+        },
+      ],
+    }),
     heading: { type: "text", label: "Heading", contentEditable: true },
     subheading: {
       type: "textarea",
@@ -298,9 +360,10 @@ export const heroSplitConfig: ComponentConfig<HeroSplitProps> = {
     },
   },
   defaultProps: {
-    heading: "Grow your business with the right tools",
+    preset: "lifestyle-photo",
+    heading: "Slow mornings, sea views, breakfast that locals talk about",
     subheading:
-      "Everything you need to manage your properties, automate your workflow, and increase your revenue.",
+      "Eight rooms, two suites, and a courtyard garden. Independently owned, lovingly run, and built for travellers who plan their trips one place at a time.",
     textAlignment: "left",
     columnSpacing: 24,
     imageUrl: "https://placehold.co/600x500/e2e8f0/64748b?text=Your+Image",
