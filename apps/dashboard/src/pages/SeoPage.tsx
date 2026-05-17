@@ -168,10 +168,10 @@ export default function SeoPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+      <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 overflow-x-auto">
         <button
           onClick={() => setTab("audit")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 min-w-max rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "audit"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -181,7 +181,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("redirects")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "redirects"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -191,7 +191,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("structured-data")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "structured-data"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -201,7 +201,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("robots")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "robots"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -211,7 +211,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("indexnow")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "indexnow"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -221,7 +221,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("site-crawl")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "site-crawl"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -231,7 +231,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("search-console")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "search-console"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -241,7 +241,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("bing-webmaster")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "bing-webmaster"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -251,7 +251,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("psi")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "psi"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -261,7 +261,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("hreflang")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "hreflang"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -271,7 +271,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("page-schema")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "page-schema"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -281,7 +281,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("images")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "images"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -291,7 +291,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("previews")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "previews"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -301,7 +301,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("ai-citation")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "ai-citation"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -311,7 +311,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("scheduled-audits")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "scheduled-audits"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
@@ -321,7 +321,7 @@ export default function SeoPage() {
         </button>
         <button
           onClick={() => setTab("audit-tasks")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             tab === "audit-tasks"
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-500 hover:text-gray-800"
