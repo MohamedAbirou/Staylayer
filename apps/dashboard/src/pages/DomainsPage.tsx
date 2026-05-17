@@ -633,8 +633,8 @@ function getDnsStateChip(domain: SiteDomain): {
     const domainIsLive = domain.status === "ACTIVE" || domain.sslActive;
 
     return {
-      label: domainIsLive ? "DNS update recommended" : "DNS mismatch",
-      tone: "warning",
+      label: domainIsLive ? "DNS cleanup suggested" : "DNS mismatch",
+      tone: domainIsLive ? "info" : "warning",
     };
   }
 
@@ -648,6 +648,7 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
     domain.providerMisconfigured === true ||
     domain.dnsMatchesExpected === false ||
     records.some((record) => record.isMatch === false);
+  const isLiveDnsCleanup = domainIsLive && hasProviderDnsRecommendation;
 
   if (domainIsLive && !domain.providerError && !hasProviderDnsRecommendation) {
     return null;
@@ -670,17 +671,17 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
         {domain.providerConfiguredBy ? (
           <DomainStateChip
             label={`Provider checks ${domain.providerConfiguredBy}`}
-            tone={hasProviderDnsRecommendation ? "warning" : "info"}
+            tone={
+              hasProviderDnsRecommendation && !domainIsLive ? "warning" : "info"
+            }
           />
         ) : null}
         {hasProviderDnsRecommendation ? (
           <DomainStateChip
             label={
-              domainIsLive
-                ? "Provider recommends DNS change"
-                : "DNS update recommended"
+              isLiveDnsCleanup ? "Optional DNS cleanup" : "DNS update needed"
             }
-            tone="warning"
+            tone={isLiveDnsCleanup ? "info" : "warning"}
           />
         ) : null}
       </div>
@@ -692,7 +693,9 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
               <tr>
                 <th className="px-4 py-3 font-semibold">Type</th>
                 <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold">Expected value</th>
+                <th className="px-4 py-3 font-semibold">
+                  {isLiveDnsCleanup ? "Preferred value" : "Expected value"}
+                </th>
                 <th className="px-4 py-3 font-semibold">Observed</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
               </tr>
@@ -743,10 +746,11 @@ function DomainDiagnosticsPanel({ domain }: { domain: SiteDomain }) {
             the provider-preferred record for each type and name.
           </p>
         ) : null}
-        {domainIsLive && hasProviderDnsRecommendation ? (
+        {isLiveDnsCleanup ? (
           <p>
-            Traffic is live, but the provider may still recommend replacing
-            older DNS records with the preferred targets above.
+            Vercel marks this domain valid and traffic is live. These rows show
+            the newer preferred DNS target and any older DNS value still
+            observed; updating it is cleanup, not a launch blocker.
           </p>
         ) : null}
         {domain.providerAcceptedChallenges.length > 0 ? (
@@ -817,9 +821,9 @@ function getRecommendedRecordStatus(
     const domainIsLive = domain.status === "ACTIVE" || domain.sslActive;
 
     return {
-      label: domainIsLive ? "Recommended update" : "Needs update",
+      label: domainIsLive ? "Cleanup suggested" : "Needs update",
       className: domainIsLive
-        ? "bg-amber-100 text-amber-800"
+        ? "bg-blue-50 text-blue-700"
         : "bg-red-100 text-red-700",
     };
   }
