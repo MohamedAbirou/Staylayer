@@ -11,6 +11,7 @@ import {
   SearchConsoleConnection,
   SearchConsoleConnectionStatus,
   SearchConsoleSyncJobType,
+  SiteStatus,
 } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
@@ -162,9 +163,7 @@ export class SearchConsoleService {
     } as unknown as SearchConsoleConnection;
     try {
       const sites = await this.api.listSites(fakeConn);
-      const allowed = sites.siteEntry?.some(
-        (s) => s.siteUrl === propertyUrl,
-      );
+      const allowed = sites.siteEntry?.some((s) => s.siteUrl === propertyUrl);
       if (!allowed) {
         throw new BadRequestException({
           code: "OAUTH_PROPERTY_NOT_ACCESSIBLE",
@@ -320,10 +319,33 @@ export class SearchConsoleService {
     siteId: string,
     daysBack: number,
   ): Promise<{
-    totals: { clicks: number; impressions: number; ctr: number; position: number };
-    daily: Array<{ date: string; clicks: number; impressions: number; ctr: number; position: number }>;
-    topPages: Array<{ page: string; clicks: number; impressions: number; ctr: number; position: number }>;
-    topQueries: Array<{ query: string; clicks: number; impressions: number; ctr: number; position: number }>;
+    totals: {
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+    };
+    daily: Array<{
+      date: string;
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+    }>;
+    topPages: Array<{
+      page: string;
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+    }>;
+    topQueries: Array<{
+      query: string;
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+    }>;
     rangeStart: string;
     rangeEnd: string;
   }> {
@@ -436,7 +458,8 @@ export class SearchConsoleService {
         clicks: totalClicks,
         impressions: totalImpressions,
         ctr: totalImpressions > 0 ? totalClicks / totalImpressions : 0,
-        position: totalImpressions > 0 ? weightedPosition / totalImpressions : 0,
+        position:
+          totalImpressions > 0 ? weightedPosition / totalImpressions : 0,
       },
       daily,
       topPages,
@@ -491,9 +514,7 @@ export class SearchConsoleService {
     }));
   }
 
-  async listSitemaps(
-    siteId: string,
-  ): Promise<
+  async listSitemaps(siteId: string): Promise<
     Array<{
       sitemapUrl: string;
       type: string | null;
@@ -597,7 +618,8 @@ export class SearchConsoleService {
     try {
       const result = await this.api.inspectUrl(conn, url, languageCode);
       const idx = result.inspectionResult?.indexStatusResult;
-      const richItems = result.inspectionResult?.richResultsResult?.detectedItems?.length ?? 0;
+      const richItems =
+        result.inspectionResult?.richResultsResult?.detectedItems?.length ?? 0;
       await this.prisma.searchConsoleUrlInspection.upsert({
         where: { siteId_url: { siteId, url } },
         update: {
@@ -606,7 +628,9 @@ export class SearchConsoleService {
           indexingState: idx?.indexingState ?? null,
           robotsTxtState: idx?.robotsTxtState ?? null,
           pageFetchState: idx?.pageFetchState ?? null,
-          lastCrawlTime: idx?.lastCrawlTime ? new Date(idx.lastCrawlTime) : null,
+          lastCrawlTime: idx?.lastCrawlTime
+            ? new Date(idx.lastCrawlTime)
+            : null,
           googleCanonical: idx?.googleCanonical ?? null,
           userCanonical: idx?.userCanonical ?? null,
           mobileUsability:
@@ -623,7 +647,9 @@ export class SearchConsoleService {
           indexingState: idx?.indexingState ?? null,
           robotsTxtState: idx?.robotsTxtState ?? null,
           pageFetchState: idx?.pageFetchState ?? null,
-          lastCrawlTime: idx?.lastCrawlTime ? new Date(idx.lastCrawlTime) : null,
+          lastCrawlTime: idx?.lastCrawlTime
+            ? new Date(idx.lastCrawlTime)
+            : null,
           googleCanonical: idx?.googleCanonical ?? null,
           userCanonical: idx?.userCanonical ?? null,
           mobileUsability:
@@ -707,12 +733,17 @@ export class SearchConsoleService {
   }
 
   /** Used by the daily cron. Returns connections eligible for refresh. */
-  async listConnectionsDueForSync(now: Date = new Date()): Promise<SearchConsoleConnection[]> {
+  async listConnectionsDueForSync(
+    now: Date = new Date(),
+  ): Promise<SearchConsoleConnection[]> {
     const cutoff = new Date(now.getTime() - 23 * 60 * 60 * 1000);
     return this.prisma.searchConsoleConnection.findMany({
       where: {
         status: SearchConsoleConnectionStatus.ACTIVE,
         OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: cutoff } }],
+        // Skip connections whose underlying site is no longer active —
+        // archived sites must not pull Search Console data.
+        site: { is: { status: SiteStatus.ACTIVE } },
       },
       orderBy: { lastSyncedAt: { sort: "asc", nulls: "first" } },
       take: 50,

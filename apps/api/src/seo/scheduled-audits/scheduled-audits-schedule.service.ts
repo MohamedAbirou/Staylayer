@@ -3,7 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import type { SeoAuditSchedule, SeoAuditScheduleCadence } from "@prisma/client";
+import {
+  SiteStatus,
+  type SeoAuditSchedule,
+  type SeoAuditScheduleCadence,
+} from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { computeNextRunAt } from "./scheduled-audits.helpers";
@@ -96,6 +100,9 @@ export class SeoAuditScheduleService {
         enabled: true,
         cadence: { not: "OFF" },
         nextRunAt: { lte: now },
+        // Skip schedules whose site has been archived/suspended — archive
+        // is fully quiet so background SEO audits must not fire for them.
+        site: { is: { status: SiteStatus.ACTIVE } },
       },
       take: 25,
     });

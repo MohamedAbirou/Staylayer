@@ -11,6 +11,7 @@ import {
   BingWebmasterConnection,
   BingWebmasterConnectionStatus,
   Prisma,
+  SiteStatus,
 } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
@@ -617,6 +618,9 @@ export class BingWebmasterService {
       where: {
         status: BingWebmasterConnectionStatus.ACTIVE,
         OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: cutoff } }],
+        // Skip connections whose underlying site is no longer active —
+        // archived sites must not pull Bing Webmaster data.
+        site: { is: { status: SiteStatus.ACTIVE } },
       },
       orderBy: { lastSyncedAt: { sort: "asc", nulls: "first" } },
       take: 50,

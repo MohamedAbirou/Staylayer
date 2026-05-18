@@ -287,21 +287,28 @@ model TenantMembership {
 // ─── Site ──────────────────────────────────────────────────
 
 model Site {
-  id                   String      @id @default(cuid())
-  tenantId             String      @map("tenant_id")
-  name                 String
-  slug                 String
-  publicSubdomain      String?     @unique @map("public_subdomain")
-  preferredHostVariant HostVariant @default(APEX) @map("preferred_host_variant")
-  publishedRevision    Int         @default(1) @map("published_revision")
-  previewTokenVersion  Int         @default(1) @map("preview_token_version")
-  status               SiteStatus  @default(DRAFT)
-  templateKey          String?     @map("template_key")
-  primaryLocale        String      @default("en") @map("primary_locale")
-  enabledLocales       String[]    @default(["en"]) @map("enabled_locales")
-  siteType             SiteType    @default(VACATION_RENTAL) @map("site_type")
-  createdAt            DateTime    @default(now()) @map("created_at")
-  updatedAt            DateTime    @updatedAt @map("updated_at")
+  id                      String      @id @default(cuid())
+  tenantId                String      @map("tenant_id")
+  name                    String
+  slug                    String
+  publicSubdomain         String?     @unique @map("public_subdomain")
+  preferredHostVariant    HostVariant @default(APEX) @map("preferred_host_variant")
+  publishedRevision       Int         @default(1) @map("published_revision")
+  previewTokenVersion     Int         @default(1) @map("preview_token_version")
+  status                  SiteStatus  @default(DRAFT)
+  templateKey             String?     @map("template_key")
+  primaryLocale           String      @default("en") @map("primary_locale")
+  enabledLocales          String[]    @default(["en"]) @map("enabled_locales")
+  siteType                SiteType    @default(VACATION_RENTAL) @map("site_type")
+  /// Archive snapshot — preserved when the site is moved to ARCHIVED status so
+  /// the original public identifiers and detached custom domains can be
+  /// surfaced in the trash view and offered for restore.
+  archivedAt              DateTime?   @map("archived_at")
+  archivedSlug            String?     @map("archived_slug")
+  archivedPublicSubdomain String?     @map("archived_public_subdomain")
+  archivedDomains         String[]    @default([]) @map("archived_domains")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @updatedAt @map("updated_at")
 
   tenant                         Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   pages                          Page[]
