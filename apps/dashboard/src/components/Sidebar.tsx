@@ -556,7 +556,11 @@ export function Sidebar() {
       </div>
 
       <div className="mt-3 rounded-3xl border border-slate-200 bg-white/90 p-3 shadow-sm">
-        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2.5">
+        <NavLink
+          to="/profile"
+          className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2.5 transition hover:bg-slate-100"
+          title="Open account & profile"
+        >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#12392f] text-sm font-semibold text-white">
             {user?.email?.[0]?.toUpperCase()}
           </div>
@@ -579,7 +583,7 @@ export function Sidebar() {
               </p>
             ) : null}
           </div>
-        </div>
+        </NavLink>
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600">
           <div className="min-w-0 flex-1">

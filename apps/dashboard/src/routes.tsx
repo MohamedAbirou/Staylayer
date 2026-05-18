@@ -30,6 +30,7 @@ import SeoPage from "./pages/SeoPage";
 import SearchConsoleCallbackPage from "./pages/SearchConsoleCallbackPage";
 import BillingPage from "./pages/BillingPage";
 import WorkspaceStudioPage from "./pages/WorkspaceStudioPage";
+import ProfilePage from "./pages/ProfilePage";
 import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
 import AdminTenantsPage from "./pages/admin/AdminTenantsPage";
 import AdminDeploymentsPage from "./pages/admin/AdminDeploymentsPage";
@@ -158,6 +159,16 @@ export const router = createBrowserRouter([
               <ProtectedRoute membershipRoles={SITE_ADMIN_MEMBERSHIP_ROLES}>
                 <ErrorBoundary>
                   <WorkspaceStudioPage />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/profile",
+            element: (
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <ProfilePage />
                 </ErrorBoundary>
               </ProtectedRoute>
             ),

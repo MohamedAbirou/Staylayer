@@ -21,6 +21,7 @@ import { PublicModule } from "./public/public.module";
 import { PublicRuntimeModule } from "./public-runtime/public-runtime.module";
 import { TranslationModule } from "./translation/translation.module";
 import { SeoModule } from "./seo/seo.module";
+import { ProfileModule } from "./profile/profile.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 import { MailModule } from "./mail/mail.module";
@@ -67,6 +68,7 @@ import { MailModule } from "./mail/mail.module";
     PublicRuntimeModule,
     TranslationModule,
     SeoModule,
+    ProfileModule,
   ],
   providers: [
     // Reactivate later if we want global throttling (currently we apply it at the controller level with @UseGuards(ThrottlerGuard) and @Throttle() decorators)
