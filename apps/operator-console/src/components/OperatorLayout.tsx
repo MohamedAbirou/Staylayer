@@ -64,7 +64,6 @@ const PRIMARY_NAV: NavItem[] = [
     to: "/billing",
     label: "Billing",
     icon: CreditCard,
-    pending: true,
     anyOf: [
       OPERATOR_PERMISSIONS.BILLING_ACCOUNT_READ_ALL,
       OPERATOR_PERMISSIONS.BILLING_SUBSCRIPTION_READ_ALL,

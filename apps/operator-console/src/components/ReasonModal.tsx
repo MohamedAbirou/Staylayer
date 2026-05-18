@@ -46,7 +46,7 @@ export interface ReasonModalProps {
   submitting?: boolean;
   error?: string | null;
   onCancel: () => void;
-  onConfirm: (reason: string) => void | Promise<void>;
+  onConfirm: (reason: string) => unknown | Promise<unknown>;
   /** When true a stronger "DANGER" banner is rendered. */
   highRisk?: boolean;
   /** When highRisk, the operator must type this token to enable confirm. */

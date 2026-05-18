@@ -888,3 +888,574 @@ export async function closeSupportCaseHandoff(
   );
   return res.data;
 }
+
+// ─── Billing (Phase 8 UI) ──────────────────────────────────────────────
+//
+// Types mirror `apps/api/src/operator-billing/operator-billing.service.ts`
+// and the Prisma models added in the Phase 7 migration. Every mutation
+// expects a `reason` of >= 8 chars and is permission-gated server-side.
+
+export type BillingActionType =
+  | "CHANGE_PLAN"
+  | "CANCEL_PENDING_PLAN_CHANGE"
+  | "CANCEL_AT_PERIOD_END"
+  | "REACTIVATE_SUBSCRIPTION"
+  | "EXTEND_GRACE_PERIOD"
+  | "STRIPE_SYNC"
+  | "STRIPE_WEBHOOK_REPLAY"
+  | "REFUND_INVOICE"
+  | "ISSUE_CREDIT"
+  | "ENTITLEMENT_OVERRIDE_CREATE"
+  | "ENTITLEMENT_OVERRIDE_REVOKE";
+
+export type BillingActionStatus =
+  | "PENDING_APPROVAL"
+  | "APPROVED"
+  | "REJECTED"
+  | "EXECUTED"
+  | "FAILED"
+  | "CANCELED";
+
+export interface BillingActionRequest {
+  id: string;
+  tenantId: string;
+  actorUserId: string;
+  approverUserId: string | null;
+  type: BillingActionType;
+  status: BillingActionStatus;
+  requiresApproval: boolean;
+  reason: string;
+  approverReason: string | null;
+  idempotencyKey: string | null;
+  payload: Record<string, unknown> | null;
+  beforeSnapshot: Record<string, unknown> | null;
+  afterSnapshot: Record<string, unknown> | null;
+  providerObjectIds: Record<string, unknown> | null;
+  failureCode: string | null;
+  failureMessage: string | null;
+  executionError: string | null;
+  createdAt: string;
+  approvedAt: string | null;
+  executedAt: string | null;
+}
+
+export interface BillingOverviewResponse {
+  counts: {
+    active: number;
+    trialing: number;
+    pastDue: number;
+    canceled: number;
+    mismatched: number;
+  };
+  pendingApprovals: number;
+  unprocessedWebhooks: number;
+  failedWebhooks: number;
+  recentActions: BillingActionRequest[];
+}
+
+export interface BillingPlanCatalogEntry {
+  key: string;
+  name: string;
+  isFree: boolean;
+  limits: Record<string, unknown>;
+}
+
+export interface BillingAccountListItem {
+  id: string;
+  slug: string;
+  name: string;
+  status: TenantStatus;
+  createdAt: string;
+  subscriptions: Array<{
+    id: string;
+    planKey: string | null;
+    status: SubscriptionStatus;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    gracePeriodEndsAt: string | null;
+    providerCustomerId: string | null;
+    providerSubscriptionId: string | null;
+    lastWebhookAt: string | null;
+  }>;
+}
+
+export interface BillingAccountsListResponse {
+  data: BillingAccountListItem[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+export interface BillingInvoiceSnapshotRow {
+  id: string;
+  tenantId: string;
+  subscriptionId: string | null;
+  providerInvoiceId: string;
+  providerCustomerId: string | null;
+  providerSubscriptionId: string | null;
+  number: string | null;
+  status: string;
+  currency: string;
+  amountDue: number;
+  amountPaid: number;
+  amountRemaining: number;
+  hostedInvoiceUrl: string | null;
+  invoicePdfUrl: string | null;
+  providerCreatedAt: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  paidAt: string | null;
+  raw: Record<string, unknown> | null;
+  lastSyncedAt: string;
+}
+
+export interface BillingPaymentEventRow {
+  id: string;
+  tenantId: string;
+  providerPaymentIntentId: string | null;
+  providerChargeId: string | null;
+  providerInvoiceId: string | null;
+  providerCustomerId: string | null;
+  kind: string;
+  amount: number;
+  currency: string;
+  status: string;
+  failureCode: string | null;
+  failureMessage: string | null;
+  occurredAt: string;
+  raw: Record<string, unknown> | null;
+}
+
+export interface BillingOperatorNoteRow {
+  id: string;
+  tenantId: string;
+  authorUserId: string;
+  body: string;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author: {
+    id: string;
+    email: string;
+    platformRole: PlatformRole | null;
+  } | null;
+}
+
+export interface BillingEntitlementOverrideRow {
+  id: string;
+  tenantId: string;
+  limitKey: string;
+  intValue: number | null;
+  jsonValue: Record<string, unknown> | null;
+  reason: string;
+  createdByUserId: string;
+  revokedByUserId: string | null;
+  revokeReason: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface BillingTenantSnapshot {
+  tenantId: string;
+  planKey: string;
+  planName: string;
+  description: string;
+  provider: string;
+  status: BillingPublicStatus;
+  renewsAt: string | null;
+  currentPeriodStart: string | null;
+  gracePeriodEndsAt: string | null;
+  limits: Record<string, unknown>;
+  usage: Record<string, unknown>;
+  source: string;
+  providerCustomerId: string | null;
+  providerSubscriptionId: string | null;
+  cancelAtPeriodEnd: boolean;
+  actions: {
+    editingAllowed: boolean;
+    publishingBlocked: boolean;
+    publicSitesRemainLive: boolean;
+    operatorOverrideAvailable: boolean;
+    gracePeriodActive: boolean;
+  };
+  lastWebhookAt: string | null;
+  subscriptionId: string | null;
+  isFreePlan: boolean;
+  pendingPlanChange: {
+    planKey: string;
+    effectiveAt: string | null;
+  } | null;
+}
+
+export interface BillingAccountDetailResponse {
+  tenant: {
+    id: string;
+    slug: string;
+    name: string;
+    status: TenantStatus;
+  };
+  snapshot: BillingTenantSnapshot;
+  invoices: BillingInvoiceSnapshotRow[];
+  payments: BillingPaymentEventRow[];
+  notes: BillingOperatorNoteRow[];
+  overrides: BillingEntitlementOverrideRow[];
+  pendingActions: BillingActionRequest[];
+  recentActions: BillingActionRequest[];
+  supportCases: Array<{
+    id: string;
+    status: string;
+    priority: string;
+    category: string;
+    subject: string;
+    updatedAt: string;
+    createdAt: string;
+  }>;
+}
+
+export interface BillingWebhookEventRow {
+  id: string;
+  tenantId: string | null;
+  providerEventId: string;
+  eventType: string;
+  rawPayload: Record<string, unknown> | null;
+  processedAt: string | null;
+  errorMessage: string | null;
+  signatureVerifiedAt: string | null;
+  createdAt: string;
+}
+
+export interface BillingWebhookEventsResponse {
+  data: BillingWebhookEventRow[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+export interface BillingActionRequestsResponse {
+  data: BillingActionRequest[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+export interface FetchBillingAccountsParams {
+  q?: string;
+  status?:
+    | "active"
+    | "trialing"
+    | "past_due"
+    | "canceled"
+    | "incomplete"
+    | "inactive";
+  planKey?: string;
+  mismatch?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface FetchBillingActionRequestsParams {
+  tenantId?: string;
+  status?: BillingActionStatus;
+  page?: number;
+  limit?: number;
+}
+
+export interface FetchBillingWebhooksParams {
+  tenantId?: string;
+  eventType?: string;
+  failed?: boolean;
+  unprocessed?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+// ─── Endpoints ────────────────────────────────────────────────────────
+
+export async function fetchBillingOverview(): Promise<BillingOverviewResponse> {
+  const res = await client.get<BillingOverviewResponse>(
+    "/operator/billing/overview",
+  );
+  return res.data;
+}
+
+export async function fetchBillingPlans(): Promise<BillingPlanCatalogEntry[]> {
+  const res = await client.get<BillingPlanCatalogEntry[]>(
+    "/operator/billing/plans",
+  );
+  return res.data;
+}
+
+export async function fetchBillingAccounts(
+  params: FetchBillingAccountsParams = {},
+): Promise<BillingAccountsListResponse> {
+  const res = await client.get<BillingAccountsListResponse>(
+    "/operator/billing/accounts",
+    { params },
+  );
+  return res.data;
+}
+
+export async function fetchBillingAccount(
+  tenantId: string,
+): Promise<BillingAccountDetailResponse> {
+  const res = await client.get<BillingAccountDetailResponse>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}`,
+  );
+  return res.data;
+}
+
+export async function fetchBillingInvoices(
+  tenantId: string,
+): Promise<BillingInvoiceSnapshotRow[]> {
+  const res = await client.get<BillingInvoiceSnapshotRow[]>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/invoices`,
+  );
+  return res.data;
+}
+
+export async function fetchBillingPayments(
+  tenantId: string,
+): Promise<BillingPaymentEventRow[]> {
+  const res = await client.get<BillingPaymentEventRow[]>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/payments`,
+  );
+  return res.data;
+}
+
+export async function fetchBillingNotes(
+  tenantId: string,
+): Promise<BillingOperatorNoteRow[]> {
+  const res = await client.get<BillingOperatorNoteRow[]>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/notes`,
+  );
+  return res.data;
+}
+
+export async function fetchBillingOverrides(
+  tenantId: string,
+): Promise<BillingEntitlementOverrideRow[]> {
+  const res = await client.get<BillingEntitlementOverrideRow[]>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/overrides`,
+  );
+  return res.data;
+}
+
+export async function fetchBillingActionRequests(
+  params: FetchBillingActionRequestsParams = {},
+): Promise<BillingActionRequestsResponse> {
+  const res = await client.get<BillingActionRequestsResponse>(
+    "/operator/billing/action-requests",
+    { params },
+  );
+  return res.data;
+}
+
+export async function fetchBillingWebhooks(
+  params: FetchBillingWebhooksParams = {},
+): Promise<BillingWebhookEventsResponse> {
+  const res = await client.get<BillingWebhookEventsResponse>(
+    "/operator/billing/webhooks",
+    { params },
+  );
+  return res.data;
+}
+
+// ─── Mutations ────────────────────────────────────────────────────────
+//
+// Every mutation expects { reason: string } with min 8 chars; high-risk
+// mutations (refund / credit / override) return a `BillingActionRequest`
+// row in `PENDING_APPROVAL` status. The remaining mutations return the
+// executed `BillingActionRequest` along with the new tenant snapshot.
+
+export interface BillingMutationResponse {
+  action: BillingActionRequest;
+  snapshot: BillingTenantSnapshot;
+}
+
+export async function changeBillingPlan(
+  tenantId: string,
+  body: { targetPlanKey: string; reason: string },
+): Promise<BillingMutationResponse> {
+  const res = await client.post<BillingMutationResponse>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/plan`,
+    body,
+  );
+  return res.data;
+}
+
+export async function cancelPendingBillingPlanChange(
+  tenantId: string,
+  body: { reason: string },
+): Promise<BillingMutationResponse> {
+  const res = await client.delete<BillingMutationResponse>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/pending-plan`,
+    { data: body },
+  );
+  return res.data;
+}
+
+export async function cancelBillingAtPeriodEnd(
+  tenantId: string,
+  body: { reason: string },
+): Promise<BillingMutationResponse> {
+  const res = await client.post<BillingMutationResponse>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/cancel`,
+    body,
+  );
+  return res.data;
+}
+
+export async function reactivateBillingSubscription(
+  tenantId: string,
+  body: { reason: string },
+): Promise<BillingMutationResponse> {
+  const res = await client.post<BillingMutationResponse>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/reactivate`,
+    body,
+  );
+  return res.data;
+}
+
+export async function extendBillingGracePeriod(
+  tenantId: string,
+  body: { until: string; reason: string },
+): Promise<BillingMutationResponse> {
+  const res = await client.post<BillingMutationResponse>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/grace-period`,
+    body,
+  );
+  return res.data;
+}
+
+export async function syncBillingFromStripe(
+  tenantId: string,
+  body: { reason: string },
+): Promise<BillingMutationResponse> {
+  const res = await client.post<BillingMutationResponse>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/sync`,
+    body,
+  );
+  return res.data;
+}
+
+export async function requestBillingRefund(
+  tenantId: string,
+  invoiceProviderId: string,
+  body: { amount?: number | null; reason: string },
+): Promise<BillingActionRequest> {
+  const res = await client.post<BillingActionRequest>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/invoices/${encodeURIComponent(invoiceProviderId)}/refund`,
+    body,
+  );
+  return res.data;
+}
+
+export async function requestBillingCredit(
+  tenantId: string,
+  body: { amount: number; currency: string; reason: string },
+): Promise<BillingActionRequest> {
+  const res = await client.post<BillingActionRequest>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/credits`,
+    body,
+  );
+  return res.data;
+}
+
+export async function createBillingNote(
+  tenantId: string,
+  body: { body: string; pinned?: boolean },
+): Promise<BillingOperatorNoteRow> {
+  const res = await client.post<BillingOperatorNoteRow>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/notes`,
+    body,
+  );
+  return res.data;
+}
+
+export async function updateBillingNote(
+  tenantId: string,
+  noteId: string,
+  body: { body?: string; pinned?: boolean },
+): Promise<BillingOperatorNoteRow> {
+  const res = await client.patch<BillingOperatorNoteRow>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/notes/${encodeURIComponent(noteId)}`,
+    body,
+  );
+  return res.data;
+}
+
+export async function deleteBillingNote(
+  tenantId: string,
+  noteId: string,
+): Promise<{ deleted: true }> {
+  const res = await client.delete<{ deleted: true }>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/notes/${encodeURIComponent(noteId)}`,
+  );
+  return res.data;
+}
+
+export async function requestBillingOverride(
+  tenantId: string,
+  body: {
+    limitKey: string;
+    intValue?: number | null;
+    jsonValue?: Record<string, unknown> | null;
+    expiresAt?: string;
+    reason: string;
+  },
+): Promise<BillingActionRequest> {
+  const res = await client.post<BillingActionRequest>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/overrides`,
+    body,
+  );
+  return res.data;
+}
+
+export async function requestBillingOverrideRevoke(
+  tenantId: string,
+  overrideId: string,
+  body: { reason: string },
+): Promise<BillingActionRequest> {
+  const res = await client.delete<BillingActionRequest>(
+    `/operator/billing/accounts/${encodeURIComponent(tenantId)}/overrides/${encodeURIComponent(overrideId)}`,
+    { data: body },
+  );
+  return res.data;
+}
+
+export async function replayBillingWebhook(
+  eventRowId: string,
+  body: { reason: string },
+): Promise<{ action: BillingActionRequest; result: unknown }> {
+  const res = await client.post<{
+    action: BillingActionRequest;
+    result: unknown;
+  }>(
+    `/operator/billing/webhooks/${encodeURIComponent(eventRowId)}/replay`,
+    body,
+  );
+  return res.data;
+}
+
+export async function approveBillingAction(
+  requestId: string,
+  body: { reason: string },
+): Promise<BillingActionRequest> {
+  const res = await client.post<BillingActionRequest>(
+    `/operator/billing/action-requests/${encodeURIComponent(requestId)}/approve`,
+    body,
+  );
+  return res.data;
+}
+
+export async function rejectBillingAction(
+  requestId: string,
+  body: { reason: string },
+): Promise<BillingActionRequest> {
+  const res = await client.post<BillingActionRequest>(
+    `/operator/billing/action-requests/${encodeURIComponent(requestId)}/reject`,
+    body,
+  );
+  return res.data;
+}

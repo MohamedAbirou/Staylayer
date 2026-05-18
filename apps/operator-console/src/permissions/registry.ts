@@ -46,15 +46,21 @@ export const OPERATOR_PERMISSIONS = {
 
   // Billing
   BILLING_ACCOUNT_READ_ALL: "billing.account.read.all",
+  BILLING_ACCOUNT_READ_BASIC: "billing.account.read.basic",
   BILLING_SUBSCRIPTION_READ_ALL: "billing.subscription.read.all",
   BILLING_SUBSCRIPTION_CHANGE_PLAN_ALL: "billing.subscription.change_plan.all",
   BILLING_SUBSCRIPTION_CANCEL_ALL: "billing.subscription.cancel.all",
   BILLING_INVOICE_READ_ALL: "billing.invoice.read.all",
   BILLING_INVOICE_REFUND_ALL: "billing.invoice.refund.all",
+  BILLING_PAYMENT_READ_ALL: "billing.payment.read.all",
   BILLING_PAYMENT_RETRY_ALL: "billing.payment.retry.all",
   BILLING_STRIPE_SYNC_ALL: "billing.stripe.sync.all",
+  BILLING_STRIPE_REPLAY_ALL: "billing.stripe.replay.all",
   BILLING_ENTITLEMENT_OVERRIDE_ALL: "billing.entitlement.override.all",
   BILLING_NOTE_ALL: "billing.note.all",
+  BILLING_GRACE_PERIOD_EXTEND_ALL: "billing.grace_period.extend.all",
+  BILLING_CREDIT_ISSUE_ALL: "billing.credit.issue.all",
+  BILLING_ACTION_APPROVE_ALL: "billing.action.approve.all",
 
   // Operations
   DEPLOYMENT_READ_ALL: "deployment.read.all",

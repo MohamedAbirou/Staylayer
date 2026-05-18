@@ -13,6 +13,11 @@ import GlobalSearchPage from "./pages/GlobalSearchPage";
 import SupportInboxPage from "./pages/SupportInboxPage";
 import SupportCaseDetailPage from "./pages/SupportCaseDetailPage";
 import SupportCaseNewPage from "./pages/SupportCaseNewPage";
+import BillingOverviewPage from "./pages/BillingOverviewPage";
+import BillingAccountsListPage from "./pages/BillingAccountsListPage";
+import BillingAccountDetailPage from "./pages/BillingAccountDetailPage";
+import BillingActionRequestsPage from "./pages/BillingActionRequestsPage";
+import BillingWebhooksPage from "./pages/BillingWebhooksPage";
 import ForbiddenPage from "./pages/ForbiddenPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -167,6 +172,59 @@ export const router = createBrowserRouter([
                 element: (
                   <ErrorBoundary>
                     <SupportCaseNewPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.BILLING_ACCOUNT_READ_ALL,
+                  OPERATOR_PERMISSIONS.BILLING_SUBSCRIPTION_READ_ALL,
+                  OPERATOR_PERMISSIONS.BILLING_INVOICE_READ_ALL,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/billing",
+                element: (
+                  <ErrorBoundary>
+                    <BillingOverviewPage />
+                  </ErrorBoundary>
+                ),
+              },
+              {
+                path: "/billing/accounts",
+                element: (
+                  <ErrorBoundary>
+                    <BillingAccountsListPage />
+                  </ErrorBoundary>
+                ),
+              },
+              {
+                path: "/billing/accounts/:tenantId",
+                element: (
+                  <ErrorBoundary>
+                    <BillingAccountDetailPage />
+                  </ErrorBoundary>
+                ),
+              },
+              {
+                path: "/billing/approvals",
+                element: (
+                  <ErrorBoundary>
+                    <BillingActionRequestsPage />
+                  </ErrorBoundary>
+                ),
+              },
+              {
+                path: "/billing/webhooks",
+                element: (
+                  <ErrorBoundary>
+                    <BillingWebhooksPage />
                   </ErrorBoundary>
                 ),
               },
