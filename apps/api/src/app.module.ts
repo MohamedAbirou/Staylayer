@@ -14,6 +14,7 @@ import { BillingModule } from "./billing/billing.module";
 import { AdminModule } from "./admin/admin.module";
 import { OperatorResourcesModule } from "./operator-resources/operator-resources.module";
 import { SupportCasesModule } from "./support-cases/support-cases.module";
+import { OperatorBillingModule } from "./operator-billing/operator-billing.module";
 import { DeploymentsModule } from "./deployments/deployments.module";
 import { DomainsModule } from "./domains/domains.module";
 import { FormsModule } from "./forms/forms.module";
@@ -63,6 +64,7 @@ import { MailModule } from "./mail/mail.module";
     AdminModule,
     OperatorResourcesModule,
     SupportCasesModule,
+    OperatorBillingModule,
     SettingsModule,
     DeploymentsModule,
     DomainsModule,

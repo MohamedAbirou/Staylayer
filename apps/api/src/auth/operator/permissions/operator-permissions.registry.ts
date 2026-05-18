@@ -64,6 +64,9 @@ export const OPERATOR_PERMISSIONS = {
   BILLING_STRIPE_SYNC_ALL: "billing.stripe.sync.all",
   BILLING_ENTITLEMENT_OVERRIDE_ALL: "billing.entitlement.override.all",
   BILLING_NOTE_ALL: "billing.note.all",
+  BILLING_GRACE_PERIOD_EXTEND_ALL: "billing.grace_period.extend.all",
+  BILLING_CREDIT_ISSUE_ALL: "billing.credit.issue.all",
+  BILLING_ACTION_APPROVE_ALL: "billing.action.approve.all",
 
   // ── Deployments / domains / forms (read + safe retries) ─────────────
   DEPLOYMENT_READ_ALL: "deployment.read.all",
@@ -154,6 +157,8 @@ const FINANCE_ADMIN_PERMISSIONS: ReadonlyArray<OperatorPermissionKey> = [
   P.BILLING_STRIPE_SYNC_ALL,
   P.BILLING_ENTITLEMENT_OVERRIDE_ALL,
   P.BILLING_NOTE_ALL,
+  P.BILLING_GRACE_PERIOD_EXTEND_ALL,
+  P.BILLING_CREDIT_ISSUE_ALL,
   P.DEPLOYMENT_READ_ALL,
   P.DOMAIN_READ_ALL,
   P.FORM_DELIVERY_READ_ALL,

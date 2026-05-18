@@ -97,8 +97,15 @@ type StripeInvoiceRecord = {
   invoice_pdf?: string | null;
   amount_paid: number;
   amount_due?: number | null;
+  amount_remaining?: number | null;
   total?: number | null;
   currency: string;
+  status?: string | null;
+  period_start?: number | null;
+  period_end?: number | null;
+  created?: number | null;
+  charge?: string | { id: string } | null;
+  payment_intent?: string | { id: string } | null;
 };
 
 type StripeSubscriptionUpdateSource = {
@@ -1286,6 +1293,9 @@ export class BillingService {
       return {};
     }
 
+    await this.persistInvoiceSnapshot(tenantId, invoice);
+    await this.recordInvoicePaymentEvent(tenantId, invoice, "paid");
+
     await this.safeSendInvoicePaidEmail({
       tenantId,
       customerEmail: invoice.customer_email ?? null,
@@ -1312,6 +1322,9 @@ export class BillingService {
     if (!tenantId) {
       return {};
     }
+
+    await this.persistInvoiceSnapshot(tenantId, invoice);
+    await this.recordInvoicePaymentEvent(tenantId, invoice, "payment_failed");
 
     await this.notifyBillingPaymentActionRequired({
       tenantId,
@@ -2685,5 +2698,373 @@ export class BillingService {
     }
 
     return new Date(value * 1000);
+  }
+
+  // ── Phase 7 — operator billing surface ───────────────────────────────
+  //
+  // The methods below are consumed exclusively by `OperatorBillingService`.
+  // They live here so the existing Stripe client, webhook deduplication
+  // contract, and snapshot persistence helpers can be reused without
+  // duplicating Stripe SDK setup. None of the customer-facing controllers
+  // call into them.
+
+  /**
+   * Persist a Stripe invoice as a queryable snapshot. Idempotent — the
+   * provider invoice id is the natural key. Safe to call from both webhook
+   * handlers and operator-triggered Stripe syncs.
+   */
+  async persistInvoiceSnapshot(
+    tenantId: string,
+    invoice: StripeInvoiceRecord,
+  ): Promise<void> {
+    const providerInvoiceId = invoice.id;
+    if (!providerInvoiceId) {
+      return;
+    }
+
+    const subscriptionId = await this.resolveLocalSubscriptionIdForInvoice(
+      tenantId,
+      invoice,
+    );
+    const providerCustomerId = this.extractCustomerId(invoice.customer);
+    const amountDue = invoice.amount_due ?? invoice.total ?? 0;
+    const amountRemaining =
+      invoice.amount_remaining ?? Math.max(amountDue - invoice.amount_paid, 0);
+
+    const data = {
+      tenantId,
+      subscriptionId,
+      provider: BILLING_PROVIDER,
+      providerCustomerId,
+      status: invoice.status ?? "open",
+      amountDue,
+      amountPaid: invoice.amount_paid,
+      amountRemaining,
+      currency: invoice.currency,
+      hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+      invoicePdfUrl: invoice.invoice_pdf ?? null,
+      periodStart: this.fromUnixTime(invoice.period_start ?? null),
+      periodEnd: this.fromUnixTime(invoice.period_end ?? null),
+      providerCreatedAt: this.fromUnixTime(invoice.created ?? null),
+      syncedAt: new Date(),
+      raw: invoice as unknown as Prisma.InputJsonValue,
+    } satisfies Prisma.BillingInvoiceSnapshotUncheckedUpdateInput;
+
+    await this.prisma.billingInvoiceSnapshot.upsert({
+      where: { providerInvoiceId },
+      create: { providerInvoiceId, ...data },
+      update: data,
+    });
+  }
+
+  private async resolveLocalSubscriptionIdForInvoice(
+    tenantId: string,
+    invoice: StripeInvoiceRecord,
+  ): Promise<string | null> {
+    const providerSubscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : (invoice.subscription?.id ?? null);
+    if (!providerSubscriptionId) {
+      return null;
+    }
+    const row = await this.prisma.subscription.findFirst({
+      where: { tenantId, providerSubscriptionId },
+      select: { id: true },
+    });
+    return row?.id ?? null;
+  }
+
+  /**
+   * Persist a payment event derived from an invoice webhook. Idempotent on
+   * `providerEventId` so retries are safe.
+   */
+  async recordInvoicePaymentEvent(
+    tenantId: string,
+    invoice: StripeInvoiceRecord,
+    eventType: "paid" | "payment_failed" | "refunded",
+  ): Promise<void> {
+    const providerEventId = `${invoice.id}:${eventType}`;
+    const subscriptionId = await this.resolveLocalSubscriptionIdForInvoice(
+      tenantId,
+      invoice,
+    );
+    const invoiceSnapshot = await this.prisma.billingInvoiceSnapshot.findUnique(
+      {
+        where: { providerInvoiceId: invoice.id },
+        select: { id: true },
+      },
+    );
+    const data = {
+      tenantId,
+      subscriptionId,
+      invoiceSnapshotId: invoiceSnapshot?.id ?? null,
+      provider: BILLING_PROVIDER,
+      providerEventId,
+      eventType,
+      amount: invoice.amount_paid ?? null,
+      currency: invoice.currency ?? null,
+      status: invoice.status ?? eventType,
+      occurredAt: new Date(),
+      metadata: {
+        chargeId:
+          typeof invoice.charge === "string"
+            ? invoice.charge
+            : (invoice.charge?.id ?? null),
+        paymentIntentId:
+          typeof invoice.payment_intent === "string"
+            ? invoice.payment_intent
+            : (invoice.payment_intent?.id ?? null),
+      } as unknown as Prisma.InputJsonValue,
+    } satisfies Prisma.BillingPaymentEventUncheckedCreateInput;
+
+    await this.prisma.billingPaymentEvent
+      .create({ data })
+      .catch((err: unknown) => {
+        // Unique constraint on providerEventId — swallow duplicates so retries
+        // don't 500 the webhook.
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2002"
+        ) {
+          return null;
+        }
+        throw err;
+      });
+  }
+
+  /**
+   * Replay a previously stored Stripe webhook event by id. The original
+   * payload is re-parsed and `processStripeEvent` re-runs. Only the
+   * operator console calls this — customer flows never need replay.
+   */
+  async replayStoredWebhookEvent(eventRowId: string): Promise<{
+    eventId: string;
+    eventType: string;
+    duplicate: boolean;
+  }> {
+    const row = await this.prisma.billingWebhookEvent.findUnique({
+      where: { id: eventRowId },
+    });
+    if (!row) {
+      throw new NotFoundException({
+        code: "WEBHOOK_EVENT_NOT_FOUND",
+        message: "Webhook event not found",
+      });
+    }
+
+    const payload = row.payload as unknown as StripeWebhookEventRecord | null;
+    if (!payload || typeof payload !== "object") {
+      throw new BadRequestException({
+        code: "WEBHOOK_EVENT_PAYLOAD_MISSING",
+        message: "Stored webhook payload is missing or unreadable",
+      });
+    }
+
+    try {
+      const syncResult = await this.processStripeEvent(payload);
+      await this.prisma.billingWebhookEvent.update({
+        where: { id: row.id },
+        data: {
+          processedAt: new Date(),
+          errorMessage: null,
+          tenantId: syncResult.tenantId ?? row.tenantId,
+          subscriptionId: syncResult.subscriptionId ?? row.subscriptionId,
+        },
+      });
+      return {
+        eventId: row.providerEventId,
+        eventType: row.eventType,
+        duplicate: false,
+      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unknown webhook replay error";
+      await this.prisma.billingWebhookEvent.update({
+        where: { id: row.id },
+        data: { errorMessage: message },
+      });
+      throw err;
+    }
+  }
+
+  /**
+   * Force a Stripe → local sync for one tenant. Fetches the current Stripe
+   * subscription (if any) plus recent invoices and persists snapshots.
+   * Returns the refreshed local snapshot.
+   */
+  async syncTenantFromStripe(tenantId: string): Promise<TenantBillingSnapshot> {
+    const subscription = await this.findCurrentSubscription(tenantId);
+    if (subscription) {
+      const stripeSubscription =
+        await this.findStripeSubscriptionForLocalRecord(subscription);
+      if (stripeSubscription) {
+        await this.syncSubscriptionFromStripe(
+          stripeSubscription,
+          `manual:${tenantId}:${Date.now()}`,
+          Math.floor(Date.now() / 1000),
+        );
+      }
+      if (subscription.providerCustomerId) {
+        await this.syncRecentInvoicesForCustomer(
+          tenantId,
+          subscription.providerCustomerId,
+        );
+      }
+    }
+    return this.getTenantPlanSnapshot(tenantId);
+  }
+
+  private async syncRecentInvoicesForCustomer(
+    tenantId: string,
+    customerId: string,
+    limit = 20,
+  ): Promise<void> {
+    const stripe = this.getStripeClient();
+    const result = await stripe.invoices.list({
+      customer: customerId,
+      limit,
+    });
+    for (const invoice of result.data) {
+      await this.persistInvoiceSnapshot(
+        tenantId,
+        invoice as unknown as StripeInvoiceRecord,
+      );
+    }
+  }
+
+  /**
+   * Operator-only: extend the local grace period for a tenant. Does NOT
+   * mutate Stripe — the customer-facing entitlement gate reads
+   * `Subscription.gracePeriodEndsAt`, so this is enough to keep publishing
+   * unlocked while finance follows up.
+   */
+  async operatorExtendGracePeriod(
+    tenantId: string,
+    until: Date,
+  ): Promise<TenantBillingSnapshot> {
+    const subscription = await this.findCurrentSubscription(tenantId);
+    if (!subscription) {
+      throw new NotFoundException({
+        code: "SUBSCRIPTION_NOT_FOUND",
+        message: "No subscription exists for this tenant",
+      });
+    }
+    if (until.getTime() <= Date.now()) {
+      throw new BadRequestException({
+        code: "GRACE_PERIOD_INVALID",
+        message: "Grace period must end in the future",
+      });
+    }
+    await this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { gracePeriodEndsAt: until },
+    });
+    return this.getTenantPlanSnapshot(tenantId);
+  }
+
+  /**
+   * Operator-only: set `cancel_at_period_end=true` on the Stripe
+   * subscription. The tenant keeps publishing through the period end; the
+   * downstream webhook will flip the local row.
+   */
+  async operatorCancelAtPeriodEnd(
+    tenantId: string,
+  ): Promise<TenantBillingSnapshot> {
+    const subscription = await this.findCurrentSubscription(tenantId);
+    if (!subscription?.providerSubscriptionId) {
+      throw new NotFoundException({
+        code: "SUBSCRIPTION_NOT_FOUND",
+        message: "Tenant has no active Stripe subscription",
+      });
+    }
+    const stripe = this.getStripeClient();
+    await stripe.subscriptions.update(subscription.providerSubscriptionId, {
+      cancel_at_period_end: true,
+    });
+    return this.syncTenantFromStripe(tenantId);
+  }
+
+  /**
+   * Operator-only: clear a pending `cancel_at_period_end` flag in Stripe.
+   */
+  async operatorReactivateSubscription(
+    tenantId: string,
+  ): Promise<TenantBillingSnapshot> {
+    const subscription = await this.findCurrentSubscription(tenantId);
+    if (!subscription?.providerSubscriptionId) {
+      throw new NotFoundException({
+        code: "SUBSCRIPTION_NOT_FOUND",
+        message: "Tenant has no Stripe subscription to reactivate",
+      });
+    }
+    const stripe = this.getStripeClient();
+    await stripe.subscriptions.update(subscription.providerSubscriptionId, {
+      cancel_at_period_end: false,
+    });
+    return this.syncTenantFromStripe(tenantId);
+  }
+
+  /**
+   * Operator-only: refund a Stripe invoice. Resolves the underlying
+   * `payment_intent` / `charge` and dispatches `stripe.refunds.create`.
+   * Idempotency is enforced by an upstream `BillingActionRequest` so
+   * approver-driven retries don't double refund.
+   */
+  async operatorRefundInvoice(
+    tenantId: string,
+    providerInvoiceId: string,
+    options: { amount?: number | null; idempotencyKey: string; reason: string },
+  ): Promise<{ refundId: string; status: string; amount: number | null }> {
+    const stripe = this.getStripeClient();
+    const invoiceResponse = await stripe.invoices.retrieve(providerInvoiceId);
+    const invoice = invoiceResponse as unknown as StripeInvoiceRecord;
+    const invoiceTenantId =
+      invoice.metadata?.tenantId ??
+      (await this.resolveTenantIdForInvoice(invoice));
+    if (invoiceTenantId && invoiceTenantId !== tenantId) {
+      throw new BadRequestException({
+        code: "INVOICE_TENANT_MISMATCH",
+        message: "Invoice does not belong to the selected tenant",
+      });
+    }
+    const paymentIntent =
+      typeof invoice.payment_intent === "string"
+        ? invoice.payment_intent
+        : (invoice.payment_intent?.id ?? null);
+    const charge =
+      typeof invoice.charge === "string"
+        ? invoice.charge
+        : (invoice.charge?.id ?? null);
+    if (!paymentIntent && !charge) {
+      throw new BadRequestException({
+        code: "INVOICE_NOT_REFUNDABLE",
+        message: "Invoice has no associated payment to refund",
+      });
+    }
+    const refund = await stripe.refunds.create(
+      {
+        payment_intent: paymentIntent ?? undefined,
+        charge: paymentIntent ? undefined : (charge ?? undefined),
+        amount: options.amount ?? undefined,
+        reason: "requested_by_customer",
+        metadata: {
+          tenantId,
+          providerInvoiceId,
+          operatorReason: options.reason.slice(0, 480),
+        },
+      },
+      { idempotencyKey: options.idempotencyKey },
+    );
+
+    // Re-persist invoice snapshot to capture the new amount_remaining.
+    await this.persistInvoiceSnapshot(tenantId, invoice);
+    await this.recordInvoicePaymentEvent(tenantId, invoice, "refunded");
+
+    return {
+      refundId: refund.id,
+      status: refund.status ?? "unknown",
+      amount: refund.amount ?? null,
+    };
   }
 }

@@ -208,6 +208,13 @@ model User {
   supportCaseHandoffsOpened       SupportCaseHandoff[]        @relation("SupportCaseHandoffOpenedBy")
   supportCaseHandoffsClosed       SupportCaseHandoff[]        @relation("SupportCaseHandoffClosedBy")
 
+  // ── Phase 7: billing control ─────────────────────────────────────
+  billingOperatorNotesAuthored       BillingOperatorNote[]        @relation("BillingOperatorNoteAuthor")
+  billingActionRequestsInitiated     BillingActionRequest[]       @relation("BillingActionRequestActor")
+  billingActionRequestsApproved      BillingActionRequest[]       @relation("BillingActionRequestApprover")
+  billingEntitlementOverridesCreated BillingEntitlementOverride[] @relation("BillingEntitlementOverrideCreatedBy")
+  billingEntitlementOverridesRevoked BillingEntitlementOverride[] @relation("BillingEntitlementOverrideRevokedBy")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -266,6 +273,13 @@ model Tenant {
   workspaceInvitations WorkspaceInvitation[]
   siteDeletionJobs     SiteDeletionJob[]
   supportCases         SupportCase[]
+
+  // ── Phase 7: billing control ──────────────────────────────────────
+  billingInvoiceSnapshots     BillingInvoiceSnapshot[]
+  billingPaymentEvents        BillingPaymentEvent[]
+  billingOperatorNotes        BillingOperatorNote[]
+  billingActionRequests       BillingActionRequest[]
+  billingEntitlementOverrides BillingEntitlementOverride[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -628,6 +642,9 @@ model Subscription {
 
   tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   webhookEvents BillingWebhookEvent[]
+
+  invoiceSnapshots BillingInvoiceSnapshot[]
+  paymentEvents    BillingPaymentEvent[]
 
   @@index([tenantId])
   @@index([status])
@@ -2604,4 +2621,194 @@ model SupportCaseHandoff {
   @@index([caseId, createdAt])
   @@index([target, status])
   @@map("support_case_handoffs")
+}
+
+// --- Phase 7: Billing Control --------------------------------------------
+//
+// Billing operations cockpit described in
+// `operator-console-docs/04-billing-control-system.md`. The Stripe webhook
+// snapshot (`BillingWebhookEvent`) and `Subscription` remain the only
+// columns the BillingService mutates in the customer-facing flow. The
+// models below are owned exclusively by the operator console:
+//
+//  - `BillingInvoiceSnapshot` / `BillingPaymentEvent` capture provider
+//    activity so operators can audit invoice/payment history without
+//    re-fetching Stripe on every page load.
+//  - `BillingOperatorNote` is an internal-only timeline visible to
+//    FINANCE_ADMIN / PLATFORM_OWNER. Customers never see it.
+//  - `BillingActionRequest` captures every sensitive billing mutation with
+//    before/after snapshots, reason, optional approver, and execution
+//    result. Combined with `OperatorAuditLog`, it answers "who changed
+//    what, why, and what was the state before/after".
+//  - `BillingEntitlementOverride` lets PLATFORM_OWNER lift a single plan
+//    limit for a tenant without mutating the plan catalog. Overrides are
+//    bounded (optional `expiresAt`) and auditable.
+
+enum BillingActionType {
+  CHANGE_PLAN
+  CANCEL_PENDING_PLAN_CHANGE
+  CANCEL_AT_PERIOD_END
+  REACTIVATE_SUBSCRIPTION
+  EXTEND_GRACE_PERIOD
+  REFUND_INVOICE
+  ISSUE_CREDIT
+  ENTITLEMENT_OVERRIDE_CREATE
+  ENTITLEMENT_OVERRIDE_REVOKE
+  STRIPE_WEBHOOK_REPLAY
+  STRIPE_SYNC
+}
+
+enum BillingActionStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  EXECUTED
+  FAILED
+  CANCELED
+}
+
+model BillingInvoiceSnapshot {
+  id                 String    @id @default(cuid())
+  tenantId           String    @map("tenant_id")
+  subscriptionId     String?   @map("subscription_id")
+  provider           String
+  providerInvoiceId  String    @unique @map("provider_invoice_id")
+  providerCustomerId String?   @map("provider_customer_id")
+  status             String
+  amountDue          Int       @map("amount_due")
+  amountPaid         Int       @map("amount_paid")
+  amountRemaining    Int       @default(0) @map("amount_remaining")
+  currency           String
+  hostedInvoiceUrl   String?   @map("hosted_invoice_url")
+  invoicePdfUrl      String?   @map("invoice_pdf_url")
+  periodStart        DateTime? @map("period_start")
+  periodEnd          DateTime? @map("period_end")
+  providerCreatedAt  DateTime? @map("provider_created_at")
+  syncedAt           DateTime  @default(now()) @map("synced_at")
+  raw                Json?
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription  Subscription?         @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  paymentEvents BillingPaymentEvent[]
+
+  @@index([tenantId, providerCreatedAt])
+  @@index([status, providerCreatedAt])
+  @@index([subscriptionId, providerCreatedAt])
+  @@map("billing_invoice_snapshots")
+}
+
+model BillingPaymentEvent {
+  id                String   @id @default(cuid())
+  tenantId          String   @map("tenant_id")
+  subscriptionId    String?  @map("subscription_id")
+  invoiceSnapshotId String?  @map("invoice_snapshot_id")
+  provider          String
+  providerEventId   String   @unique @map("provider_event_id")
+  eventType         String   @map("event_type")
+  amount            Int?
+  currency          String?
+  status            String
+  occurredAt        DateTime @map("occurred_at")
+  metadata          Json?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription Subscription?           @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  invoice      BillingInvoiceSnapshot? @relation(fields: [invoiceSnapshotId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, occurredAt])
+  @@index([eventType, occurredAt])
+  @@map("billing_payment_events")
+}
+
+model BillingOperatorNote {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  authorUserId String   @map("author_user_id")
+  body         String
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author User   @relation("BillingOperatorNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, pinned, createdAt])
+  @@map("billing_operator_notes")
+}
+
+model BillingActionRequest {
+  id                String              @id @default(cuid())
+  tenantId          String              @map("tenant_id")
+  /// Operator user that initiated the action.
+  actorUserId       String              @map("actor_user_id")
+  type              BillingActionType
+  status            BillingActionStatus @default(EXECUTED)
+  /// True if the action requires a separate approver before execution.
+  /// High-risk actions (refunds, entitlement overrides, credits) are
+  /// recorded with `PENDING_APPROVAL` until a Platform Owner approves.
+  requiresApproval  Boolean             @default(false) @map("requires_approval")
+  reason            String
+  /// Stripe / external object ids touched by this action (subscription id,
+  /// invoice id, refund id, etc.). Indexed for cross-referencing.
+  providerObjectIds Json?               @map("provider_object_ids")
+  /// Idempotency key for downstream Stripe calls so retries don't double
+  /// charge / double refund.
+  idempotencyKey    String?             @unique @map("idempotency_key")
+  beforeSnapshot    Json?               @map("before_snapshot")
+  afterSnapshot     Json?               @map("after_snapshot")
+  approverUserId    String?             @map("approver_user_id")
+  approverReason    String?             @map("approver_reason")
+  approvedAt        DateTime?           @map("approved_at")
+  executedAt        DateTime?           @map("executed_at")
+  failureCode       String?             @map("failure_code")
+  failureMessage    String?             @map("failure_message")
+  /// Free-form payload supplied at request time (e.g. target plan key,
+  /// refund amount). Validated server-side.
+  payload           Json?
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor    User   @relation("BillingActionRequestActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  approver User?  @relation("BillingActionRequestApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@map("billing_action_requests")
+}
+
+model BillingEntitlementOverride {
+  id              String    @id @default(cuid())
+  tenantId        String    @map("tenant_id")
+  /// Limit key from `BillingPlanLimits` (e.g. `sites`, `seats`,
+  /// `pages`, `translationCharactersPerMonth`). Stored as a free-form
+  /// string so the catalog can evolve without a schema migration.
+  limitKey        String    @map("limit_key")
+  /// Integer override value applied on top of the plan baseline.
+  /// `null` means "no numeric override" (used when overriding boolean
+  /// flags like `rollbackEnabled` instead).
+  intValue        Int?      @map("int_value")
+  /// JSON payload for non-integer overrides (booleans, allowed-language
+  /// lists, etc.). Mutually exclusive with `intValue`.
+  jsonValue       Json?     @map("json_value")
+  reason          String
+  expiresAt       DateTime? @map("expires_at")
+  createdByUserId String    @map("created_by_user_id")
+  revokedAt       DateTime? @map("revoked_at")
+  revokedByUserId String?   @map("revoked_by_user_id")
+  revokeReason    String?   @map("revoke_reason")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User   @relation("BillingEntitlementOverrideCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  revokedBy User?  @relation("BillingEntitlementOverrideRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, revokedAt, expiresAt])
+  @@index([limitKey])
+  @@map("billing_entitlement_overrides")
 }
