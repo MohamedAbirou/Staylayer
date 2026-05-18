@@ -209,12 +209,11 @@ export class AuthService {
 
     const memberships = this.buildMembershipSummaries(user);
 
-    if (!user.platformRole && memberships.length === 0) {
-      throw new ForbiddenException({
-        code: "NO_WORKSPACE_ACCESS",
-        message: "This account has no platform role or tenant memberships",
-      });
-    }
+    // NOTE: We intentionally allow customer users with zero memberships to
+    // sign in. They land in a "no-workspace" limbo state on the dashboard
+    // where they can create a new workspace, accept a pending invite, or
+    // permanently delete their account. Locking them out here would orphan
+    // any user who deletes their last workspace.
 
     const activeMembership = this.resolveActiveMembership(memberships, context);
     const activeTenant = activeMembership

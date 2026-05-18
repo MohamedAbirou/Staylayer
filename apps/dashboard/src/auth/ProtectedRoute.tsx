@@ -10,6 +10,22 @@ import {
 import { ADMIN_LOGIN_PATH } from "../lib/constants";
 import type { MembershipRole, PlatformRole } from "./types";
 
+/**
+ * Paths a no-workspace user is allowed to visit. Anything else funnels them
+ * back to /no-workspace.
+ */
+const LIMBO_ALLOWLIST: readonly string[] = [
+  "/no-workspace",
+  "/profile",
+  "/auth/handoff",
+];
+
+function isLimboAllowed(pathname: string): boolean {
+  return LIMBO_ALLOWLIST.some(
+    (allowed) => pathname === allowed || pathname.startsWith(`${allowed}/`),
+  );
+}
+
 interface ProtectedRouteProps {
   children?: React.ReactNode;
   platformRoles?: readonly PlatformRole[];
@@ -46,6 +62,21 @@ export function ProtectedRoute({
         : "";
 
     return <Navigate to={`/login${search}`} replace />;
+  }
+
+  // ─── Limbo state ────────────────────────────────────────────────────
+  // Authenticated user with zero workspace memberships AND no platform role.
+  // They've just deleted their last workspace, were removed from all
+  // memberships, or never joined one. Funnel them through /no-workspace so
+  // they can create, accept an invite, or delete their account.
+  const isLimbo = session.memberships.length === 0 && !hasPlatformRole(session);
+  if (isLimbo && !isLimboAllowed(location.pathname)) {
+    return <Navigate to="/no-workspace" replace />;
+  }
+  // Inverse: if user lands on /no-workspace but is no longer in limbo
+  // (e.g. accepted an invite in another tab), bounce home.
+  if (!isLimbo && location.pathname === "/no-workspace") {
+    return <Navigate to={getDefaultAuthenticatedPath(session)} replace />;
   }
 
   const platformAllowed = platformRoles

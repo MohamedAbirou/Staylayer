@@ -4,6 +4,7 @@ import { AuthModule } from "../auth/auth.module";
 import { BillingModule } from "../billing/billing.module";
 import { PublicRuntimeModule } from "../public-runtime/public-runtime.module";
 import { SiteDeletionModule } from "../site-deletion/site-deletion.module";
+import { TenantDeletionModule } from "../tenant-deletion/tenant-deletion.module";
 import { UsersModule } from "../users/users.module";
 import { TenantMembersController } from "./tenant-members.controller";
 import { TenantSitesController } from "./tenant-sites.controller";
@@ -16,6 +17,7 @@ import { TenantWorkspaceService } from "./tenant-workspace.service";
     BillingModule,
     PublicRuntimeModule,
     SiteDeletionModule,
+    TenantDeletionModule,
     UsersModule,
   ],
   controllers: [TenantSitesController, TenantMembersController],

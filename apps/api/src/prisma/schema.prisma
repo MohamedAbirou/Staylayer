@@ -80,6 +80,13 @@ enum SiteDeletionJobStatus {
   FAILED
 }
 
+enum TenantDeletionJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 enum DomainStatus {
   PENDING
   DNS_REQUIRED
@@ -405,6 +412,42 @@ model SiteDeletionJob {
   @@index([tenantId, createdAt])
   @@index([status, createdAt])
   @@map("site_deletion_jobs")
+}
+
+// ─── Tenant Deletion Job ───────────────────────────────────
+//
+// Tracks permanent workspace (tenant) deletion. Rows MUST survive the tenant
+// cascade so the dashboard can poll the job after the underlying Tenant is
+// destroyed — that is why tenantId is stored as a raw String with NO foreign
+// key relation. The job row carries snapshots of the tenant name/slug so the
+// completion screen can show what was deleted.
+
+model TenantDeletionJob {
+  id                String                  @id @default(cuid())
+  tenantId          String                  @map("tenant_id")
+  tenantName        String                  @map("tenant_name")
+  tenantSlug        String                  @map("tenant_slug")
+  status            TenantDeletionJobStatus @default(QUEUED)
+  progress          Int                     @default(0)
+  totalSteps        Int                     @default(0) @map("total_steps")
+  currentStep       String?                 @map("current_step")
+  requestedByUserId String?                 @map("requested_by_user_id")
+  acknowledgements  Json?
+  impactSnapshot    Json?                   @map("impact_snapshot")
+  resultSummary     Json?                   @map("result_summary")
+  errorCode         String?                 @map("error_code")
+  errorMessage      String?                 @map("error_message")
+  startedAt         DateTime?               @map("started_at")
+  completedAt       DateTime?               @map("completed_at")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@index([requestedByUserId])
+  @@map("tenant_deletion_jobs")
 }
 
 // ─── Page ──────────────────────────────────────────────────

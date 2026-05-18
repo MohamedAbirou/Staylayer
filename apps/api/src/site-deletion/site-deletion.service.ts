@@ -12,6 +12,7 @@ import {
   Prisma,
   SiteDeletionJobStatus,
   SiteStatus,
+  TenantDeletionJobStatus,
   TenantMembershipRole,
 } from "@prisma/client";
 
@@ -411,6 +412,26 @@ export class SiteDeletionService {
         code: "DELETION_ALREADY_IN_PROGRESS",
         message:
           "A permanent deletion job for this site is already queued or running.",
+      });
+    }
+
+    // Cross-block: if a tenant-level permanent deletion is in flight, refuse
+    // to queue per-site deletion — the tenant runner will erase the site for
+    // us in a single cascade and we should not race it.
+    const tenantJobInFlight = await this.prisma.tenantDeletionJob.findFirst({
+      where: {
+        tenantId,
+        status: {
+          in: [TenantDeletionJobStatus.QUEUED, TenantDeletionJobStatus.RUNNING],
+        },
+      },
+      select: { id: true },
+    });
+    if (tenantJobInFlight) {
+      throw new ConflictException({
+        code: "TENANT_DELETION_IN_PROGRESS",
+        message:
+          "This workspace is currently being permanently deleted. Site deletions cannot be queued.",
       });
     }
 

@@ -58,7 +58,7 @@ import {
   type WorkspaceSiteType,
 } from "../api/workspace";
 import { ArchivedSitesPanel } from "./workspace/ArchivedSitesPanel";
-
+import { WorkspaceDangerZone } from "./workspace/WorkspaceDangerZone";
 const SITE_TYPE_OPTIONS: Array<{
   value: WorkspaceSiteType;
   label: string;
@@ -1176,9 +1176,9 @@ export default function WorkspaceStudioPage() {
                               Delete {site.name}?
                             </p>
                             <p className="mt-1 text-xs leading-5 text-rose-800">
-                              The site leaves the workspace atlas, its default
-                              subdomain is released, and connected domains are
-                              detached.
+                              The site will be removed from this workspace, its
+                              default subdomain will be released, and connected
+                              domains will be detached.
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                               <button
@@ -1455,6 +1455,13 @@ export default function WorkspaceStudioPage() {
 
       {tenantId && canUseDangerActions ? (
         <ArchivedSitesPanel
+          tenantId={tenantId}
+          canManageDangerActions={canUseDangerActions}
+        />
+      ) : null}
+
+      {tenantId && canUseDangerActions ? (
+        <WorkspaceDangerZone
           tenantId={tenantId}
           canManageDangerActions={canUseDangerActions}
         />

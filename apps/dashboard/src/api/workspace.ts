@@ -266,6 +266,148 @@ export async function listSiteDeletionJobs(
   return data;
 }
 
+// ─── Tenant (workspace) permanent deletion ─────────────────
+
+export type TenantDeletionRiskFlag =
+  | "HAS_OTHER_MEMBERS"
+  | "HAS_ACTIVE_SITES"
+  | "HAS_ARCHIVED_SITES"
+  | "HAS_ACTIVE_SUBSCRIPTION"
+  | "HAS_PROVIDER_RESOURCES"
+  | "HAS_CONNECTED_DOMAINS"
+  | "HAS_FORM_SUBMISSIONS"
+  | "HAS_ACTIVE_INTEGRATIONS";
+
+export interface TenantDeletionProviderResource {
+  siteId: string;
+  siteName: string;
+  deploymentId: string;
+  provider: string | null;
+  providerProjectId: string | null;
+  providerDeployId: string | null;
+}
+
+export interface TenantDeletionSubscriptionSummary {
+  id: string;
+  provider: string;
+  planKey: string;
+  status: string;
+  providerCustomerId: string | null;
+  providerSubscriptionId: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface TenantDeletionImpact {
+  tenantId: string;
+  name: string;
+  slug: string;
+  counts: {
+    members: number;
+    owners: number;
+    pendingInvitations: number;
+    activeSites: number;
+    archivedSites: number;
+    totalSites: number;
+    pages: number;
+    deployments: number;
+    connectedDomains: number;
+    formSubmissions: number;
+    formDeliveries: number;
+    auditLogs: number;
+    siteDeletionJobs: number;
+    translationJobs: number;
+    notifications: number;
+  };
+  integrations: {
+    searchConsoleConnections: number;
+    bingConnections: number;
+    scheduledAuditsEnabled: number;
+  };
+  providerResources: TenantDeletionProviderResource[];
+  activeSubscriptions: TenantDeletionSubscriptionSummary[];
+  riskFlags: TenantDeletionRiskFlag[];
+  blockingReasons: string[];
+  /**
+   * Whether the requesting user still belongs to other workspaces.
+   * `false` enables the “also delete my account” cascade option.
+   * `undefined` means the API didn’t compute it (legacy call path).
+   */
+  actorHasOtherMemberships?: boolean;
+}
+
+export interface PermanentDeleteTenantPayload {
+  confirmTenantSlug: string;
+  acknowledgeOtherMembers?: boolean;
+  acknowledgeActiveSites?: boolean;
+  acknowledgeArchivedSites?: boolean;
+  acknowledgeActiveSubscription?: boolean;
+  acknowledgeProviderResources?: boolean;
+  acknowledgeConnectedDomains?: boolean;
+  acknowledgeFormSubmissions?: boolean;
+  acknowledgeIntegrations?: boolean;
+  /**
+   * Optional cascade: also permanently delete the requesting user account.
+   * Requires `accountDeletionPassword`. Allowed only when the user has no
+   * other workspace memberships.
+   */
+  alsoDeleteMyAccount?: boolean;
+  accountDeletionPassword?: string;
+}
+
+export type TenantDeletionJobStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface TenantDeletionJobRecord {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  status: TenantDeletionJobStatus;
+  progress: number;
+  totalSteps: number;
+  currentStep: string | null;
+  requestedByUserId: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getTenantDeletionImpact(
+  tenantId: string,
+): Promise<TenantDeletionImpact> {
+  const { data } = await client.get<TenantDeletionImpact>(
+    `/tenants/${tenantId}/deletion-impact`,
+  );
+  return data;
+}
+
+export async function permanentlyDeleteWorkspace(
+  tenantId: string,
+  payload: PermanentDeleteTenantPayload,
+): Promise<TenantDeletionJobRecord> {
+  const { data } = await client.post<TenantDeletionJobRecord>(
+    `/tenants/${tenantId}/permanent-delete`,
+    payload,
+  );
+  return data;
+}
+
+export async function getTenantDeletionJob(
+  jobId: string,
+): Promise<TenantDeletionJobRecord> {
+  const { data } = await client.get<TenantDeletionJobRecord>(
+    `/tenant-deletion-jobs/${jobId}`,
+  );
+  return data;
+}
+
 export async function getWorkspaceMembers(
   tenantId: string,
 ): Promise<WorkspaceMemberRecord[]> {

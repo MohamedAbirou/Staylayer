@@ -31,6 +31,7 @@ import SearchConsoleCallbackPage from "./pages/SearchConsoleCallbackPage";
 import BillingPage from "./pages/BillingPage";
 import WorkspaceStudioPage from "./pages/WorkspaceStudioPage";
 import ProfilePage from "./pages/ProfilePage";
+import NoWorkspacePage from "./pages/NoWorkspacePage";
 import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
 import AdminTenantsPage from "./pages/admin/AdminTenantsPage";
 import AdminDeploymentsPage from "./pages/admin/AdminDeploymentsPage";
@@ -102,6 +103,10 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      {
+        path: "/no-workspace",
+        element: <NoWorkspacePage />,
+      },
       {
         element: <Layout />,
         children: [

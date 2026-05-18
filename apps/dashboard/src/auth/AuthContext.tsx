@@ -9,6 +9,7 @@ export interface AuthState {
   login: (email: string, password: string) => Promise<AuthSession>;
   logout: () => Promise<void>;
   switchWorkspace: (context: AuthContextRequest) => Promise<AuthSession>;
+  refresh: () => Promise<AuthSession>;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);

@@ -199,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         switchWorkspace,
+        refresh: refreshCurrentSession,
       }}
     >
       {children}
