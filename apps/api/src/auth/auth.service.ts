@@ -303,14 +303,16 @@ export class AuthService {
       (membership) => membership.isDefault,
     );
 
-    if (defaultMemberships.length === 1) {
+    if (defaultMemberships.length >= 1) {
       return defaultMemberships[0];
     }
 
-    throw new ForbiddenException({
-      code: "TENANT_CONTEXT_REQUIRED",
-      message: "Select a tenant workspace to continue",
-    });
+    // If the previous/default workspace was suspended, it is filtered out of
+    // `memberships` above. Do not block login just because the remaining
+    // active memberships have no default marker; pick the oldest active
+    // membership deterministically and let the dashboard switcher handle any
+    // manual changes.
+    return memberships[0];
   }
 
   private resolveActiveSite(

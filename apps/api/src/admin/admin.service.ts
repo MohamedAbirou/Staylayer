@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import {
   DeploymentStatus,
   DomainStatus,
   FormDeliveryStatus,
+  NotificationCategory,
   OperationalAlertSeverity,
   OperationalAlertStatus,
   OperationalAlertType,
@@ -18,6 +19,8 @@ import {
   isBillingPlanKey,
 } from "../billing/billing-plans";
 import { BillingPublicStatus } from "../billing/billing.types";
+import { TransactionalEmailService } from "../mail/transactional-email.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 type AuditMetadata = Record<string, unknown> | null | undefined;
 
@@ -34,7 +37,13 @@ type AdminCommercialSnapshot = {
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(AdminService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    private readonly transactionalEmailService: TransactionalEmailService,
+  ) {}
 
   async getOverview(): Promise<{
     generatedAt: string;
@@ -708,7 +717,9 @@ export class AdminService {
       });
     }
 
-    if (tenant.status !== params.nextStatus) {
+    const statusChanged = tenant.status !== params.nextStatus;
+
+    if (statusChanged) {
       await this.prisma.tenant.update({
         where: { id: tenant.id },
         data: { status: params.nextStatus },
@@ -730,6 +741,144 @@ export class AdminService {
         nextStatus: params.nextStatus,
       },
     });
+
+    if (statusChanged && params.nextStatus === TenantStatus.SUSPENDED) {
+      await this.notifyTenantSuspended({
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+      });
+    }
+  }
+
+  private async notifyTenantSuspended(params: {
+    tenantId: string;
+    tenantName: string;
+  }): Promise<void> {
+    const memberships = await this.prisma.tenantMembership.findMany({
+      where: { tenantId: params.tenantId },
+      select: {
+        userId: true,
+        role: true,
+        user: { select: { email: true } },
+      },
+    });
+
+    const userIds = memberships.map((membership) => membership.userId);
+    const title = `Workspace suspended: ${params.tenantName}`;
+    const body =
+      `Access to ${params.tenantName} has been suspended by StayLayer operations. ` +
+      "Other active workspaces on your account remain available. If you need details or believe this is a mistake, contact support.";
+
+    await this.notificationsService
+      .createForUsers({
+        tenantId: params.tenantId,
+        userIds,
+        category: NotificationCategory.SYSTEM,
+        title,
+        body,
+        actionUrl: "/profile",
+        metadata: {
+          tenantId: params.tenantId,
+          tenantName: params.tenantName,
+          status: TenantStatus.SUSPENDED,
+          reason: "operator_suspension",
+        },
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Failed to create suspension notifications for tenant ${params.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+
+    if (!this.transactionalEmailService.isConfigured()) {
+      return;
+    }
+
+    const supportEmail = this.resolveSupportEmail();
+    const uniqueRecipients = Array.from(
+      new Set(
+        memberships
+          .map((membership) => membership.user.email.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    );
+
+    await Promise.allSettled(
+      uniqueRecipients.map((email) =>
+        this.transactionalEmailService.send({
+          to: email,
+          replyTo: supportEmail ?? undefined,
+          subject: title,
+          text: this.buildTenantSuspensionEmailText({
+            tenantName: params.tenantName,
+            supportEmail,
+          }),
+          html: this.buildTenantSuspensionEmailHtml({
+            tenantName: params.tenantName,
+            supportEmail,
+          }),
+        }),
+      ),
+    ).then((results) => {
+      const failed = results.filter((result) => result.status === "rejected");
+      if (failed.length > 0) {
+        this.logger.warn(
+          `Failed to send ${failed.length}/${uniqueRecipients.length} suspension emails for tenant ${params.tenantId}`,
+        );
+      }
+    });
+  }
+
+  private resolveSupportEmail(): string | null {
+    return process.env.MARKETING_CONTACT_EMAIL?.trim() || null;
+  }
+
+  private buildTenantSuspensionEmailText(input: {
+    tenantName: string;
+    supportEmail: string | null;
+  }): string {
+    const contactLine = input.supportEmail
+      ? `Contact ${input.supportEmail} if you need more information or believe this suspension is a mistake.`
+      : "Contact StayLayer support if you need more information or believe this suspension is a mistake.";
+
+    return [
+      `Access to ${input.tenantName} has been suspended by StayLayer operations.`,
+      "",
+      "This only affects the suspended workspace. Other active workspaces on your account remain available and you can continue to sign in normally.",
+      "",
+      contactLine,
+      "",
+      "StayLayer Operations",
+    ].join("\n");
+  }
+
+  private buildTenantSuspensionEmailHtml(input: {
+    tenantName: string;
+    supportEmail: string | null;
+  }): string {
+    const escapedTenantName = this.escapeHtml(input.tenantName);
+    const contactLine = input.supportEmail
+      ? `Contact <a href="mailto:${this.escapeHtml(input.supportEmail)}">${this.escapeHtml(input.supportEmail)}</a> if you need more information or believe this suspension is a mistake.`
+      : "Contact StayLayer support if you need more information or believe this suspension is a mistake.";
+
+    return `
+      <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#0f172a">
+        <h1 style="font-size:20px;margin:0 0 12px">Workspace suspended</h1>
+        <p>Access to <strong>${escapedTenantName}</strong> has been suspended by StayLayer operations.</p>
+        <p>This only affects the suspended workspace. Other active workspaces on your account remain available and you can continue to sign in normally.</p>
+        <p>${contactLine}</p>
+        <p style="color:#64748b;font-size:13px;margin-top:24px">StayLayer Operations</p>
+      </div>
+    `;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   async listAuditLog(params: { page?: number; limit?: number }): Promise<{
