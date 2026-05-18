@@ -98,6 +98,20 @@ export const OPERATOR_PERMISSIONS = {
   AUDIT_READ_SUPPORT: "audit.read.support",
   AUDIT_READ_BILLING: "audit.read.billing",
 
+  // ── Analytics & observability (Phase 10) ─────────────────────────────
+  // Analytics is split by domain so each role bundle only sees the slices
+  // it owns operationally. `analytics.read.all` is a superset (Platform
+  // Owner) — narrower scopes are granted to Support/Finance individually.
+  ANALYTICS_READ_ALL: "analytics.read.all",
+  ANALYTICS_READ_BUSINESS: "analytics.read.business",
+  ANALYTICS_READ_SUPPORT: "analytics.read.support",
+  ANALYTICS_READ_OPERATIONS: "analytics.read.operations",
+  // Observability surfaces system reliability (DB, webhook, provider
+  // health). Restricted to PLATFORM_OWNER — never expose to billing-only
+  // or support-only operators (it includes deployment provider state +
+  // raw webhook health that can leak provider failure modes).
+  OBSERVABILITY_READ_ALL: "observability.read.all",
+
   // ── Operator user & permission management ────────────────────────────
   OPERATOR_USER_READ_ALL: "operator_user.read.all",
   OPERATOR_USER_MANAGE_ALL: "operator_user.manage.all",
@@ -161,6 +175,8 @@ const SUPPORT_ADMIN_PERMISSIONS: ReadonlyArray<OperatorPermissionKey> = [
   P.TRANSLATION_GLOSSARY_READ_ALL,
   P.NOTIFICATION_READ_ALL,
   P.AUDIT_READ_SUPPORT,
+  P.ANALYTICS_READ_SUPPORT,
+  P.ANALYTICS_READ_OPERATIONS,
 ];
 
 const FINANCE_ADMIN_PERMISSIONS: ReadonlyArray<OperatorPermissionKey> = [
@@ -195,6 +211,7 @@ const FINANCE_ADMIN_PERMISSIONS: ReadonlyArray<OperatorPermissionKey> = [
   P.TRANSLATION_GLOSSARY_READ_ALL,
   P.NOTIFICATION_READ_ALL,
   P.AUDIT_READ_BILLING,
+  P.ANALYTICS_READ_BUSINESS,
 ];
 
 const ROLE_PERMISSIONS: Readonly<

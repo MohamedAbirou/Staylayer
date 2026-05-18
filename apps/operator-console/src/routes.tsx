@@ -26,6 +26,12 @@ import OperationsAlertsPage from "./pages/OperationsAlertsPage";
 import OperationsSeoPage from "./pages/OperationsSeoPage";
 import OperationsTranslationsPage from "./pages/OperationsTranslationsPage";
 import OperationsNotificationsPage from "./pages/OperationsNotificationsPage";
+import AnalyticsLandingPage from "./pages/AnalyticsLandingPage";
+import AnalyticsBusinessPage from "./pages/AnalyticsBusinessPage";
+import AnalyticsSupportPage from "./pages/AnalyticsSupportPage";
+import AnalyticsOperationsPage from "./pages/AnalyticsOperationsPage";
+import TenantHealthPage from "./pages/TenantHealthPage";
+import ObservabilityPage from "./pages/ObservabilityPage";
 import ForbiddenPage from "./pages/ForbiddenPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -380,6 +386,123 @@ export const router = createBrowserRouter([
                 element: (
                   <ErrorBoundary>
                     <OperationsNotificationsPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_ALL,
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_BUSINESS,
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_SUPPORT,
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_OPERATIONS,
+                  OPERATOR_PERMISSIONS.OBSERVABILITY_READ_ALL,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/analytics",
+                element: (
+                  <ErrorBoundary>
+                    <AnalyticsLandingPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_ALL,
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_BUSINESS,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/analytics/business",
+                element: (
+                  <ErrorBoundary>
+                    <AnalyticsBusinessPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_ALL,
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_SUPPORT,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/analytics/support",
+                element: (
+                  <ErrorBoundary>
+                    <AnalyticsSupportPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_ALL,
+                  OPERATOR_PERMISSIONS.ANALYTICS_READ_OPERATIONS,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/analytics/operations",
+                element: (
+                  <ErrorBoundary>
+                    <AnalyticsOperationsPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[OPERATOR_PERMISSIONS.ANALYTICS_READ_ALL]}
+              />
+            ),
+            children: [
+              {
+                path: "/analytics/tenant-health",
+                element: (
+                  <ErrorBoundary>
+                    <TenantHealthPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[OPERATOR_PERMISSIONS.OBSERVABILITY_READ_ALL]}
+              />
+            ),
+            children: [
+              {
+                path: "/observability",
+                element: (
+                  <ErrorBoundary>
+                    <ObservabilityPage />
                   </ErrorBoundary>
                 ),
               },

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   ActivitySquare,
+  BarChart3,
   Building2,
   CreditCard,
+  HeartPulse,
   LifeBuoy,
   Rocket,
   ScrollText,
@@ -84,6 +86,23 @@ const PRIMARY_NAV: NavItem[] = [
       OPERATOR_PERMISSIONS.TRANSLATION_JOB_READ_ALL,
       OPERATOR_PERMISSIONS.NOTIFICATION_READ_ALL,
     ],
+  },
+  {
+    to: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    anyOf: [
+      OPERATOR_PERMISSIONS.ANALYTICS_READ_ALL,
+      OPERATOR_PERMISSIONS.ANALYTICS_READ_BUSINESS,
+      OPERATOR_PERMISSIONS.ANALYTICS_READ_SUPPORT,
+      OPERATOR_PERMISSIONS.ANALYTICS_READ_OPERATIONS,
+    ],
+  },
+  {
+    to: "/observability",
+    label: "Observability",
+    icon: HeartPulse,
+    anyOf: [OPERATOR_PERMISSIONS.OBSERVABILITY_READ_ALL],
   },
   {
     to: "/audit",

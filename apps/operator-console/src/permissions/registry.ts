@@ -87,6 +87,13 @@ export const OPERATOR_PERMISSIONS = {
   AUDIT_READ_SUPPORT: "audit.read.support",
   AUDIT_READ_BILLING: "audit.read.billing",
 
+  // Analytics & observability (Phase 10)
+  ANALYTICS_READ_ALL: "analytics.read.all",
+  ANALYTICS_READ_BUSINESS: "analytics.read.business",
+  ANALYTICS_READ_SUPPORT: "analytics.read.support",
+  ANALYTICS_READ_OPERATIONS: "analytics.read.operations",
+  OBSERVABILITY_READ_ALL: "observability.read.all",
+
   // Operator user management (Phase 12)
   OPERATOR_USER_READ_ALL: "operator_user.read.all",
   OPERATOR_USER_MANAGE_ALL: "operator_user.manage.all",

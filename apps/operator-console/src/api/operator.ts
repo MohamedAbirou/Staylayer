@@ -1953,3 +1953,309 @@ export async function listOperatorNotifications(params: {
   >("/operator/operations/notifications", { params });
   return res.data;
 }
+
+// --- Phase 10: Analytics & observability ------------------------------
+
+export type AnalyticsRangeDays = 7 | 30 | 90;
+
+export interface AnalyticsRangeMeta {
+  days: number;
+  start: string;
+  end: string;
+}
+
+export interface AnalyticsTimeSeriesPoint {
+  date: string;
+  count: number;
+}
+
+export interface BusinessAnalyticsResponse {
+  generatedAt: string;
+  range: AnalyticsRangeMeta;
+  tenants: {
+    total: number;
+    active: number;
+    suspended: number;
+    archived: number;
+    newInRange: number;
+    newSeries: AnalyticsTimeSeriesPoint[];
+  };
+  planMix: Array<{
+    planKey: string;
+    planName: string;
+    tenantCount: number;
+    activeCount: number;
+    trialCount: number;
+    attentionCount: number;
+  }>;
+  trialFunnel: {
+    currentlyTrialing: number;
+    convertedInRange: number;
+    expiredInRange: number;
+    canceledInRange: number;
+    conversionRate: number | null;
+  };
+  churnSeries: Array<{
+    date: string;
+    canceled: number;
+    downgrades: number;
+    expansions: number;
+  }>;
+  paymentFailures: {
+    totalFailedInRange: number;
+    series: AnalyticsTimeSeriesPoint[];
+  };
+  revenue: {
+    currency: string | null;
+    paidLast30Days: number;
+    paidPreviousRange: number;
+    outstanding: number;
+    atRisk: number;
+    lastInvoiceSyncedAt: string | null;
+    series: Array<{ date: string; amount: number }>;
+  };
+  supportVolumeByPlan: Array<{
+    planKey: string;
+    planName: string;
+    caseCount: number;
+    openCases: number;
+  }>;
+}
+
+export type SupportCasePriorityKey = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+export type SupportCaseCategoryKey =
+  | "BILLING"
+  | "DEPLOYMENT"
+  | "DOMAIN"
+  | "FORMS"
+  | "SEO"
+  | "TRANSLATION"
+  | "ACCESS"
+  | "CONTENT"
+  | "ACCOUNT"
+  | "OTHER";
+
+export interface SupportAnalyticsResponse {
+  generatedAt: string;
+  range: AnalyticsRangeMeta;
+  openByPriority: Array<{ priority: SupportCasePriorityKey; count: number }>;
+  byCategory: Array<{ category: SupportCaseCategoryKey; count: number }>;
+  firstResponse: {
+    averageMinutes: number | null;
+    p50Minutes: number | null;
+    p95Minutes: number | null;
+    sample: number;
+  };
+  resolution: {
+    averageMinutes: number | null;
+    p50Minutes: number | null;
+    p95Minutes: number | null;
+    sample: number;
+  };
+  slaBreaches: {
+    firstResponse: number;
+    resolution: number;
+    totalCreatedInRange: number;
+    breachRate: number | null;
+  };
+  reopen: {
+    reopenedInRange: number;
+    resolvedInRange: number;
+    reopenRate: number | null;
+  };
+  createdFromAlerts: number;
+  handoffsToBilling: number;
+  operatorWorkload: Array<{
+    operatorId: string | null;
+    operatorEmail: string | null;
+    openCount: number;
+    resolvedInRange: number;
+    averageResolutionMinutes: number | null;
+  }>;
+  volumeSeries: Array<{ date: string; created: number; resolved: number }>;
+}
+
+export interface OperationsAnalyticsResponse {
+  generatedAt: string;
+  range: AnalyticsRangeMeta;
+  deployments: {
+    totalInRange: number;
+    successCount: number;
+    failureCount: number;
+    successRate: number | null;
+    durationMs: {
+      averageMs: number | null;
+      p50Ms: number | null;
+      p95Ms: number | null;
+      sample: number;
+    };
+    series: Array<{ date: string; success: number; failure: number }>;
+  };
+  domains: {
+    total: number;
+    active: number;
+    sslProvisioning: number;
+    pending: number;
+    failed: number;
+    verificationSuccessRate: number | null;
+  };
+  forms: {
+    totalSubmissionsInRange: number;
+    spamCount: number;
+    spamRatio: number | null;
+    deliverySuccessRate: number | null;
+    failedDeliveries: number;
+    submissionSeries: Array<{ date: string; received: number; spam: number }>;
+    deliverySeries: Array<{ date: string; delivered: number; failed: number }>;
+  };
+  alerts: {
+    openCritical: number;
+    openWarning: number;
+    openByType: Array<{ type: string; count: number }>;
+    newInRangeSeries: AnalyticsTimeSeriesPoint[];
+  };
+  seo: {
+    runsInRange: number;
+    successRate: number | null;
+    alertsCreatedInRange: number;
+    criticalIssuesInRange: number;
+    averageScore: number | null;
+  };
+  translations: {
+    jobsInRange: number;
+    completed: number;
+    failed: number;
+    averageCharactersPerJob: number | null;
+  };
+}
+
+export type TenantHealthBucket =
+  | "healthy"
+  | "watch"
+  | "needs_support"
+  | "critical";
+
+export interface TenantHealthRow {
+  tenantId: string;
+  tenantName: string;
+  tenantStatus: TenantStatus;
+  planKey: string;
+  planName: string;
+  subscriptionStatus: SubscriptionStatus;
+  healthScore: number;
+  bucket: TenantHealthBucket;
+  siteCount: number;
+  liveSites: number;
+  failedSites: number;
+  openAlerts: number;
+  openSupportCases: number;
+  pastDue: boolean;
+  reasons: string[];
+}
+
+export interface TenantHealthResponse {
+  generatedAt: string;
+  data: TenantHealthRow[];
+  total: number;
+  page: number;
+  limit: number;
+  distribution: {
+    healthy: number;
+    watch: number;
+    needsSupport: number;
+    critical: number;
+  };
+}
+
+export interface ObservabilityResponse {
+  generatedAt: string;
+  database: { reachable: boolean; latencyMs: number | null };
+  billingWebhooks: {
+    provider: string;
+    processedLast24h: number;
+    pendingLast24h: number;
+    failedLast24h: number;
+    lastProcessedAt: string | null;
+    lastFailureAt: string | null;
+    lastFailureType: string | null;
+  };
+  invoiceSync: {
+    lastSyncAt: string | null;
+    lastSyncStaleMinutes: number | null;
+  };
+  deploymentProvider: {
+    providers: Array<{
+      provider: string;
+      liveCount: number;
+      failedLast24h: number;
+      lastFailureAt: string | null;
+    }>;
+  };
+  formDelivery: {
+    pendingTotal: number;
+    failedLast24h: number;
+    successLast24h: number;
+  };
+  operationalAlerts: {
+    openCritical: number;
+    openWarning: number;
+    oldestOpenAt: string | null;
+  };
+  auditLog: { eventsLast24h: number; lastEventAt: string | null };
+}
+
+export async function fetchBusinessAnalytics(
+  range: AnalyticsRangeDays = 30,
+): Promise<BusinessAnalyticsResponse> {
+  const res = await client.get<BusinessAnalyticsResponse>(
+    "/operator/analytics/business",
+    { params: { range } },
+  );
+  return res.data;
+}
+
+export async function fetchSupportAnalytics(
+  range: AnalyticsRangeDays = 30,
+): Promise<SupportAnalyticsResponse> {
+  const res = await client.get<SupportAnalyticsResponse>(
+    "/operator/analytics/support",
+    { params: { range } },
+  );
+  return res.data;
+}
+
+export async function fetchOperationsAnalytics(
+  range: AnalyticsRangeDays = 30,
+): Promise<OperationsAnalyticsResponse> {
+  const res = await client.get<OperationsAnalyticsResponse>(
+    "/operator/analytics/operations",
+    { params: { range } },
+  );
+  return res.data;
+}
+
+export interface TenantHealthQueryParams {
+  page?: number;
+  limit?: number;
+  minScore?: number;
+  maxScore?: number;
+  sort?: "score" | "name";
+  direction?: "asc" | "desc";
+}
+
+export async function fetchTenantHealth(
+  params: TenantHealthQueryParams = {},
+): Promise<TenantHealthResponse> {
+  const res = await client.get<TenantHealthResponse>(
+    "/operator/analytics/tenant-health",
+    { params },
+  );
+  return res.data;
+}
+
+export async function fetchObservability(): Promise<ObservabilityResponse> {
+  const res = await client.get<ObservabilityResponse>(
+    "/operator/observability",
+  );
+  return res.data;
+}
