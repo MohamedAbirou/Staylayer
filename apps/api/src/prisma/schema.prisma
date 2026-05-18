@@ -73,6 +73,13 @@ enum DeploymentEnvironmentVariableType {
   ENCRYPTED
 }
 
+enum SiteDeletionJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 enum DomainStatus {
   PENDING
   DNS_REQUIRED
@@ -234,6 +241,7 @@ model Tenant {
   glossaries           TranslationGlossary[]
   providerGlossaries   TranslationProviderGlossary[]
   workspaceInvitations WorkspaceInvitation[]
+  siteDeletionJobs     SiteDeletionJob[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -360,6 +368,43 @@ model Site {
   @@index([status])
   @@index([tenantId, status])
   @@map("sites")
+}
+
+// ─── Site Deletion Job ─────────────────────────────────────
+//
+// Tracks permanent site deletion. Rows survive after the underlying Site is
+// gone, so siteId is stored as a raw String (no FK) plus a snapshot of the
+// site name and archived identifiers. Used by the dashboard danger-zone UI to
+// poll progress and by the cron runner to pick up QUEUED work.
+
+model SiteDeletionJob {
+  id                String                @id @default(cuid())
+  tenantId          String                @map("tenant_id")
+  siteId            String                @map("site_id")
+  siteName          String                @map("site_name")
+  archivedSlug      String?               @map("archived_slug")
+  status            SiteDeletionJobStatus @default(QUEUED)
+  progress          Int                   @default(0)
+  totalSteps        Int                   @default(0) @map("total_steps")
+  currentStep       String?               @map("current_step")
+  requestedByUserId String?               @map("requested_by_user_id")
+  acknowledgements  Json?
+  impactSnapshot    Json?                 @map("impact_snapshot")
+  resultSummary     Json?                 @map("result_summary")
+  errorCode         String?               @map("error_code")
+  errorMessage      String?               @map("error_message")
+  startedAt         DateTime?             @map("started_at")
+  completedAt       DateTime?             @map("completed_at")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@map("site_deletion_jobs")
 }
 
 // ─── Page ──────────────────────────────────────────────────

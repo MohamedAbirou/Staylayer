@@ -57,6 +57,7 @@ import {
   type WorkspaceSiteStatus,
   type WorkspaceSiteType,
 } from "../api/workspace";
+import { ArchivedSitesPanel } from "./workspace/ArchivedSitesPanel";
 
 const SITE_TYPE_OPTIONS: Array<{
   value: WorkspaceSiteType;
@@ -1451,6 +1452,13 @@ export default function WorkspaceStudioPage() {
           </div>
         </div>
       </section>
+
+      {tenantId && canUseDangerActions ? (
+        <ArchivedSitesPanel
+          tenantId={tenantId}
+          canManageDangerActions={canUseDangerActions}
+        />
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">

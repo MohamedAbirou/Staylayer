@@ -18,7 +18,9 @@ import { MembershipRoles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { WorkspaceAccessService } from "../auth/workspace-access.service";
+import { SiteDeletionService } from "../site-deletion/site-deletion.service";
 import { CreateSiteDto } from "./dto/create-site.dto";
+import { PermanentDeleteSiteDto } from "./dto/permanent-delete-site.dto";
 import { RestoreSiteDto } from "./dto/restore-site.dto";
 import { TenantWorkspaceService } from "./tenant-workspace.service";
 
@@ -30,6 +32,7 @@ export class TenantSitesController {
     private readonly tenantWorkspaceService: TenantWorkspaceService,
     private readonly workspaceAccessService: WorkspaceAccessService,
     private readonly adminService: AdminService,
+    private readonly siteDeletionService: SiteDeletionService,
   ) {}
 
   @Get()
@@ -184,5 +187,58 @@ export class TenantSitesController {
     });
 
     return site;
+  }
+
+  @Get(":siteId/deletion-impact")
+  @MembershipRoles(TenantMembershipRole.OWNER)
+  async deletionImpact(
+    @Param("tenantId") tenantId: string,
+    @Param("siteId") siteId: string,
+    @Req() req: Request,
+  ) {
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+
+    return this.siteDeletionService.computeDeletionImpact(
+      resolvedTenantId,
+      siteId,
+    );
+  }
+
+  @Post(":siteId/permanent-delete")
+  @MembershipRoles(TenantMembershipRole.OWNER)
+  @HttpCode(HttpStatus.ACCEPTED)
+  async permanentDelete(
+    @Param("tenantId") tenantId: string,
+    @Param("siteId") siteId: string,
+    @Body() dto: PermanentDeleteSiteDto,
+    @Req() req: Request,
+  ) {
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+    const user = req.user as AuthenticatedRequestUser | undefined;
+
+    return this.siteDeletionService.queuePermanentDeletion(
+      resolvedTenantId,
+      siteId,
+      dto,
+      user?.sub ?? null,
+    );
   }
 }

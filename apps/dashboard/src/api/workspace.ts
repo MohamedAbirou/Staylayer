@@ -92,6 +92,180 @@ export async function deleteWorkspaceSite(
   return data;
 }
 
+export interface ArchivedDomainAvailability {
+  host: string;
+  available: boolean;
+}
+
+export interface ArchivedWorkspaceSiteRecord extends WorkspaceSiteRecord {
+  archivedAt: string | null;
+  archivedSlug: string | null;
+  archivedPublicSubdomain: string | null;
+  archivedDomains: string[];
+  archivedSlugAvailable: boolean;
+  archivedPublicSubdomainAvailable: boolean | null;
+  archivedDomainAvailability: ArchivedDomainAvailability[];
+}
+
+export interface RestoreWorkspaceSitePayload {
+  slug?: string;
+  publicSubdomain?: string | null;
+  restoreDomains?: boolean;
+}
+
+export async function getArchivedWorkspaceSites(
+  tenantId: string,
+): Promise<ArchivedWorkspaceSiteRecord[]> {
+  const { data } = await client.get<ArchivedWorkspaceSiteRecord[]>(
+    `/tenants/${tenantId}/sites/archived`,
+  );
+  return data;
+}
+
+export async function restoreWorkspaceSite(
+  tenantId: string,
+  siteId: string,
+  payload: RestoreWorkspaceSitePayload = {},
+): Promise<WorkspaceSiteRecord> {
+  const { data } = await client.post<WorkspaceSiteRecord>(
+    `/tenants/${tenantId}/sites/${siteId}/restore`,
+    payload,
+  );
+  return data;
+}
+
+export type SiteDeletionRiskFlag =
+  | "HAS_SUBMISSIONS"
+  | "HAS_PROVIDER_RESOURCES"
+  | "HAS_ACTIVE_INTEGRATIONS"
+  | "HAS_PUBLISHED_PAGES"
+  | "HAS_CONNECTED_DOMAINS";
+
+export interface SiteDeletionProviderResource {
+  deploymentId: string;
+  provider: string | null;
+  providerProjectId: string | null;
+  providerDeployId: string | null;
+}
+
+export interface SiteDeletionImpact {
+  siteId: string;
+  tenantId: string;
+  name: string;
+  archivedSlug: string | null;
+  archivedPublicSubdomain: string | null;
+  archivedDomains: string[];
+  archivedAt: string | null;
+  status: WorkspaceSiteStatus;
+  counts: {
+    pages: number;
+    publishedPages: number;
+    formDefinitions: number;
+    formSubmissions: number;
+    formDeliveries: number;
+    connectedDomains: number;
+    deployments: number;
+    publishedRevisions: number;
+    searchConsolePerformanceRows: number;
+    bingPerformanceRows: number;
+    psiAudits: number;
+    cruxRecords: number;
+    hreflangIssues: number;
+    seoCrawlJobs: number;
+    seoAuditRuns: number;
+    seoAuditTasks: number;
+    aiCitationAudits: number;
+    translationJobs: number;
+    translationUsageRows: number;
+    redirects: number;
+    notifications: number;
+    auditLogs: number;
+  };
+  integrations: {
+    searchConsoleConnected: boolean;
+    bingConnected: boolean;
+    scheduledAuditsEnabled: boolean;
+  };
+  providerResources: SiteDeletionProviderResource[];
+  riskFlags: SiteDeletionRiskFlag[];
+  blockingReasons: string[];
+}
+
+export interface PermanentDeleteSitePayload {
+  confirmSiteName: string;
+  acknowledgeSubmissions?: boolean;
+  acknowledgeProviderResources?: boolean;
+  acknowledgeIntegrations?: boolean;
+  acknowledgePublishedPages?: boolean;
+  acknowledgeConnectedDomains?: boolean;
+}
+
+export type SiteDeletionJobStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface SiteDeletionJobRecord {
+  id: string;
+  tenantId: string;
+  siteId: string;
+  siteName: string;
+  archivedSlug: string | null;
+  status: SiteDeletionJobStatus;
+  progress: number;
+  totalSteps: number;
+  currentStep: string | null;
+  requestedByUserId: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getSiteDeletionImpact(
+  tenantId: string,
+  siteId: string,
+): Promise<SiteDeletionImpact> {
+  const { data } = await client.get<SiteDeletionImpact>(
+    `/tenants/${tenantId}/sites/${siteId}/deletion-impact`,
+  );
+  return data;
+}
+
+export async function permanentlyDeleteWorkspaceSite(
+  tenantId: string,
+  siteId: string,
+  payload: PermanentDeleteSitePayload,
+): Promise<SiteDeletionJobRecord> {
+  const { data } = await client.post<SiteDeletionJobRecord>(
+    `/tenants/${tenantId}/sites/${siteId}/permanent-delete`,
+    payload,
+  );
+  return data;
+}
+
+export async function getSiteDeletionJob(
+  tenantId: string,
+  jobId: string,
+): Promise<SiteDeletionJobRecord> {
+  const { data } = await client.get<SiteDeletionJobRecord>(
+    `/tenants/${tenantId}/site-deletion-jobs/${jobId}`,
+  );
+  return data;
+}
+
+export async function listSiteDeletionJobs(
+  tenantId: string,
+): Promise<SiteDeletionJobRecord[]> {
+  const { data } = await client.get<SiteDeletionJobRecord[]>(
+    `/tenants/${tenantId}/site-deletion-jobs`,
+  );
+  return data;
+}
+
 export async function getWorkspaceMembers(
   tenantId: string,
 ): Promise<WorkspaceMemberRecord[]> {
