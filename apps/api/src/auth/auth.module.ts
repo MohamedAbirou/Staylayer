@@ -62,6 +62,7 @@ import { UsersModule } from "../users/users.module";
   exports: [
     AuthService,
     CustomerAccessService,
+    JwtModule,
     JwtStrategy,
     RolesGuard,
     WorkspaceAccessService,

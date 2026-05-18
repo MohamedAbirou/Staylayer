@@ -1,8 +1,6 @@
-// Operator console session/auth contracts.
-// These mirror the backend `platformRole` values today but live in a
-// console-local namespace so the operator app does not import dashboard types.
-// Phase 2 introduces dedicated `/operator/auth/*` endpoints and may evolve
-// these types (e.g. adding MFA challenge state).
+// Operator console session/auth contracts. These mirror the backend
+// `/operator/auth/*` response shapes. The operator app never imports
+// customer dashboard auth types.
 
 export const PLATFORM_ROLES = [
   "PLATFORM_OWNER",
@@ -20,8 +18,23 @@ export interface OperatorUser {
 
 export interface OperatorSession {
   user: OperatorUser;
+  /** Granular permission keys (`resource.action.scope`). */
+  permissions: string[];
 }
 
-export interface OperatorAuthResponse extends OperatorSession {
+export interface OperatorSessionResponse {
+  user: OperatorUser;
+  permissions: string[];
+}
+
+export interface OperatorAuthResponse {
   accessToken: string;
+  expiresIn: number;
+  user: OperatorUser;
+  permissions: string[];
+}
+
+export interface OperatorAuthError {
+  code: string;
+  message: string;
 }

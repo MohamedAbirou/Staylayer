@@ -191,6 +191,22 @@ model User {
   sentWorkspaceInvitations WorkspaceInvitation[]    @relation("WorkspaceInvitationSender")
   assignedSeoAuditTasks    SeoAuditTask[]           @relation("SeoAuditTaskAssignee")
   createdSeoAuditTasks     SeoAuditTask[]           @relation("SeoAuditTaskCreator")
+  operatorRefreshSessions  OperatorRefreshSession[] @relation("OperatorRefreshSessionUser")
+  operatorAuditLogs        OperatorAuditLog[]       @relation("OperatorAuditLogActor")
+
+  // ── Phase 5: support cases ─────────────────────────────────────────
+  supportCasesRequested           SupportCase[]               @relation("SupportCaseRequester")
+  supportCasesAssigned            SupportCase[]               @relation("SupportCaseAssignee")
+  supportCasesCreated             SupportCase[]               @relation("SupportCaseCreator")
+  supportCaseMessages             SupportCaseMessage[]        @relation("SupportCaseMessageAuthor")
+  supportCaseNotes                SupportCaseNote[]           @relation("SupportCaseNoteAuthor")
+  supportCaseEvents               SupportCaseEvent[]          @relation("SupportCaseEventActor")
+  supportCaseAssignmentsFrom      SupportCaseAssignment[]     @relation("SupportCaseAssignmentFrom")
+  supportCaseAssignmentsTo        SupportCaseAssignment[]     @relation("SupportCaseAssignmentTo")
+  supportCaseAssignmentsChangedBy SupportCaseAssignment[]     @relation("SupportCaseAssignmentChangedBy")
+  supportCaseLinkedResources      SupportCaseLinkedResource[] @relation("SupportCaseLinkedResourceBy")
+  supportCaseHandoffsOpened       SupportCaseHandoff[]        @relation("SupportCaseHandoffOpenedBy")
+  supportCaseHandoffsClosed       SupportCaseHandoff[]        @relation("SupportCaseHandoffClosedBy")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -249,6 +265,7 @@ model Tenant {
   providerGlossaries   TranslationProviderGlossary[]
   workspaceInvitations WorkspaceInvitation[]
   siteDeletionJobs     SiteDeletionJob[]
+  supportCases         SupportCase[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -369,6 +386,7 @@ model Site {
   seoAuditRuns                   SeoAuditRun[]
   seoAuditSnapshots              SeoAuditSnapshot[]
   seoAuditTasks                  SeoAuditTask[]
+  supportCases                   SupportCase[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -2227,4 +2245,363 @@ model SeoAuditTask {
   @@index([siteId, priority, status])
   @@index([siteId, slug, locale])
   @@map("seo_audit_tasks")
+}
+
+// ─── Phase 3: Operator refresh sessions + audit log ─────────────────────
+
+/// Persistent server-side record for an operator refresh token. Each issued
+/// refresh JWT carries a unique JTI claim that points to a row here so the
+/// session can be revoked on logout, on role revocation, or out-of-band by
+/// a Platform Owner. Rows are deleted by a periodic cleanup job once both
+/// `expiresAt` and `revokedAt` are in the past — see Phase 11.
+model OperatorRefreshSession {
+  id                  String    @id @default(cuid())
+  /// JWT `jti` claim. Unique across all operator refresh tokens, ever.
+  jti                 String    @unique
+  userId              String    @map("user_id")
+  /// SHA-256 hash (first 32 hex chars) of the User-Agent header at issuance.
+  /// Used to surface "Unknown device" warnings without storing raw UA strings.
+  userAgentHash       String?   @map("user_agent_hash")
+  /// SHA-256 hash (first 32 hex chars) of the client IP at issuance. Never
+  /// the raw IP — we only need to detect re-use from a different network.
+  ipHash              String?   @map("ip_hash")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  lastUsedAt          DateTime  @default(now()) @map("last_used_at")
+  expiresAt           DateTime  @map("expires_at")
+  revokedAt           DateTime? @map("revoked_at")
+  /// Optional reason recorded when the session is revoked
+  /// (`logout`, `rotated`, `role_revoked`, `admin_revoked`).
+  revokedReason       String?   @map("revoked_reason")
+  /// When the token is rotated on refresh, the new session points back at
+  /// the one it replaced so a stolen-token detector can walk the chain.
+  replacedBySessionId String?   @map("replaced_by_session_id")
+
+  user User @relation("OperatorRefreshSessionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("operator_refresh_sessions")
+}
+
+/// Append-only audit trail of operator console actions. Written by the
+/// `OperatorAuditInterceptor` for any handler decorated with
+/// `@OperatorAudit(...)`. Rows MUST NOT be updated or deleted by the app —
+/// retention/archival is handled out-of-band.
+model OperatorAuditLog {
+  id             String   @id @default(cuid())
+  /// Server-generated request id (matches `X-Request-Id` response header).
+  requestId      String   @map("request_id")
+  /// Operator user that initiated the action.
+  actorUserId    String   @map("actor_user_id")
+  /// Snapshot of the platform role at the time of the action. Stored as a
+  /// string (not the enum) so future role renames do not invalidate history.
+  platformRole   String   @map("platform_role")
+  /// Stable machine action identifier, e.g. `tenant.suspend`,
+  /// `billing.subscription.change_plan`.
+  action         String
+  /// Permission keys declared by `@RequireOperatorPermissions` on the
+  /// handler. Captured for traceability.
+  permissionKeys String[] @map("permission_keys")
+  targetType     String?  @map("target_type")
+  targetId       String?  @map("target_id")
+  tenantId       String?  @map("tenant_id")
+  siteId         String?  @map("site_id")
+  method         String
+  path           String
+  statusCode     Int      @map("status_code")
+  durationMs     Int      @map("duration_ms")
+  /// True for actions marked `sensitive: true` (billing mutations, refunds,
+  /// suspensions). Requires a non-empty `reason`.
+  sensitive      Boolean  @default(false)
+  /// Reason text supplied by the operator on sensitive mutations. Truncated
+  /// to 2000 chars by the interceptor.
+  reason         String?
+  ipHash         String?  @map("ip_hash")
+  userAgentHash  String?  @map("user_agent_hash")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  actor User @relation("OperatorAuditLogActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([tenantId, createdAt])
+  @@index([targetType, targetId])
+  @@index([requestId])
+  @@map("operator_audit_logs")
+}
+
+// --- Phase 5: Support System -------------------------------------------
+//
+// Native support case schema described in
+// `operator-console-docs/03-support-system.md`. Cases are the canonical
+// record for every customer-affecting interaction, regardless of channel
+// (manual, inbound email, system alert, billing handoff, etc.). Rows are
+// scoped to a tenant and optionally a site; cross-tenant ownership lives in
+// `assignedOperatorId` (operator user) and `requesterUserId` (customer
+// user). Mutations are audited via `OperatorAuditLog`; per-case timeline
+// events live on `SupportCaseEvent` so the UI can render an inline,
+// non-PII history without joining the operator audit table.
+
+enum SupportCaseStatus {
+  OPEN
+  PENDING_CUSTOMER
+  PENDING_INTERNAL
+  RESOLVED
+  CLOSED
+}
+
+enum SupportCasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportCaseCategory {
+  BILLING
+  DEPLOYMENT
+  DOMAIN
+  FORMS
+  SEO
+  TRANSLATION
+  ACCESS
+  CONTENT
+  ACCOUNT
+  OTHER
+}
+
+enum SupportCaseChannel {
+  MANUAL
+  EMAIL
+  CUSTOMER_WORKSPACE
+  SYSTEM_ALERT
+  BILLING
+  WEBHOOK
+}
+
+enum SupportCaseEventType {
+  CREATED
+  STATUS_CHANGED
+  PRIORITY_CHANGED
+  CATEGORY_CHANGED
+  ASSIGNMENT_CHANGED
+  TAGS_UPDATED
+  MESSAGE_ADDED
+  NOTE_ADDED
+  RESOURCE_LINKED
+  RESOURCE_UNLINKED
+  HANDOFF_OPENED
+  HANDOFF_ACKNOWLEDGED
+  HANDOFF_CLOSED
+  RESOLVED
+  REOPENED
+  CLOSED
+  SLA_BREACHED
+}
+
+enum SupportLinkedResourceType {
+  TENANT
+  SITE
+  DEPLOYMENT
+  DOMAIN
+  FORM_DEFINITION
+  FORM_SUBMISSION
+  SUBSCRIPTION
+  OPERATIONAL_ALERT
+  USER
+}
+
+enum SupportHandoffTarget {
+  BILLING
+  PLATFORM_OWNER
+  SUPPORT
+}
+
+enum SupportHandoffStatus {
+  OPEN
+  ACKNOWLEDGED
+  CLOSED
+}
+
+model SupportCase {
+  id                       String              @id @default(cuid())
+  /// Human-readable monotonically increasing identifier surfaced to
+  /// operators as `#1042`. Generated by the database sequence so concurrent
+  /// inserts cannot collide.
+  number                   Int                 @unique @default(autoincrement())
+  tenantId                 String              @map("tenant_id")
+  siteId                   String?             @map("site_id")
+  /// Customer user that originated the case (may be null for cases opened
+  /// by an operator on the customer's behalf or by a system signal).
+  requesterUserId          String?             @map("requester_user_id")
+  /// Verbatim email of the requester for cases not tied to a known user.
+  requesterEmail           String?             @map("requester_email")
+  subject                  String
+  channel                  SupportCaseChannel  @default(MANUAL)
+  status                   SupportCaseStatus   @default(OPEN)
+  priority                 SupportCasePriority @default(NORMAL)
+  category                 SupportCaseCategory @default(OTHER)
+  /// Free-form tag list. Kept as a denormalised array so queue filters can
+  /// rely on a GIN index without a join.
+  tags                     String[]            @default([])
+  assignedOperatorId       String?             @map("assigned_operator_id")
+  createdByOperatorId      String?             @map("created_by_operator_id")
+  /// SLA targets resolved at creation time from category + priority. Stored
+  /// rather than computed so an SLA breach is auditable even if the policy
+  /// matrix later changes.
+  firstResponseDueAt       DateTime?           @map("first_response_due_at")
+  resolutionDueAt          DateTime?           @map("resolution_due_at")
+  firstResponseAt          DateTime?           @map("first_response_at")
+  resolvedAt               DateTime?           @map("resolved_at")
+  closedAt                 DateTime?           @map("closed_at")
+  slaBreachedFirstResponse Boolean             @default(false) @map("sla_breached_first_response")
+  slaBreachedResolution    Boolean             @default(false) @map("sla_breached_resolution")
+  /// Maintained by the lifecycle service so queue ordering is stable even
+  /// when audit/event rows are written asynchronously.
+  lastActivityAt           DateTime            @default(now()) @map("last_activity_at")
+  /// Arbitrary structured payload supplied by inbound channels (e.g. the
+  /// original `OperationalAlert.id` or the inbound email message-id). Must
+  /// not contain PII beyond what the channel itself carries.
+  metadata                 Json?
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
+
+  tenant            Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site              Site?  @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  requesterUser     User?  @relation("SupportCaseRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)
+  assignedOperator  User?  @relation("SupportCaseAssignee", fields: [assignedOperatorId], references: [id], onDelete: SetNull)
+  createdByOperator User?  @relation("SupportCaseCreator", fields: [createdByOperatorId], references: [id], onDelete: SetNull)
+
+  messages        SupportCaseMessage[]
+  notes           SupportCaseNote[]
+  events          SupportCaseEvent[]
+  assignments     SupportCaseAssignment[]
+  linkedResources SupportCaseLinkedResource[]
+  handoffs        SupportCaseHandoff[]
+
+  @@index([status, priority, lastActivityAt])
+  @@index([assignedOperatorId, status])
+  @@index([tenantId, status])
+  @@index([category, status])
+  @@index([createdAt])
+  @@index([tags])
+  @@map("support_cases")
+}
+
+model SupportCaseMessage {
+  id               String   @id @default(cuid())
+  caseId           String   @map("case_id")
+  /// Operator user that authored the message. `null` indicates an inbound
+  /// customer message captured by a future inbound channel.
+  authorUserId     String?  @map("author_user_id")
+  /// `true` for operator replies (visible-to-customer), `false` for
+  /// captured inbound customer messages. Notes are stored separately on
+  /// `SupportCaseNote` so they cannot be exposed in a customer thread by
+  /// accident.
+  authorIsOperator Boolean  @default(true) @map("author_is_operator")
+  body             String
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  case   SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  author User?       @relation("SupportCaseMessageAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt])
+  @@map("support_case_messages")
+}
+
+model SupportCaseNote {
+  id           String   @id @default(cuid())
+  caseId       String   @map("case_id")
+  authorUserId String   @map("author_user_id")
+  body         String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  case   SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  author User        @relation("SupportCaseNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
+  @@map("support_case_notes")
+}
+
+model SupportCaseEvent {
+  id          String               @id @default(cuid())
+  caseId      String               @map("case_id")
+  type        SupportCaseEventType
+  actorUserId String?              @map("actor_user_id")
+  /// Stringified previous value for status/priority/category changes.
+  fromValue   String?              @map("from_value")
+  toValue     String?              @map("to_value")
+  /// Short human-readable message for the UI timeline (e.g. assignment
+  /// reasons, handoff target). Never contains customer PII.
+  message     String?
+  metadata    Json?
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  case  SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actor User?       @relation("SupportCaseEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt])
+  @@index([type, createdAt])
+  @@map("support_case_events")
+}
+
+model SupportCaseAssignment {
+  id              String   @id @default(cuid())
+  caseId          String   @map("case_id")
+  fromUserId      String?  @map("from_user_id")
+  toUserId        String?  @map("to_user_id")
+  changedByUserId String   @map("changed_by_user_id")
+  reason          String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  case      SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  fromUser  User?       @relation("SupportCaseAssignmentFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUser    User?       @relation("SupportCaseAssignmentTo", fields: [toUserId], references: [id], onDelete: SetNull)
+  changedBy User        @relation("SupportCaseAssignmentChangedBy", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
+  @@map("support_case_assignments")
+}
+
+model SupportCaseLinkedResource {
+  id              String                    @id @default(cuid())
+  caseId          String                    @map("case_id")
+  resourceType    SupportLinkedResourceType @map("resource_type")
+  /// Opaque identifier for the linked resource. Validated against the
+  /// matching domain table by the lifecycle service at link time.
+  resourceId      String                    @map("resource_id")
+  label           String?
+  createdByUserId String                    @map("created_by_user_id")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+
+  case      SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdBy User        @relation("SupportCaseLinkedResourceBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([caseId, resourceType, resourceId])
+  @@index([resourceType, resourceId])
+  @@map("support_case_linked_resources")
+}
+
+model SupportCaseHandoff {
+  id             String               @id @default(cuid())
+  caseId         String               @map("case_id")
+  target         SupportHandoffTarget
+  status         SupportHandoffStatus @default(OPEN)
+  /// Mandatory free-text reason � captured because handoffs are sensitive
+  /// operator actions per the audit policy.
+  reason         String
+  openedByUserId String               @map("opened_by_user_id")
+  closedByUserId String?              @map("closed_by_user_id")
+  acknowledgedAt DateTime?            @map("acknowledged_at")
+  closedAt       DateTime?            @map("closed_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  case     SupportCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  openedBy User        @relation("SupportCaseHandoffOpenedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)
+  closedBy User?       @relation("SupportCaseHandoffClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt])
+  @@index([target, status])
+  @@map("support_case_handoffs")
 }

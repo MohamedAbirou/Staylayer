@@ -1,39 +1,159 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { OperatorAuthContext } from "./AuthContext";
-import { setAccessToken } from "../api/client";
+import {
+  OPERATOR_AUTH_EVENTS,
+  getAccessToken,
+  refreshOperatorSession,
+  setAccessToken,
+  type OperatorAuthRefreshedDetail,
+} from "../api/client";
+import {
+  fetchOperatorSession,
+  operatorLogin,
+  operatorLogout,
+} from "../api/auth";
 import type { OperatorSession } from "./types";
 
-// Phase 1 scaffolding only. No real network auth calls are made yet.
-// Phase 2 will replace these placeholders with `/operator/auth/login`,
-// `/operator/auth/refresh`, `/operator/auth/logout`, `/operator/auth/session`.
-//
-// The provider intentionally exposes a stable shape so feature code written
-// in Phase 1 (route guards, layout, permission hooks) does not change in
-// Phase 2 when the wire protocol is added.
+// Refresh the access token a little before it expires so an idle dashboard
+// stays signed in across the 15-minute access token lifetime. Backend issues
+// tokens with `expiresIn` in seconds; we refresh 60 seconds early.
+const REFRESH_LEEWAY_SECONDS = 60;
+const DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+
 export function OperatorAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<OperatorSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimerRef = useRef<number | null>(null);
+
+  const clearRefreshTimer = useCallback(() => {
+    if (refreshTimerRef.current !== null) {
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleSilentRefresh = useCallback(
+    (ttlSeconds: number) => {
+      clearRefreshTimer();
+      const delayMs = Math.max(
+        15_000,
+        (ttlSeconds - REFRESH_LEEWAY_SECONDS) * 1000,
+      );
+      refreshTimerRef.current = window.setTimeout(() => {
+        void refreshOperatorSession();
+      }, delayMs);
+    },
+    [clearRefreshTimer],
+  );
+
+  const bootstrap = useCallback(async () => {
+    // If we have a cached access token, try to load the session directly.
+    if (getAccessToken()) {
+      try {
+        const { user, permissions } = await fetchOperatorSession();
+        setSession({ user, permissions });
+        scheduleSilentRefresh(DEFAULT_ACCESS_TOKEN_TTL_SECONDS);
+        return;
+      } catch {
+        // Fall through to refresh attempt; 401 handler in the axios client
+        // already cleared the token in that case.
+      }
+    }
+
+    // No usable access token yet. Try the refresh cookie (httpOnly) — if the
+    // operator's previous session is still alive on the backend this returns
+    // a new access token without prompting for credentials.
+    const refreshed = await refreshOperatorSession();
+    if (refreshed) {
+      setSession({ user: refreshed.user, permissions: refreshed.permissions });
+      scheduleSilentRefresh(refreshed.expiresIn);
+    } else {
+      setSession(null);
+    }
+  }, [scheduleSilentRefresh]);
 
   useEffect(() => {
-    // Placeholder bootstrap: there is no operator session endpoint yet.
-    // Phase 2 will call GET /operator/auth/session here and hydrate state.
-    setLoading(false);
-  }, []);
+    void bootstrap().finally(() => setLoading(false));
+    return clearRefreshTimer;
+  }, [bootstrap, clearRefreshTimer]);
 
-  const login = useCallback(async (): Promise<OperatorSession> => {
-    throw new Error(
-      "Operator login is not implemented yet. It will be added in Phase 2.",
+  // Stay in sync with the axios client. The client may rotate tokens or drop
+  // the session as a side-effect of any HTTP call, and we want the React
+  // tree to reflect that without component-level plumbing.
+  useEffect(() => {
+    function onRefreshed(event: Event) {
+      const detail = (event as CustomEvent<OperatorAuthRefreshedDetail>).detail;
+      if (detail?.session) {
+        setSession(detail.session);
+        scheduleSilentRefresh(DEFAULT_ACCESS_TOKEN_TTL_SECONDS);
+      }
+    }
+    function onUnauthenticated() {
+      clearRefreshTimer();
+      setSession(null);
+    }
+
+    window.addEventListener(OPERATOR_AUTH_EVENTS.refreshed, onRefreshed);
+    window.addEventListener(
+      OPERATOR_AUTH_EVENTS.unauthenticated,
+      onUnauthenticated,
     );
-  }, []);
+    return () => {
+      window.removeEventListener(OPERATOR_AUTH_EVENTS.refreshed, onRefreshed);
+      window.removeEventListener(
+        OPERATOR_AUTH_EVENTS.unauthenticated,
+        onUnauthenticated,
+      );
+    };
+  }, [clearRefreshTimer, scheduleSilentRefresh]);
+
+  const login = useCallback(
+    async (email: string, password: string): Promise<OperatorSession> => {
+      const auth = await operatorLogin(email, password);
+      setAccessToken(auth.accessToken);
+      const next: OperatorSession = {
+        user: auth.user,
+        permissions: auth.permissions,
+      };
+      setSession(next);
+      scheduleSilentRefresh(auth.expiresIn);
+      return next;
+    },
+    [scheduleSilentRefresh],
+  );
 
   const logout = useCallback(async () => {
+    clearRefreshTimer();
+    try {
+      await operatorLogout();
+    } catch {
+      // Backend logout is best-effort. Even if it fails we still clear local
+      // state so the operator cannot keep operating with a stale identity.
+    }
     setAccessToken(null);
     setSession(null);
-  }, []);
+  }, [clearRefreshTimer]);
 
-  const refresh = useCallback(async () => {
-    return session;
-  }, [session]);
+  const refresh = useCallback(async (): Promise<OperatorSession | null> => {
+    const refreshed = await refreshOperatorSession();
+    if (!refreshed) {
+      setSession(null);
+      return null;
+    }
+    const next: OperatorSession = {
+      user: refreshed.user,
+      permissions: refreshed.permissions,
+    };
+    setSession(next);
+    scheduleSilentRefresh(refreshed.expiresIn);
+    return next;
+  }, [scheduleSilentRefresh]);
 
   return (
     <OperatorAuthContext.Provider

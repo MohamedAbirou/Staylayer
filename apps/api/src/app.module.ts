@@ -4,6 +4,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
+import { OperatorAuthModule } from "./auth/operator/operator-auth.module";
 import { UsersModule } from "./users/users.module";
 import { PagesModule } from "./pages/pages.module";
 import { RevalidationModule } from "./revalidation/revalidation.module";
@@ -11,6 +12,8 @@ import { HealthModule } from "./health/health.module";
 import { SettingsModule } from "./settings/settings.module";
 import { BillingModule } from "./billing/billing.module";
 import { AdminModule } from "./admin/admin.module";
+import { OperatorResourcesModule } from "./operator-resources/operator-resources.module";
+import { SupportCasesModule } from "./support-cases/support-cases.module";
 import { DeploymentsModule } from "./deployments/deployments.module";
 import { DomainsModule } from "./domains/domains.module";
 import { FormsModule } from "./forms/forms.module";
@@ -51,12 +54,15 @@ import { MailModule } from "./mail/mail.module";
     MailModule,
     PrismaModule,
     AuthModule,
+    OperatorAuthModule,
     UsersModule,
     PagesModule,
     RevalidationModule,
     HealthModule,
     BillingModule,
     AdminModule,
+    OperatorResourcesModule,
+    SupportCasesModule,
     SettingsModule,
     DeploymentsModule,
     DomainsModule,

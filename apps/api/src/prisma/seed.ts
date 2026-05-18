@@ -516,6 +516,11 @@ async function main(): Promise<void> {
     "Admin123!",
     PlatformRole.SUPPORT_ADMIN,
   );
+  await upsertUser(
+    "finance@staylayer.com",
+    "Finance123!",
+    PlatformRole.FINANCE_ADMIN,
+  );
   const coastalOwner = await upsertUser(
     "owner@azurebayvillas.com",
     "AzureBay123!",
@@ -944,6 +949,9 @@ async function main(): Promise<void> {
   );
   console.log(
     "  │ admin@staylayer.com                  │ Admin123!        │ SUPPORT_ADMIN │",
+  );
+  console.log(
+    "  │ finance@staylayer.com                │ Finance123!      │ FINANCE_ADMIN │",
   );
   console.log(
     "  │ owner@azurebayvillas.com               │ AzureBay123!     │ TENANT OWNER │",

@@ -13,10 +13,12 @@ function trimTrailingSlash(value: string): string {
 function buildDefaultCorsOrigins(): string[] {
   const origins = new Set([
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:4174",
     "http://localhost:3000",
     "http://localhost:3002",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
     "http://127.0.0.1:4174",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3002",
@@ -25,6 +27,7 @@ function buildDefaultCorsOrigins(): string[] {
   const configuredOrigins = [
     process.env.DASHBOARD_APP_URL,
     process.env.MARKETING_APP_URL,
+    process.env.OPERATOR_CONSOLE_APP_URL,
   ]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
@@ -58,6 +61,7 @@ async function bootstrap(): Promise<void> {
       "Authorization",
       "X-Active-Tenant-Id",
       "X-Active-Site-Id",
+      "X-Operator-Console",
       REQUEST_ID_HEADER,
     ],
     exposedHeaders: [REQUEST_ID_HEADER],

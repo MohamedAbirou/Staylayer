@@ -1,11 +1,125 @@
-// Phase 1 placeholder for the granular operator permission registry described
-// in operator-console-docs/02-auth-rbac-and-permissions.md. Phase 3 will
-// expand this into a full permission-to-role mapping plus a `useCan` hook.
+// Operator permission registry. Mirrors the backend
+// `apps/api/src/auth/operator/permissions/operator-permissions.registry.ts`.
+// Permission keys follow the pattern `resource.action.scope` so future
+// scoping (e.g. `tenant.update.region:eu`) can be introduced without
+// reshaping consumers.
 //
-// Resource and action enums are defined here so feature code written in
-// Phase 1 (navigation, route guards) can already reference them without
-// circular imports.
+// IMPORTANT: this file is the single source of truth for permission keys
+// inside the operator console. Backend and frontend constant lists MUST be
+// kept in sync — any change here must be reflected in the backend registry
+// and vice-versa. The backend remains the only authority that grants or
+// denies access; this list is used purely for UI gating.
 
+export const OPERATOR_PERMISSIONS = {
+  // Command center / overview surfaces
+  OVERVIEW_READ_ALL: "overview.read.all",
+  OVERVIEW_READ_SUPPORT: "overview.read.support",
+  OVERVIEW_READ_BILLING: "overview.read.billing",
+
+  // Tenants
+  TENANT_READ_ALL: "tenant.read.all",
+  TENANT_READ_BILLING: "tenant.read.billing",
+  TENANT_LIST_ALL: "tenant.list.all",
+  TENANT_UPDATE_ALL: "tenant.update.all",
+  TENANT_SUSPEND_ALL: "tenant.suspend.all",
+  TENANT_NOTE_ALL: "tenant.note.all",
+
+  // Sites
+  SITE_READ_ALL: "site.read.all",
+  SITE_LIST_ALL: "site.list.all",
+  SITE_RESTORE_ALL: "site.restore.all",
+  SITE_DELETE_ALL: "site.delete.all",
+
+  // Support cases
+  SUPPORT_CASE_READ_ALL: "support_case.read.all",
+  SUPPORT_CASE_READ_BILLING: "support_case.read.billing",
+  SUPPORT_CASE_LIST_ALL: "support_case.list.all",
+  SUPPORT_CASE_CREATE_ALL: "support_case.create.all",
+  SUPPORT_CASE_ASSIGN_ALL: "support_case.assign.all",
+  SUPPORT_CASE_REPLY_ALL: "support_case.reply.all",
+  SUPPORT_CASE_REPLY_BILLING: "support_case.reply.billing",
+  SUPPORT_CASE_NOTE_ALL: "support_case.note.all",
+  SUPPORT_CASE_NOTE_BILLING: "support_case.note.billing",
+  SUPPORT_CASE_RESOLVE_ALL: "support_case.resolve.all",
+  SUPPORT_CASE_TRANSFER_ALL: "support_case.transfer.all",
+  SUPPORT_CASE_IMPERSONATE_ALL: "support_case.impersonate.all",
+
+  // Billing
+  BILLING_ACCOUNT_READ_ALL: "billing.account.read.all",
+  BILLING_SUBSCRIPTION_READ_ALL: "billing.subscription.read.all",
+  BILLING_SUBSCRIPTION_CHANGE_PLAN_ALL: "billing.subscription.change_plan.all",
+  BILLING_SUBSCRIPTION_CANCEL_ALL: "billing.subscription.cancel.all",
+  BILLING_INVOICE_READ_ALL: "billing.invoice.read.all",
+  BILLING_INVOICE_REFUND_ALL: "billing.invoice.refund.all",
+  BILLING_PAYMENT_RETRY_ALL: "billing.payment.retry.all",
+  BILLING_STRIPE_SYNC_ALL: "billing.stripe.sync.all",
+  BILLING_ENTITLEMENT_OVERRIDE_ALL: "billing.entitlement.override.all",
+  BILLING_NOTE_ALL: "billing.note.all",
+
+  // Operations
+  DEPLOYMENT_READ_ALL: "deployment.read.all",
+  DEPLOYMENT_RETRY_ALL: "deployment.retry.all",
+  DEPLOYMENT_ROLLBACK_ALL: "deployment.rollback.all",
+  DOMAIN_READ_ALL: "domain.read.all",
+  DOMAIN_VERIFY_ALL: "domain.verify.all",
+  FORM_DELIVERY_READ_ALL: "form_delivery.read.all",
+  FORM_DELIVERY_RETRY_ALL: "form_delivery.retry.all",
+
+  // Audit
+  AUDIT_READ_ALL: "audit.read.all",
+  AUDIT_READ_SUPPORT: "audit.read.support",
+  AUDIT_READ_BILLING: "audit.read.billing",
+
+  // Operator user management (Phase 12)
+  OPERATOR_USER_READ_ALL: "operator_user.read.all",
+  OPERATOR_USER_MANAGE_ALL: "operator_user.manage.all",
+  PERMISSION_MANAGE_ALL: "permission.manage.all",
+} as const;
+
+export type OperatorPermissionKey =
+  (typeof OPERATOR_PERMISSIONS)[keyof typeof OPERATOR_PERMISSIONS];
+
+/**
+ * `.all` permission keys act as a superset for narrower scopes.
+ * For example, `tenant.update.all` satisfies `tenant.update.region:eu`.
+ * A literal `*` in the held set is always a superset (used for
+ * PLATFORM_OWNER seeds).
+ */
+export function hasPermission(
+  held: ReadonlySet<string> | readonly string[] | null | undefined,
+  required: string,
+): boolean {
+  if (!held) return false;
+  const set = held instanceof Set ? held : new Set(held);
+  if (set.has("*")) return true;
+  if (set.has(required)) return true;
+
+  const lastDot = required.lastIndexOf(".");
+  if (lastDot === -1) return false;
+  const broad = `${required.slice(0, lastDot)}.all`;
+  if (set.has(broad)) return true;
+  return false;
+}
+
+export function hasAllPermissions(
+  held: ReadonlySet<string> | readonly string[] | null | undefined,
+  required: readonly string[],
+): boolean {
+  if (required.length === 0) return true;
+  return required.every((p) => hasPermission(held, p));
+}
+
+export function hasAnyPermission(
+  held: ReadonlySet<string> | readonly string[] | null | undefined,
+  required: readonly string[],
+): boolean {
+  if (required.length === 0) return true;
+  return required.some((p) => hasPermission(held, p));
+}
+
+// Re-exported legacy enums for code that still references resource/action
+// names. These are NOT used for permission checks — they only document the
+// resource taxonomy.
 export type OperatorResource =
   | "tenant"
   | "site"

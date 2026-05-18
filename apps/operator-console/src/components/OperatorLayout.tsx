@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   ActivitySquare,
   Building2,
@@ -6,36 +7,107 @@ import {
   LifeBuoy,
   Receipt,
   ScrollText,
+  Search,
   Settings,
   Shield,
   Users,
 } from "lucide-react";
 import { useOperatorAuth } from "../auth/useOperatorAuth";
+import { OPERATOR_PERMISSIONS, usePermissions } from "../permissions";
+import { CommandPalette } from "./CommandPalette";
 
 interface NavItem {
   to: string;
   label: string;
   icon: typeof ActivitySquare;
+  /** At least one of these permissions is required for the item to render. */
+  anyOf?: readonly string[];
   // Phase 1 marks pending sections so we never silently link to missing routes.
   pending?: boolean;
 }
 
 // Top-level information architecture mirrors
-// operator-console-docs/01-architecture-and-tech-stack.md. Most sections are
-// placeholders in Phase 1 and will be implemented in their respective phases.
+// operator-console-docs/01-architecture-and-tech-stack.md. Nav items are
+// permission-gated so SUPPORT_ADMIN and FINANCE_ADMIN only see the surfaces
+// their role grants them.
 const PRIMARY_NAV: NavItem[] = [
-  { to: "/", label: "Command Center", icon: ActivitySquare },
-  { to: "/tenants", label: "Tenants", icon: Building2, pending: true },
-  { to: "/support", label: "Support", icon: LifeBuoy, pending: true },
-  { to: "/billing", label: "Billing", icon: CreditCard, pending: true },
-  { to: "/operations", label: "Operations", icon: Receipt, pending: true },
-  { to: "/audit", label: "Audit", icon: ScrollText, pending: true },
-  { to: "/permissions", label: "Permissions", icon: Shield, pending: true },
+  {
+    to: "/",
+    label: "Command Center",
+    icon: ActivitySquare,
+    anyOf: [
+      OPERATOR_PERMISSIONS.OVERVIEW_READ_ALL,
+      OPERATOR_PERMISSIONS.OVERVIEW_READ_SUPPORT,
+      OPERATOR_PERMISSIONS.OVERVIEW_READ_BILLING,
+    ],
+  },
+  {
+    to: "/tenants",
+    label: "Tenants",
+    icon: Building2,
+    anyOf: [
+      OPERATOR_PERMISSIONS.TENANT_READ_ALL,
+      OPERATOR_PERMISSIONS.TENANT_LIST_ALL,
+    ],
+  },
+  {
+    to: "/support",
+    label: "Support",
+    icon: LifeBuoy,
+    anyOf: [
+      OPERATOR_PERMISSIONS.SUPPORT_CASE_READ_ALL,
+      OPERATOR_PERMISSIONS.SUPPORT_CASE_READ_BILLING,
+      OPERATOR_PERMISSIONS.SUPPORT_CASE_LIST_ALL,
+    ],
+  },
+  {
+    to: "/billing",
+    label: "Billing",
+    icon: CreditCard,
+    pending: true,
+    anyOf: [
+      OPERATOR_PERMISSIONS.BILLING_ACCOUNT_READ_ALL,
+      OPERATOR_PERMISSIONS.BILLING_SUBSCRIPTION_READ_ALL,
+      OPERATOR_PERMISSIONS.BILLING_INVOICE_READ_ALL,
+    ],
+  },
+  {
+    to: "/operations",
+    label: "Operations",
+    icon: Receipt,
+    pending: true,
+    anyOf: [
+      OPERATOR_PERMISSIONS.DEPLOYMENT_READ_ALL,
+      OPERATOR_PERMISSIONS.DOMAIN_READ_ALL,
+      OPERATOR_PERMISSIONS.FORM_DELIVERY_READ_ALL,
+    ],
+  },
+  {
+    to: "/audit",
+    label: "Audit",
+    icon: ScrollText,
+    anyOf: [
+      OPERATOR_PERMISSIONS.AUDIT_READ_ALL,
+      OPERATOR_PERMISSIONS.AUDIT_READ_SUPPORT,
+      OPERATOR_PERMISSIONS.AUDIT_READ_BILLING,
+    ],
+  },
+  {
+    to: "/permissions",
+    label: "Permissions",
+    icon: Shield,
+    pending: true,
+    anyOf: [OPERATOR_PERMISSIONS.PERMISSION_MANAGE_ALL],
+  },
   {
     to: "/operator-users",
     label: "Operator Users",
     icon: Users,
     pending: true,
+    anyOf: [
+      OPERATOR_PERMISSIONS.OPERATOR_USER_READ_ALL,
+      OPERATOR_PERMISSIONS.OPERATOR_USER_MANAGE_ALL,
+    ],
   },
 ];
 
@@ -50,6 +122,29 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
 
 export function OperatorLayout() {
   const { session, logout } = useOperatorAuth();
+  const { canAny } = usePermissions();
+  const navigate = useNavigate();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Register a global ⌘K / Ctrl+K shortcut so operators can always reach the
+  // command palette without taking their hands off the keyboard.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const cmdOrCtrl = event.metaKey || event.ctrlKey;
+      if (cmdOrCtrl && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
+      } else if (event.key === "Escape" && paletteOpen) {
+        setPaletteOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [paletteOpen]);
+
+  const visibleNav = PRIMARY_NAV.filter((item) =>
+    item.anyOf ? canAny(item.anyOf) : true,
+  );
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
@@ -69,7 +164,7 @@ export function OperatorLayout() {
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
             Workspace
           </p>
-          {PRIMARY_NAV.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -116,8 +211,32 @@ export function OperatorLayout() {
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto">
+        <div className="sticky top-0 z-30 flex items-center justify-end gap-2 border-b border-slate-800 bg-slate-950/80 px-6 py-2 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:border-slate-700 hover:text-slate-100"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span>Quick search</span>
+            <span className="ml-2 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-slate-500">
+              ⌘K
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/search")}
+            className="text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-300"
+          >
+            Open full search
+          </button>
+        </div>
         <Outlet />
       </main>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+      />
     </div>
   );
 }
