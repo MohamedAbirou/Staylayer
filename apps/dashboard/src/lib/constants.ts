@@ -3,7 +3,6 @@ function trimTrailingSlash(value: string): string {
 }
 
 export const API_URL = import.meta.env.VITE_API_URL || "/api";
-export const ADMIN_LOGIN_PATH = "/admin/login";
 export const MARKETING_APP_URL = trimTrailingSlash(
   import.meta.env.VITE_MARKETING_URL || "http://localhost:3002",
 );

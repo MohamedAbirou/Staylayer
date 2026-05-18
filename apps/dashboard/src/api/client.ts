@@ -1,9 +1,5 @@
 import axios from "axios";
-import {
-  ADMIN_LOGIN_PATH,
-  API_URL,
-  buildMarketingLoginUrl,
-} from "../lib/constants";
+import { API_URL, buildMarketingLoginUrl } from "../lib/constants";
 import type { AuthApiResponse, AuthContextRequest } from "../auth/types";
 
 const ACCESS_TOKEN_KEY = "auth_access_token";
@@ -167,9 +163,7 @@ client.interceptors.response.use(
       } catch {
         setAccessToken(null);
         const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        window.location.href = window.location.pathname.startsWith("/admin")
-          ? ADMIN_LOGIN_PATH
-          : buildMarketingLoginUrl(returnTo);
+        window.location.href = buildMarketingLoginUrl(returnTo);
         return Promise.reject(error);
       }
     }

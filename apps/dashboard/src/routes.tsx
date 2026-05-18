@@ -1,6 +1,5 @@
 import { createBrowserRouter, Link, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { AdminLayout } from "./components/AdminLayout";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import {
   BILLING_MEMBERSHIP_ROLES,
@@ -8,10 +7,8 @@ import {
   hasActiveSite,
   SITE_ADMIN_MEMBERSHIP_ROLES,
 } from "./auth/access";
-import { PLATFORM_ROLES } from "./auth/types";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./auth/useAuth";
-import LoginPage from "./pages/LoginPage";
 import AuthHandoffPage from "./pages/AuthHandoffPage";
 import MarketingLoginRedirectPage from "./pages/MarketingLoginRedirectPage";
 import PagesListPage from "./pages/PagesListPage";
@@ -32,13 +29,6 @@ import BillingPage from "./pages/BillingPage";
 import WorkspaceStudioPage from "./pages/WorkspaceStudioPage";
 import ProfilePage from "./pages/ProfilePage";
 import NoWorkspacePage from "./pages/NoWorkspacePage";
-import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
-import AdminTenantsPage from "./pages/admin/AdminTenantsPage";
-import AdminDeploymentsPage from "./pages/admin/AdminDeploymentsPage";
-import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
-import AdminDomainsPage from "./pages/admin/AdminDomainsPage";
-import AdminFormsPage from "./pages/admin/AdminFormsPage";
-import AdminAuditPage from "./pages/admin/AdminAuditPage";
 
 function LegacyOnboardingRedirect() {
   const { session } = useAuth();
@@ -95,10 +85,6 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <MarketingLoginRedirectPage />,
-  },
-  {
-    path: "/admin/login",
-    element: <LoginPage />,
   },
   {
     element: <ProtectedRoute />,
@@ -330,88 +316,6 @@ export const router = createBrowserRouter([
       {
         path: "*",
         element: <NotFoundPage />,
-      },
-    ],
-  },
-
-  // ─── Operator admin console ──────────────────────────────────────────────
-  // Completely separate route tree. Guarded exclusively by platform role.
-  // No customer membership roles are used within this subtree.
-  {
-    path: "/admin",
-    element: (
-      <ProtectedRoute platformRoles={[...PLATFORM_ROLES]}>
-        <AdminLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, element: <Navigate to="/admin/overview" replace /> },
-      {
-        path: "overview",
-        element: (
-          <ErrorBoundary>
-            <AdminOverviewPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "tenants",
-        element: (
-          <ErrorBoundary>
-            <AdminTenantsPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "deployments",
-        element: (
-          <ErrorBoundary>
-            <AdminDeploymentsPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "subscriptions",
-        element: (
-          <ErrorBoundary>
-            <AdminSubscriptionsPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "domains",
-        element: (
-          <ErrorBoundary>
-            <AdminDomainsPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "forms",
-        element: (
-          <ErrorBoundary>
-            <AdminFormsPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "audit",
-        element: (
-          <ErrorBoundary>
-            <AdminAuditPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "*",
-        element: (
-          <NotFoundPage
-            title="Admin page not found"
-            description="The admin route you requested does not exist or is no longer available."
-            backTo="/admin/overview"
-            backLabel="Back to Admin"
-          />
-        ),
       },
     ],
   },

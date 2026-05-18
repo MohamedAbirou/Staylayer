@@ -1,8 +1,5 @@
 import client from "./client";
-import type { PlatformRole } from "../auth/types";
 import type { WorkspaceMemberRole } from "./workspace";
-
-export type ProfilePlatformRole = PlatformRole;
 
 export type TenantStatusValue = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 
@@ -37,7 +34,6 @@ export interface ProfileOverview {
   email: string;
   emailVerified: boolean;
   emailVerifiedAt: string | null;
-  platformRole: ProfilePlatformRole | null;
   createdAt: string;
   memberships: ProfileMembershipSummary[];
   pendingInvitations: ProfilePendingInvitationSummary[];
@@ -76,7 +72,6 @@ export interface AccountDeletionImpact {
   finalOwnerWorkspaces: DeletionImpactWorkspaceEntry[];
   pendingSentInvitations: number;
   assignedSeoAuditTasks: number;
-  hasPlatformRole: boolean;
 }
 
 export async function getProfileOverview(): Promise<ProfileOverview> {

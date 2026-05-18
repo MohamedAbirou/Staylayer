@@ -17,7 +17,7 @@ import {
 import toast from "react-hot-toast";
 import axios from "axios";
 import { useAuth } from "../auth/useAuth";
-import { describeMembershipRole, describePlatformRole } from "../auth/access";
+import { describeMembershipRole } from "../auth/access";
 import { formatDate } from "../lib/formatDate";
 import {
   changeProfilePassword,
@@ -867,16 +867,6 @@ export default function ProfilePage() {
               {formatDate(overview.createdAt)}
             </dd>
           </div>
-          {overview.platformRole ? (
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Platform role
-              </dt>
-              <dd className="mt-1 text-sm text-slate-900">
-                {describePlatformRole(overview.platformRole)}
-              </dd>
-            </div>
-          ) : null}
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Workspaces

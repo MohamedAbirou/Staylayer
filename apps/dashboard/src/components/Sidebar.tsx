@@ -26,14 +26,11 @@ import {
   CONTENT_MEMBERSHIP_ROLES,
   SITE_ADMIN_MEMBERSHIP_ROLES,
   describeMembershipRole,
-  describePlatformRole,
   getDefaultAuthenticatedPath,
   hasActiveSite,
   hasMembershipRole,
-  hasPlatformRole,
 } from "../auth/access";
 import { useAuth } from "../auth/useAuth";
-import { PLATFORM_ROLES } from "../auth/types";
 import { getPendingWorkspaceInvitations } from "../api/workspace";
 import { NotificationBell } from "./NotificationBell";
 import { useSettings } from "../hooks/useSettings";
@@ -92,8 +89,7 @@ export function Sidebar() {
     session?.memberships.find(
       (membership) => membership.tenantId === session.activeTenant?.id,
     ) ?? null;
-  const isNoWorkspaceCustomer =
-    session?.memberships.length === 0 && !hasPlatformRole(session);
+  const isNoWorkspaceCustomer = session?.memberships.length === 0;
 
   const { data: pendingInvitations = [] } = useQuery({
     queryKey: ["workspace-invitations", tenantId],
@@ -107,9 +103,7 @@ export function Sidebar() {
     (isNoWorkspaceCustomer ? "No workspace yet" : null) ||
     session?.activeSite?.name ||
     settings?.siteName ||
-    (hasPlatformRole(session, PLATFORM_ROLES)
-      ? "StayLayer Operator"
-      : "StayLayer");
+    "StayLayer";
 
   const handleLogout = async () => {
     await logout();
@@ -159,9 +153,6 @@ export function Sidebar() {
     }`;
 
   const roleColor: Record<string, string> = {
-    PLATFORM_OWNER: "text-purple-400",
-    SUPPORT_ADMIN: "text-blue-400",
-    FINANCE_ADMIN: "text-emerald-400",
     OWNER: "text-amber-300",
     ADMIN: "text-blue-400",
     EDITOR: "text-slate-400",
@@ -170,9 +161,6 @@ export function Sidebar() {
 
   const membershipLabel = session?.activeMembershipRole
     ? describeMembershipRole(session.activeMembershipRole)
-    : null;
-  const platformLabel = user?.platformRole
-    ? describePlatformRole(user.platformRole)
     : null;
   const pendingInvitationCount = pendingInvitations.length;
   const navFilter = navQuery.trim().toLowerCase();
@@ -590,14 +578,7 @@ export function Sidebar() {
             <p className="truncate text-sm font-semibold text-slate-900">
               {user?.email}
             </p>
-            {platformLabel ? (
-              <p
-                className={`text-xs font-medium ${roleColor[user?.platformRole ?? "SUPPORT_ADMIN"] ?? "text-slate-500"}`}
-              >
-                {platformLabel}
-              </p>
-            ) : null}
-            {!platformLabel && membershipLabel ? (
+            {membershipLabel ? (
               <p
                 className={`text-xs font-medium ${roleColor[session?.activeMembershipRole ?? "EDITOR"] ?? "text-slate-500"}`}
               >

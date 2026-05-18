@@ -3,11 +3,6 @@ import { expect, type Page } from "@playwright/test";
 const API_BASE_URL =
   process.env.PLAYWRIGHT_API_BASE_URL ?? "http://localhost:4000";
 
-export const PLATFORM_OWNER = {
-  email: "superadmin@staylayer.com",
-  password: "SuperAdmin123!",
-};
-
 export const CUSTOMER_OWNER = {
   email: "owner@azurebayvillas.com",
   password: "AzureBay123!",

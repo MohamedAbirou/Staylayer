@@ -1,10 +1,3 @@
-export const PLATFORM_ROLES = [
-  "PLATFORM_OWNER",
-  "SUPPORT_ADMIN",
-  "FINANCE_ADMIN",
-] as const;
-export type PlatformRole = (typeof PLATFORM_ROLES)[number];
-
 export const MEMBERSHIP_ROLES = [
   "OWNER",
   "ADMIN",
@@ -19,7 +12,6 @@ export type SiteStatus = "DRAFT" | "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 export interface AuthUser {
   id: string;
   email: string;
-  platformRole: PlatformRole | null;
 }
 
 export interface WorkspaceSite {
@@ -68,12 +60,4 @@ export interface AuthApiResponse extends AuthSession {
 export interface AuthContextRequest {
   tenantId?: string;
   siteId?: string;
-}
-
-export interface OperatorUser {
-  id: string;
-  email: string;
-  platformRole: PlatformRole | null;
-  createdAt: string;
-  updatedAt?: string;
 }

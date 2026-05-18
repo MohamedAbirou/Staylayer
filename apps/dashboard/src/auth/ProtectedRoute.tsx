@@ -5,10 +5,8 @@ import {
   getDefaultAuthenticatedPath,
   hasActiveSite,
   hasMembershipRole,
-  hasPlatformRole,
 } from "./access";
-import { ADMIN_LOGIN_PATH } from "../lib/constants";
-import type { MembershipRole, PlatformRole } from "./types";
+import type { MembershipRole } from "./types";
 
 /**
  * Paths a no-workspace user is allowed to visit. Anything else funnels them
@@ -28,18 +26,14 @@ function isLimboAllowed(pathname: string): boolean {
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
-  platformRoles?: readonly PlatformRole[];
   membershipRoles?: readonly MembershipRole[];
-  allowEither?: boolean;
   requireActiveSite?: boolean;
   redirectTo?: string;
 }
 
 export function ProtectedRoute({
   children,
-  platformRoles,
   membershipRoles,
-  allowEither = false,
   requireActiveSite = false,
   redirectTo,
 }: ProtectedRouteProps) {
@@ -51,10 +45,6 @@ export function ProtectedRoute({
   }
 
   if (!session) {
-    if (platformRoles && !membershipRoles) {
-      return <Navigate to={ADMIN_LOGIN_PATH} replace />;
-    }
-
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
     const search =
       returnTo && returnTo !== "/login"
@@ -65,11 +55,11 @@ export function ProtectedRoute({
   }
 
   // ─── Limbo state ────────────────────────────────────────────────────
-  // Authenticated user with zero workspace memberships AND no platform role.
-  // They've just deleted their last workspace, were removed from all
-  // memberships, or never joined one. Funnel them through /no-workspace so
-  // they can create, accept an invite, or delete their account.
-  const isLimbo = session.memberships.length === 0 && !hasPlatformRole(session);
+  // Authenticated customer with zero workspace memberships. They've just
+  // deleted their last workspace, were removed from all memberships, or never
+  // joined one. Funnel them through /no-workspace so they can create, accept an
+  // invite, or delete their account.
+  const isLimbo = session.memberships.length === 0;
   if (isLimbo && !isLimboAllowed(location.pathname)) {
     return <Navigate to="/no-workspace" replace />;
   }
@@ -79,21 +69,12 @@ export function ProtectedRoute({
     return <Navigate to={getDefaultAuthenticatedPath(session)} replace />;
   }
 
-  const platformAllowed = platformRoles
-    ? hasPlatformRole(session, platformRoles)
-    : false;
   const membershipAllowed = membershipRoles
     ? hasMembershipRole(session, membershipRoles)
     : false;
 
   let isAuthorized = true;
-  if (platformRoles && membershipRoles) {
-    isAuthorized = allowEither
-      ? platformAllowed || membershipAllowed
-      : platformAllowed && membershipAllowed;
-  } else if (platformRoles) {
-    isAuthorized = platformAllowed;
-  } else if (membershipRoles) {
+  if (membershipRoles) {
     isAuthorized = membershipAllowed;
   }
 
