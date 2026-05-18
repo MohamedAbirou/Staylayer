@@ -103,7 +103,12 @@ export function LoginForm({ returnTo }: { returnTo: string | null }) {
         return;
       }
 
-      if (!payload.activeTenant || !payload.activeMembershipRole) {
+      const hasWorkspaceContext = Boolean(
+        payload.activeTenant && payload.activeMembershipRole,
+      );
+      const isNoWorkspaceCustomer = payload.memberships.length === 0;
+
+      if (!hasWorkspaceContext && !isNoWorkspaceCustomer) {
         await clearSessionCookie();
         setError(
           "We could not match this sign-in to a customer workspace yet. If this is an internal account, use the appropriate internal sign-in instead.",

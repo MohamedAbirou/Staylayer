@@ -283,7 +283,12 @@ export async function refreshCustomerWorkspaceSession(
     return null;
   }
 
-  if (!payload.activeTenant || !payload.activeMembershipRole) {
+  const hasWorkspaceContext = Boolean(
+    payload.activeTenant && payload.activeMembershipRole,
+  );
+  const isNoWorkspaceCustomer = payload.memberships.length === 0;
+
+  if (!hasWorkspaceContext && !isNoWorkspaceCustomer) {
     return null;
   }
 
@@ -311,6 +316,10 @@ export async function getLegalDocument(slug: string): Promise<LegalDocument> {
 }
 
 export function resolveDashboardPath(session: CustomerAuthResponse): string {
+  if (session.memberships.length === 0) {
+    return "/no-workspace";
+  }
+
   if (
     session.activeMembershipRole === "OWNER" ||
     session.activeMembershipRole === "ADMIN"

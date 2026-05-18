@@ -161,14 +161,23 @@ export function WorkspaceDangerZone({
 
   useEffect(() => {
     if (!jobQuery.data) {
-      // If polling errored with 401, the tenant is almost certainly gone.
+      // If polling errored with 401, the tenant is almost certainly gone. When
+      // the account is being kept, refresh into the no-workspace session
+      // instead of logging out.
       if (
         activeJob &&
         (activeJob.status === "QUEUED" || activeJob.status === "RUNNING") &&
         isUnauthorized(jobQuery.error)
       ) {
-        toast.success("Workspace permanently deleted. Signing you out…");
-        void completeLogout(logout);
+        if (cascadeIntent) {
+          toast.success("Workspace permanently deleted. Signing you out…");
+          void completeLogout(logout);
+        } else {
+          toast.success("Workspace permanently deleted.");
+          void refresh().catch(() => {
+            void completeLogout(logout);
+          });
+        }
       }
       return;
     }
