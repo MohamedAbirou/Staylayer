@@ -64,7 +64,7 @@ interface NoWorkspacePageProps {
 export default function NoWorkspacePage({
   mode = "limbo",
 }: NoWorkspacePageProps) {
-  const { session, user, logout, refresh } = useAuth();
+  const { session, user, logout, switchWorkspace } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [workspaceName, setWorkspaceName] = useState("");
@@ -92,7 +92,9 @@ export default function NoWorkspacePage({
       await queryClient.invalidateQueries({
         queryKey: ["profile-overview-no-workspace"],
       });
-      const nextSession = await refresh({ tenantId: workspace.tenantId });
+      const nextSession = await switchWorkspace({
+        tenantId: workspace.tenantId,
+      });
       navigate(getDefaultAuthenticatedPath(nextSession), { replace: true });
     },
     onError: (error) => {
