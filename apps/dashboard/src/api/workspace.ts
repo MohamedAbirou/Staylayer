@@ -173,3 +173,27 @@ export async function updateWorkspaceMemberRole(
   );
   return data;
 }
+
+export type DemotableWorkspaceRole = Exclude<WorkspaceMemberRole, "OWNER">;
+
+export interface TransferWorkspaceOwnershipPayload {
+  demoteSelfTo: DemotableWorkspaceRole;
+  confirm: true;
+}
+
+export interface TransferWorkspaceOwnershipResult {
+  promoted: WorkspaceMemberRecord;
+  demoted: WorkspaceMemberRecord;
+}
+
+export async function transferWorkspaceOwnership(
+  tenantId: string,
+  membershipId: string,
+  payload: TransferWorkspaceOwnershipPayload,
+): Promise<TransferWorkspaceOwnershipResult> {
+  const { data } = await client.post<TransferWorkspaceOwnershipResult>(
+    `/tenants/${tenantId}/members/${membershipId}/transfer-ownership`,
+    payload,
+  );
+  return data;
+}

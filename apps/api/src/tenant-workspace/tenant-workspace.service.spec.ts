@@ -717,4 +717,188 @@ describe("TenantWorkspaceService", () => {
       });
     });
   });
+
+  describe("transferOwnership", () => {
+    const targetMembership = {
+      id: "membership-target",
+      tenantId: "tenant-1",
+      role: TenantMembershipRole.ADMIN,
+      isDefault: false,
+      createdAt: new Date("2026-05-06T12:00:00.000Z"),
+      user: {
+        id: "user-target",
+        email: "successor@example.com",
+      },
+    };
+
+    const ownerActorMembership = {
+      id: "membership-owner",
+      tenantId: "tenant-1",
+      role: TenantMembershipRole.OWNER,
+      isDefault: true,
+      createdAt: new Date("2026-05-01T09:00:00.000Z"),
+      user: {
+        id: "user-owner",
+        email: "owner@example.com",
+      },
+    };
+
+    it("promotes the target, demotes the actor, and notifies everyone", async () => {
+      prisma.tenantMembership.findFirst
+        .mockResolvedValueOnce(targetMembership)
+        .mockResolvedValueOnce(ownerActorMembership);
+      prisma.tenantMembership.update
+        .mockResolvedValueOnce({
+          ...targetMembership,
+          role: TenantMembershipRole.OWNER,
+        })
+        .mockResolvedValueOnce({
+          ...ownerActorMembership,
+          role: TenantMembershipRole.ADMIN,
+        });
+
+      const result = await service.transferOwnership(
+        "tenant-1",
+        "membership-target",
+        "user-owner",
+        TenantMembershipRole.ADMIN,
+      );
+
+      expect(prisma.tenantMembership.update).toHaveBeenNthCalledWith(1, {
+        where: { id: "membership-target" },
+        data: { role: TenantMembershipRole.OWNER },
+        select: expect.any(Object),
+      });
+      expect(prisma.tenantMembership.update).toHaveBeenNthCalledWith(2, {
+        where: { id: "membership-owner" },
+        data: { role: TenantMembershipRole.ADMIN },
+        select: expect.any(Object),
+      });
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-target",
+          title: "You are now the workspace owner",
+        }),
+      );
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-owner",
+          title: "Workspace ownership transferred",
+        }),
+      );
+      expect(notificationsService.createForTenantRoles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: "tenant-1",
+          title: "Workspace ownership transferred to successor@example.com",
+        }),
+      );
+      expect(result.promoted.role).toBe(TenantMembershipRole.OWNER);
+      expect(result.demoted.role).toBe(TenantMembershipRole.ADMIN);
+    });
+
+    it("rejects OWNER as the demote target", async () => {
+      await expect(
+        service.transferOwnership(
+          "tenant-1",
+          "membership-target",
+          "user-owner",
+          TenantMembershipRole.OWNER,
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "INVALID_DEMOTE_ROLE" },
+      });
+      expect(prisma.tenantMembership.findFirst).not.toHaveBeenCalled();
+    });
+
+    it("404s when the target membership is missing", async () => {
+      prisma.tenantMembership.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        service.transferOwnership(
+          "tenant-1",
+          "missing",
+          "user-owner",
+          TenantMembershipRole.ADMIN,
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "NOT_FOUND" },
+      });
+    });
+
+    it("blocks transferring ownership to yourself", async () => {
+      prisma.tenantMembership.findFirst.mockResolvedValueOnce({
+        ...targetMembership,
+        user: { id: "user-owner", email: "owner@example.com" },
+      });
+
+      await expect(
+        service.transferOwnership(
+          "tenant-1",
+          "membership-target",
+          "user-owner",
+          TenantMembershipRole.ADMIN,
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "TRANSFER_TO_SELF_BLOCKED" },
+      });
+      expect(prisma.tenantMembership.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects when the target is already an OWNER", async () => {
+      prisma.tenantMembership.findFirst.mockResolvedValueOnce({
+        ...targetMembership,
+        role: TenantMembershipRole.OWNER,
+      });
+
+      await expect(
+        service.transferOwnership(
+          "tenant-1",
+          "membership-target",
+          "user-owner",
+          TenantMembershipRole.ADMIN,
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "TARGET_ALREADY_OWNER" },
+      });
+      expect(prisma.tenantMembership.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects non-OWNER actors", async () => {
+      prisma.tenantMembership.findFirst
+        .mockResolvedValueOnce(targetMembership)
+        .mockResolvedValueOnce({
+          ...ownerActorMembership,
+          role: TenantMembershipRole.ADMIN,
+        });
+
+      await expect(
+        service.transferOwnership(
+          "tenant-1",
+          "membership-target",
+          "user-owner",
+          TenantMembershipRole.ADMIN,
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "ACTOR_NOT_OWNER" },
+      });
+      expect(prisma.tenantMembership.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects actors who are not workspace members", async () => {
+      prisma.tenantMembership.findFirst
+        .mockResolvedValueOnce(targetMembership)
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.transferOwnership(
+          "tenant-1",
+          "membership-target",
+          "outsider",
+          TenantMembershipRole.ADMIN,
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "ACTOR_NOT_MEMBER" },
+      });
+    });
+  });
 });

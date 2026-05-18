@@ -21,6 +21,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { WorkspaceAccessService } from "../auth/workspace-access.service";
 import { CreateTenantMemberDto } from "./dto/create-tenant-member.dto";
 import { InviteTenantMemberDto } from "./dto/invite-tenant-member.dto";
+import { TransferTenantOwnershipDto } from "./dto/transfer-tenant-ownership.dto";
 import { UpdateTenantMemberRoleDto } from "./dto/update-tenant-member-role.dto";
 import { TenantWorkspaceService } from "./tenant-workspace.service";
 
@@ -271,6 +272,54 @@ export class TenantMembersController {
     });
 
     return member;
+  }
+
+  @Post(":membershipId/transfer-ownership")
+  @MembershipRoles(TenantMembershipRole.OWNER)
+  @HttpCode(HttpStatus.OK)
+  async transferOwnership(
+    @Param("tenantId") tenantId: string,
+    @Param("membershipId") membershipId: string,
+    @Body() dto: TransferTenantOwnershipDto,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedRequestUser | undefined;
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+
+    const result = await this.tenantWorkspaceService.transferOwnership(
+      resolvedTenantId,
+      membershipId,
+      user?.sub ?? "",
+      dto.demoteSelfTo,
+    );
+
+    await this.adminService.createAuditLogForTenant({
+      tenantId: resolvedTenantId,
+      actorUserId: user?.sub ?? null,
+      action: "tenant.ownership_transferred",
+      targetType: "tenant_membership",
+      targetId: result.promoted.id,
+      metadata: {
+        toUserId: result.promoted.userId,
+        toEmail: result.promoted.email,
+        toRole: result.promoted.role,
+        fromMembershipId: result.demoted.id,
+        fromUserId: result.demoted.userId,
+        fromEmail: result.demoted.email,
+        fromRole: result.demoted.role,
+      },
+    });
+
+    return result;
   }
 
   @Delete(":membershipId")

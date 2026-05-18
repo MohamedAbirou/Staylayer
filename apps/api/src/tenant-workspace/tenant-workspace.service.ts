@@ -588,6 +588,187 @@ export class TenantWorkspaceService {
     return this.serializeMember(updated);
   }
 
+  async transferOwnership(
+    tenantId: string,
+    targetMembershipId: string,
+    actorUserId: string,
+    demoteSelfTo: TenantMembershipRole,
+  ): Promise<{
+    promoted: TenantMemberSummary;
+    demoted: TenantMemberSummary;
+  }> {
+    if (demoteSelfTo === TenantMembershipRole.OWNER) {
+      throw new BadRequestException({
+        code: "INVALID_DEMOTE_ROLE",
+        message:
+          "Select a non-owner role for yourself. Use change role if you want to keep two owners.",
+      });
+    }
+
+    const targetMembership = await this.prisma.tenantMembership.findFirst({
+      where: { id: targetMembershipId, tenantId },
+      select: {
+        id: true,
+        tenantId: true,
+        role: true,
+        isDefault: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!targetMembership) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Workspace member not found",
+      });
+    }
+
+    if (targetMembership.user.id === actorUserId) {
+      throw new BadRequestException({
+        code: "TRANSFER_TO_SELF_BLOCKED",
+        message: "You cannot transfer ownership to yourself.",
+      });
+    }
+
+    if (targetMembership.role === TenantMembershipRole.OWNER) {
+      throw new BadRequestException({
+        code: "TARGET_ALREADY_OWNER",
+        message: "This member is already an owner of the workspace.",
+      });
+    }
+
+    const actorMembership = await this.prisma.tenantMembership.findFirst({
+      where: { tenantId, userId: actorUserId },
+      select: {
+        id: true,
+        tenantId: true,
+        role: true,
+        isDefault: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!actorMembership) {
+      throw new BadRequestException({
+        code: "ACTOR_NOT_MEMBER",
+        message: "Only workspace members can transfer ownership.",
+      });
+    }
+
+    if (actorMembership.role !== TenantMembershipRole.OWNER) {
+      throw new BadRequestException({
+        code: "ACTOR_NOT_OWNER",
+        message: "Only an existing owner can transfer workspace ownership.",
+      });
+    }
+
+    const { promoted, demoted } = await this.prisma.$transaction(async (tx) => {
+      const promotedMembership = await tx.tenantMembership.update({
+        where: { id: targetMembership.id },
+        data: { role: TenantMembershipRole.OWNER },
+        select: {
+          id: true,
+          tenantId: true,
+          role: true,
+          isDefault: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      const demotedMembership = await tx.tenantMembership.update({
+        where: { id: actorMembership.id },
+        data: { role: demoteSelfTo },
+        select: {
+          id: true,
+          tenantId: true,
+          role: true,
+          isDefault: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return { promoted: promotedMembership, demoted: demotedMembership };
+    });
+
+    await Promise.all([
+      this.notificationsService.create({
+        tenantId,
+        userId: promoted.user.id,
+        category: NotificationCategory.SYSTEM,
+        title: "You are now the workspace owner",
+        body: `${actorMembership.user.email} transferred workspace ownership to you. You may need to sign back in for permissions to refresh.`,
+        actionUrl: "/workspace",
+        metadata: {
+          previousRole: targetMembership.role,
+          role: promoted.role,
+          fromUserId: actorMembership.user.id,
+          fromEmail: actorMembership.user.email,
+        },
+      }),
+      this.notificationsService.create({
+        tenantId,
+        userId: demoted.user.id,
+        category: NotificationCategory.SYSTEM,
+        title: "Workspace ownership transferred",
+        body: `You transferred ownership to ${promoted.user.email}. Your role is now ${this.describeRole(demoted.role)}. You may need to sign back in for permissions to refresh.`,
+        actionUrl: "/",
+        metadata: {
+          previousRole: actorMembership.role,
+          role: demoted.role,
+          toUserId: promoted.user.id,
+          toEmail: promoted.user.email,
+        },
+      }),
+      this.notificationsService.createForTenantRoles({
+        tenantId,
+        roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
+        category: NotificationCategory.SYSTEM,
+        title: `Workspace ownership transferred to ${promoted.user.email}`,
+        body: `${actorMembership.user.email} handed workspace ownership to ${promoted.user.email} and is now ${this.describeRole(demoted.role)}.`,
+        actionUrl: "/workspace",
+        metadata: {
+          fromMembershipId: demoted.id,
+          fromUserId: demoted.user.id,
+          fromEmail: demoted.user.email,
+          fromRole: demoted.role,
+          toMembershipId: promoted.id,
+          toUserId: promoted.user.id,
+          toEmail: promoted.user.email,
+          toRole: promoted.role,
+        },
+      }),
+    ]);
+
+    return {
+      promoted: this.serializeMember(promoted),
+      demoted: this.serializeMember(demoted),
+    };
+  }
+
   async removeMember(
     tenantId: string,
     membershipId: string,

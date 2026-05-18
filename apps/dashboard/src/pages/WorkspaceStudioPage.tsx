@@ -11,6 +11,7 @@ import {
   Globe2,
   Home,
   Hotel,
+  KeyRound,
   Loader2,
   Mail,
   Plus,
@@ -43,9 +44,11 @@ import {
   removeWorkspaceMember,
   resendWorkspaceInvitation,
   revokeWorkspaceInvitation,
+  transferWorkspaceOwnership,
   updateWorkspaceMemberRole,
   type CreateWorkspaceMemberPayload,
   type CreateWorkspaceSitePayload,
+  type DemotableWorkspaceRole,
   type InviteWorkspaceMemberPayload,
   type WorkspaceInvitationRecord,
   type WorkspaceMemberRecord,
@@ -187,6 +190,12 @@ export default function WorkspaceStudioPage() {
   const [memberRoleEdits, setMemberRoleEdits] = useState<
     Record<string, WorkspaceMemberRole>
   >({});
+  const [transferTargetMemberId, setTransferTargetMemberId] = useState<
+    string | null
+  >(null);
+  const [transferDemoteRole, setTransferDemoteRole] =
+    useState<DemotableWorkspaceRole>("ADMIN");
+  const [transferConfirmEmail, setTransferConfirmEmail] = useState("");
   const [siteForm, setSiteForm] = useState<CreateWorkspaceSitePayload>({
     name: "",
     slug: "",
@@ -505,6 +514,46 @@ export default function WorkspaceStudioPage() {
     },
     onError: (error: unknown) => {
       toast.error(readApiMessage(error, "Unable to update that member role."));
+    },
+  });
+
+  const transferOwnershipMutation = useMutation({
+    mutationFn: async (variables: {
+      member: WorkspaceMemberRecord;
+      demoteSelfTo: DemotableWorkspaceRole;
+    }) => {
+      if (!tenantId) {
+        throw new Error("Select a tenant before transferring ownership.");
+      }
+
+      return transferWorkspaceOwnership(tenantId, variables.member.id, {
+        demoteSelfTo: variables.demoteSelfTo,
+        confirm: true,
+      });
+    },
+    onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-members", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
+      setTransferTargetMemberId(null);
+      setTransferConfirmEmail("");
+      setTransferDemoteRole("ADMIN");
+      toast.success(
+        `${result.promoted.email} is now the workspace owner. You are now ${describeMembershipRole(result.demoted.role)}.`,
+      );
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        readApiMessage(error, "Unable to transfer workspace ownership."),
+      );
     },
   });
 
@@ -1511,6 +1560,15 @@ export default function WorkspaceStudioPage() {
                 const promotingFromOwner =
                   member.role === "OWNER" && pendingRole !== "OWNER";
                 const blockedByLastOwner = promotingFromOwner && isLastOwner;
+                const canTransferOwnership =
+                  isActorOwner && !isCurrentUser && member.role !== "OWNER";
+                const transferOpen = transferTargetMemberId === member.id;
+                const transferring =
+                  transferOwnershipMutation.isPending &&
+                  transferOwnershipMutation.variables?.member.id === member.id;
+                const transferConfirmMatches =
+                  transferConfirmEmail.trim().toLowerCase() ===
+                  member.email.trim().toLowerCase();
 
                 return (
                   <article
@@ -1651,8 +1709,129 @@ export default function WorkspaceStudioPage() {
                             Remove
                           </button>
                         ) : null}
+                        {canTransferOwnership ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (transferOpen) {
+                                setTransferTargetMemberId(null);
+                                setTransferConfirmEmail("");
+                                setTransferDemoteRole("ADMIN");
+                              } else {
+                                setTransferTargetMemberId(member.id);
+                                setTransferConfirmEmail("");
+                                setTransferDemoteRole("ADMIN");
+                              }
+                            }}
+                            disabled={transferring}
+                            title={`Transfer ownership to ${member.email}`}
+                            className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {transferring ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <KeyRound className="h-3.5 w-3.5" />
+                            )}
+                            Transfer ownership
+                          </button>
+                        ) : null}
                       </div>
                     </div>
+
+                    {transferOpen ? (
+                      <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-full bg-white p-2 text-amber-800 shadow-sm">
+                            <KeyRound className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-amber-950">
+                              Transfer ownership to {member.email}?
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-amber-900">
+                              {member.email} will become the new workspace owner
+                              with full control. You will be demoted to the role
+                              you choose below and may need to sign back in for
+                              permissions to refresh.
+                            </p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                              <label className="block text-xs font-semibold text-amber-900">
+                                Your new role
+                                <select
+                                  value={transferDemoteRole}
+                                  onChange={(event) =>
+                                    setTransferDemoteRole(
+                                      event.target
+                                        .value as DemotableWorkspaceRole,
+                                    )
+                                  }
+                                  disabled={transferring}
+                                  className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60"
+                                >
+                                  <option value="ADMIN">Admin</option>
+                                  <option value="EDITOR">Editor</option>
+                                  <option value="BILLING">
+                                    Billing contact
+                                  </option>
+                                </select>
+                              </label>
+                              <label className="block text-xs font-semibold text-amber-900">
+                                Type the member email to confirm
+                                <input
+                                  value={transferConfirmEmail}
+                                  onChange={(event) =>
+                                    setTransferConfirmEmail(event.target.value)
+                                  }
+                                  disabled={transferring}
+                                  placeholder={member.email}
+                                  className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60"
+                                />
+                              </label>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  transferOwnershipMutation.mutate({
+                                    member,
+                                    demoteSelfTo: transferDemoteRole,
+                                  })
+                                }
+                                disabled={
+                                  transferring || !transferConfirmMatches
+                                }
+                                title={
+                                  transferConfirmMatches
+                                    ? `Transfer ownership to ${member.email}`
+                                    : "Type the member email to confirm"
+                                }
+                                className="inline-flex items-center gap-2 rounded-full bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-amber-300"
+                              >
+                                {transferring ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <KeyRound className="h-3.5 w-3.5" />
+                                )}
+                                Transfer ownership
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTransferTargetMemberId(null);
+                                  setTransferConfirmEmail("");
+                                  setTransferDemoteRole("ADMIN");
+                                }}
+                                disabled={transferring}
+                                className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
 
                     {pendingRemoval ? (
                       <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
