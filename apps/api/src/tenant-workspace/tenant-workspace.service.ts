@@ -37,6 +37,7 @@ import { UsersService } from "../users/users.service";
 import { CreateSiteDto } from "./dto/create-site.dto";
 import { CreateTenantMemberDto } from "./dto/create-tenant-member.dto";
 import { InviteTenantMemberDto } from "./dto/invite-tenant-member.dto";
+import { RestoreSiteDto } from "./dto/restore-site.dto";
 
 type TenantSiteSummary = {
   id: string;
@@ -49,6 +50,21 @@ type TenantSiteSummary = {
   enabledLocales: string[];
   siteType: SiteType;
   createdAt: string;
+};
+
+type ArchivedDomainAvailability = {
+  host: string;
+  available: boolean;
+};
+
+type ArchivedTenantSiteSummary = TenantSiteSummary & {
+  archivedAt: string | null;
+  archivedSlug: string | null;
+  archivedPublicSubdomain: string | null;
+  archivedDomains: string[];
+  archivedSlugAvailable: boolean;
+  archivedPublicSubdomainAvailable: boolean | null;
+  archivedDomainAvailability: ArchivedDomainAvailability[];
 };
 
 type TenantMemberSummary = {
@@ -268,8 +284,14 @@ export class TenantWorkspaceService {
     }
 
     const cacheHosts = this.collectSiteHostnames(site);
+    const detachedDomainHosts = site.domains.map((domain) => domain.host);
+    const archivedAt = new Date();
     const archivedSite = await this.prisma.$transaction(async (tx) => {
       await tx.domain.deleteMany({ where: { siteId: site.id } });
+      await tx.seoAuditSchedule.updateMany({
+        where: { siteId: site.id },
+        data: { enabled: false, nextRunAt: null },
+      });
 
       return tx.site.update({
         where: { id: site.id },
@@ -277,6 +299,10 @@ export class TenantWorkspaceService {
           status: SiteStatus.ARCHIVED,
           slug: this.buildArchivedSlug(site.slug, site.id),
           publicSubdomain: null,
+          archivedAt,
+          archivedSlug: site.slug,
+          archivedPublicSubdomain: site.publicSubdomain,
+          archivedDomains: detachedDomainHosts,
         },
         select: {
           id: true,
@@ -299,20 +325,297 @@ export class TenantWorkspaceService {
         tenantId,
         roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
         category: NotificationCategory.SYSTEM,
-        title: `${site.name} was deleted from Workspace Studio`,
-        body: `The site was archived, its default subdomain was released, and ${site.domains.length} custom domain${site.domains.length === 1 ? "" : "s"} were detached.`,
+        title: `${site.name} was archived in Workspace Studio`,
+        body: `The site was moved to Archived sites, its default subdomain was released, and ${detachedDomainHosts.length} custom domain${detachedDomainHosts.length === 1 ? "" : "s"} were detached. An owner can restore it from Archived sites.`,
         actionUrl: "/workspace",
         metadata: {
           siteId: site.id,
           siteName: site.name,
           releasedSlug: site.slug,
           releasedPublicSubdomain: site.publicSubdomain,
-          detachedDomains: site.domains.map((domain) => domain.host),
+          detachedDomains: detachedDomainHosts,
+          archivedAt: archivedAt.toISOString(),
         },
       }),
     ]);
 
     return this.serializeSite(archivedSite);
+  }
+
+  async listArchivedSites(
+    tenantId: string,
+  ): Promise<ArchivedTenantSiteSummary[]> {
+    const sites = await this.prisma.site.findMany({
+      where: { tenantId, status: SiteStatus.ARCHIVED },
+      orderBy: [{ archivedAt: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        slug: true,
+        publicSubdomain: true,
+        status: true,
+        primaryLocale: true,
+        enabledLocales: true,
+        siteType: true,
+        createdAt: true,
+        archivedAt: true,
+        archivedSlug: true,
+        archivedPublicSubdomain: true,
+        archivedDomains: true,
+      },
+    });
+
+    if (sites.length === 0) {
+      return [];
+    }
+
+    const slugCandidates = Array.from(
+      new Set(
+        sites
+          .map((site) => site.archivedSlug)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
+    const subdomainCandidates = Array.from(
+      new Set(
+        sites
+          .map((site) => site.archivedPublicSubdomain)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
+    const domainCandidates = Array.from(
+      new Set(sites.flatMap((site) => site.archivedDomains ?? [])),
+    );
+
+    const [conflictingSlugs, conflictingSubdomains, conflictingDomains] =
+      await Promise.all([
+        slugCandidates.length === 0
+          ? []
+          : this.prisma.site.findMany({
+              where: {
+                tenantId,
+                status: { not: SiteStatus.ARCHIVED },
+                slug: { in: slugCandidates },
+              },
+              select: { slug: true },
+            }),
+        subdomainCandidates.length === 0
+          ? []
+          : this.prisma.site.findMany({
+              where: {
+                publicSubdomain: { in: subdomainCandidates },
+              },
+              select: { publicSubdomain: true },
+            }),
+        domainCandidates.length === 0
+          ? []
+          : this.prisma.domain.findMany({
+              where: { host: { in: domainCandidates } },
+              select: { host: true },
+            }),
+      ]);
+
+    const takenSlugs = new Set(conflictingSlugs.map((row) => row.slug));
+    const takenSubdomains = new Set(
+      conflictingSubdomains
+        .map((row) => row.publicSubdomain)
+        .filter((value): value is string => Boolean(value)),
+    );
+    const takenDomains = new Set(conflictingDomains.map((row) => row.host));
+
+    return sites.map((site) => {
+      const archivedDomains = site.archivedDomains ?? [];
+      const archivedSlug = site.archivedSlug;
+      const archivedPublicSubdomain = site.archivedPublicSubdomain;
+      return {
+        ...this.serializeSite(site),
+        archivedAt: site.archivedAt ? site.archivedAt.toISOString() : null,
+        archivedSlug,
+        archivedPublicSubdomain,
+        archivedDomains,
+        archivedSlugAvailable: archivedSlug
+          ? !takenSlugs.has(archivedSlug)
+          : false,
+        archivedPublicSubdomainAvailable: archivedPublicSubdomain
+          ? !takenSubdomains.has(archivedPublicSubdomain)
+          : null,
+        archivedDomainAvailability: archivedDomains.map((host) => ({
+          host,
+          available: !takenDomains.has(host),
+        })),
+      };
+    });
+  }
+
+  async restoreSite(
+    tenantId: string,
+    siteId: string,
+    dto: RestoreSiteDto,
+  ): Promise<TenantSiteSummary> {
+    const site = await this.prisma.site.findFirst({
+      where: { id: siteId, tenantId },
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        slug: true,
+        publicSubdomain: true,
+        status: true,
+        primaryLocale: true,
+        enabledLocales: true,
+        siteType: true,
+        createdAt: true,
+        archivedAt: true,
+        archivedSlug: true,
+        archivedPublicSubdomain: true,
+      },
+    });
+
+    if (!site) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Site not found in this workspace",
+      });
+    }
+
+    if (site.status !== SiteStatus.ARCHIVED) {
+      throw new ConflictException({
+        code: "SITE_NOT_ARCHIVED",
+        message: "Only archived sites can be restored.",
+      });
+    }
+
+    const requestedSlug = this.normalizeOptionalValue(dto.slug ?? undefined);
+    const targetSlug = this.normalizeSlug(
+      requestedSlug ?? site.archivedSlug ?? site.slug,
+    );
+
+    const slugConflict = await this.prisma.site.findFirst({
+      where: {
+        tenantId,
+        slug: targetSlug,
+        status: { not: SiteStatus.ARCHIVED },
+        NOT: { id: site.id },
+      },
+      select: { id: true },
+    });
+
+    if (slugConflict) {
+      throw new ConflictException({
+        code: "SLUG_CONFLICT",
+        message: "A site with this slug already exists in this workspace.",
+      });
+    }
+
+    const subdomainProvided = Object.prototype.hasOwnProperty.call(
+      dto,
+      "publicSubdomain",
+    );
+    let targetPublicSubdomain: string | null;
+    if (subdomainProvided) {
+      const value = dto.publicSubdomain;
+      targetPublicSubdomain =
+        value === null || value === undefined || value === ""
+          ? null
+          : this.normalizePublicSubdomain(value);
+    } else {
+      targetPublicSubdomain = site.archivedPublicSubdomain
+        ? this.normalizePublicSubdomain(site.archivedPublicSubdomain)
+        : null;
+    }
+
+    if (targetPublicSubdomain) {
+      if (RESERVED_PUBLIC_SUBDOMAINS.has(targetPublicSubdomain)) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "This public subdomain is reserved",
+        });
+      }
+
+      const subdomainConflict = await this.prisma.site.findFirst({
+        where: {
+          publicSubdomain: targetPublicSubdomain,
+          NOT: { id: site.id },
+        },
+        select: { id: true },
+      });
+
+      if (subdomainConflict) {
+        throw new ConflictException({
+          code: "PUBLIC_SUBDOMAIN_CONFLICT",
+          message: "This public subdomain is already taken.",
+        });
+      }
+    }
+
+    let restored: {
+      id: string;
+      tenantId: string;
+      name: string;
+      slug: string;
+      publicSubdomain: string | null;
+      status: SiteStatus;
+      primaryLocale: string;
+      enabledLocales: string[];
+      siteType: SiteType;
+      createdAt: Date;
+    };
+
+    try {
+      restored = await this.prisma.site.update({
+        where: { id: site.id },
+        data: {
+          status: SiteStatus.ACTIVE,
+          slug: targetSlug,
+          publicSubdomain: targetPublicSubdomain,
+          archivedAt: null,
+          archivedSlug: null,
+          archivedPublicSubdomain: null,
+          archivedDomains: [],
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          name: true,
+          slug: true,
+          publicSubdomain: true,
+          status: true,
+          primaryLocale: true,
+          enabledLocales: true,
+          siteType: true,
+          createdAt: true,
+        },
+      });
+    } catch (error) {
+      this.rethrowSiteConflict(error);
+      throw error;
+    }
+
+    const cacheHosts = this.collectSiteHostnames({
+      publicSubdomain: restored.publicSubdomain,
+      domains: [],
+    });
+
+    await Promise.all([
+      this.bustHostCache(cacheHosts),
+      this.notificationsService.createForTenantRoles({
+        tenantId,
+        roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
+        category: NotificationCategory.SYSTEM,
+        title: `${restored.name} was restored from Archived sites`,
+        body: `The site is active again with slug "${restored.slug}". Custom domains, Search Console, Bing Webmaster, and scheduled SEO audits were not reconnected automatically.`,
+        actionUrl: "/workspace",
+        metadata: {
+          siteId: restored.id,
+          siteName: restored.name,
+          restoredSlug: restored.slug,
+          restoredPublicSubdomain: restored.publicSubdomain,
+        },
+      }),
+    ]);
+
+    return this.serializeSite(restored);
   }
 
   async inviteMember(
