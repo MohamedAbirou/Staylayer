@@ -2,8 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { randomBytes } from "node:crypto";
 import {
   NotificationCategory,
@@ -21,6 +24,15 @@ import {
 } from "../common/public-subdomain.util";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  getConfiguredPlatformRootDomain,
+  isUsablePlatformRootDomain,
+} from "../public-runtime/platform-root-domain";
+import { PublicRuntimeCacheService } from "../public-runtime/public-runtime.cache.service";
+import {
+  companionHost,
+  normalizeHostname,
+} from "../public-runtime/public-runtime.util";
 import { UsersService } from "../users/users.service";
 import { CreateSiteDto } from "./dto/create-site.dto";
 import { CreateTenantMemberDto } from "./dto/create-tenant-member.dto";
@@ -71,17 +83,22 @@ type PendingTenantInvitationSummary = {
 
 @Injectable()
 export class TenantWorkspaceService {
+  private readonly logger = new Logger(TenantWorkspaceService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly usersService: UsersService,
     private readonly customerAccessService: CustomerAccessService,
     private readonly notificationsService: NotificationsService,
+    private readonly configService: ConfigService,
+    @Optional()
+    private readonly publicRuntimeCacheService?: PublicRuntimeCacheService,
   ) {}
 
   async listSites(tenantId: string): Promise<TenantSiteSummary[]> {
     const sites = await this.prisma.site.findMany({
-      where: { tenantId },
+      where: { tenantId, status: { not: SiteStatus.ARCHIVED } },
       orderBy: [{ status: "asc" }, { name: "asc" }, { createdAt: "asc" }],
       select: {
         id: true,
@@ -214,6 +231,90 @@ export class TenantWorkspaceService {
     }
   }
 
+  async deleteSite(
+    tenantId: string,
+    siteId: string,
+  ): Promise<TenantSiteSummary> {
+    const site = await this.prisma.site.findFirst({
+      where: {
+        id: siteId,
+        tenantId,
+        status: { not: SiteStatus.ARCHIVED },
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        slug: true,
+        publicSubdomain: true,
+        status: true,
+        primaryLocale: true,
+        enabledLocales: true,
+        siteType: true,
+        createdAt: true,
+        domains: {
+          select: {
+            host: true,
+          },
+        },
+      },
+    });
+
+    if (!site) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Site not found in this workspace",
+      });
+    }
+
+    const cacheHosts = this.collectSiteHostnames(site);
+    const archivedSite = await this.prisma.$transaction(async (tx) => {
+      await tx.domain.deleteMany({ where: { siteId: site.id } });
+
+      return tx.site.update({
+        where: { id: site.id },
+        data: {
+          status: SiteStatus.ARCHIVED,
+          slug: this.buildArchivedSlug(site.slug, site.id),
+          publicSubdomain: null,
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          name: true,
+          slug: true,
+          publicSubdomain: true,
+          status: true,
+          primaryLocale: true,
+          enabledLocales: true,
+          siteType: true,
+          createdAt: true,
+        },
+      });
+    });
+
+    await Promise.all([
+      this.bustHostCache(cacheHosts),
+      this.notificationsService.createForTenantRoles({
+        tenantId,
+        roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
+        category: NotificationCategory.SYSTEM,
+        title: `${site.name} was deleted from Workspace Studio`,
+        body: `The site was archived, its default subdomain was released, and ${site.domains.length} custom domain${site.domains.length === 1 ? "" : "s"} were detached.`,
+        actionUrl: "/workspace",
+        metadata: {
+          siteId: site.id,
+          siteName: site.name,
+          releasedSlug: site.slug,
+          releasedPublicSubdomain: site.publicSubdomain,
+          detachedDomains: site.domains.map((domain) => domain.host),
+        },
+      }),
+    ]);
+
+    return this.serializeSite(archivedSite);
+  }
+
   async inviteMember(
     tenantId: string,
     dto: InviteTenantMemberDto,
@@ -223,6 +324,28 @@ export class TenantWorkspaceService {
       tenantId,
       email: dto.email,
       role: dto.role,
+      invitedByUserId,
+    });
+  }
+
+  async revokeInvitation(
+    tenantId: string,
+    invitationId: string,
+  ): Promise<TenantInvitationSummary> {
+    return this.customerAccessService.revokeWorkspaceInvitation({
+      tenantId,
+      invitationId,
+    });
+  }
+
+  async resendInvitation(
+    tenantId: string,
+    invitationId: string,
+    invitedByUserId: string | null,
+  ): Promise<TenantInvitationSummary> {
+    return this.customerAccessService.resendWorkspaceInvitation({
+      tenantId,
+      invitationId,
       invitedByUserId,
     });
   }
@@ -327,6 +450,95 @@ export class TenantWorkspaceService {
         role: membership.role,
       }),
     ]);
+
+    return this.serializeMember(membership);
+  }
+
+  async removeMember(
+    tenantId: string,
+    membershipId: string,
+    actorUserId: string,
+  ): Promise<TenantMemberSummary> {
+    const membership = await this.prisma.tenantMembership.findFirst({
+      where: { id: membershipId, tenantId },
+      select: {
+        id: true,
+        tenantId: true,
+        role: true,
+        isDefault: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!membership) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Workspace member not found",
+      });
+    }
+
+    if (membership.user.id === actorUserId) {
+      throw new BadRequestException({
+        code: "SELF_REMOVAL_BLOCKED",
+        message:
+          "You cannot remove your own workspace access from Workspace Studio.",
+      });
+    }
+
+    if (membership.role === TenantMembershipRole.OWNER) {
+      const ownerCount = await this.prisma.tenantMembership.count({
+        where: { tenantId, role: TenantMembershipRole.OWNER },
+      });
+
+      if (ownerCount <= 1) {
+        throw new BadRequestException({
+          code: "LAST_OWNER_BLOCKED",
+          message: "A workspace must keep at least one owner.",
+        });
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tenantMembership.delete({ where: { id: membership.id } });
+
+      if (!membership.isDefault) {
+        return;
+      }
+
+      const nextDefaultMembership = await tx.tenantMembership.findFirst({
+        where: { userId: membership.user.id },
+        orderBy: [{ createdAt: "asc" }],
+        select: { id: true },
+      });
+
+      if (nextDefaultMembership) {
+        await tx.tenantMembership.update({
+          where: { id: nextDefaultMembership.id },
+          data: { isDefault: true },
+        });
+      }
+    });
+
+    await this.notificationsService.createForTenantRoles({
+      tenantId,
+      roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
+      category: NotificationCategory.SYSTEM,
+      title: `Team member removed: ${membership.user.email}`,
+      body: `${membership.user.email} no longer has access to this workspace.`,
+      actionUrl: "/workspace",
+      metadata: {
+        membershipId: membership.id,
+        userId: membership.user.id,
+        email: membership.user.email,
+        role: membership.role,
+      },
+    });
 
     return this.serializeMember(membership);
   }
@@ -528,6 +740,49 @@ export class TenantWorkspaceService {
         return "guest house";
       default:
         return "hospitality";
+    }
+  }
+
+  private buildArchivedSlug(slug: string, siteId: string): string {
+    return `${slug}-archived-${siteId.slice(-8)}`;
+  }
+
+  private collectSiteHostnames(site: {
+    publicSubdomain: string | null;
+    domains: { host: string }[];
+  }): string[] {
+    const hosts: string[] = [];
+    const platformRootDomain = getConfiguredPlatformRootDomain(
+      this.configService,
+    );
+
+    if (
+      site.publicSubdomain &&
+      isUsablePlatformRootDomain(platformRootDomain)
+    ) {
+      hosts.push(`${site.publicSubdomain}.${platformRootDomain}`);
+    }
+
+    for (const domain of site.domains) {
+      hosts.push(domain.host, companionHost(domain.host));
+    }
+
+    return Array.from(new Set(hosts.map(normalizeHostname).filter(Boolean)));
+  }
+
+  private async bustHostCache(hosts: string[]): Promise<void> {
+    if (!this.publicRuntimeCacheService || hosts.length === 0) {
+      return;
+    }
+
+    try {
+      await this.publicRuntimeCacheService.deleteKeys(
+        hosts.map((host) => `runtime:host:${host}`),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to bust runtime host cache after site deletion: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

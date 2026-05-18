@@ -2,6 +2,7 @@ import { useDeferredValue, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ArrowRight,
   BedDouble,
   Building2,
@@ -16,8 +17,11 @@ import {
   Search,
   Shield,
   Sparkles,
+  Trash2,
+  UserMinus,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../auth/useAuth";
@@ -31,14 +35,21 @@ import { formatDate, formatRelativeTime } from "../lib/formatDate";
 import {
   createWorkspaceMember,
   createWorkspaceSite,
+  deleteWorkspaceSite,
   getPendingWorkspaceInvitations,
   getWorkspaceMembers,
   getWorkspaceSites,
   inviteWorkspaceMember,
+  removeWorkspaceMember,
+  resendWorkspaceInvitation,
+  revokeWorkspaceInvitation,
   type CreateWorkspaceMemberPayload,
   type CreateWorkspaceSitePayload,
   type InviteWorkspaceMemberPayload,
+  type WorkspaceInvitationRecord,
+  type WorkspaceMemberRecord,
   type WorkspaceMemberRole,
+  type WorkspaceSiteRecord,
   type WorkspaceSiteStatus,
   type WorkspaceSiteType,
 } from "../api/workspace";
@@ -164,6 +175,14 @@ export default function WorkspaceStudioPage() {
   const [memberComposerMode, setMemberComposerMode] =
     useState<MemberComposerMode>("invite");
   const [recentSiteId, setRecentSiteId] = useState<string | null>(null);
+  const [sitePendingDeletionId, setSitePendingDeletionId] = useState<
+    string | null
+  >(null);
+  const [memberPendingRemovalId, setMemberPendingRemovalId] = useState<
+    string | null
+  >(null);
+  const [invitationPendingRevocationId, setInvitationPendingRevocationId] =
+    useState<string | null>(null);
   const [siteForm, setSiteForm] = useState<CreateWorkspaceSitePayload>({
     name: "",
     slug: "",
@@ -353,6 +372,152 @@ export default function WorkspaceStudioPage() {
     },
   });
 
+  const deleteSiteMutation = useMutation({
+    mutationFn: async (site: WorkspaceSiteRecord) => {
+      if (!tenantId) {
+        throw new Error("Select a tenant before deleting a site.");
+      }
+
+      return deleteWorkspaceSite(tenantId, site.id);
+    },
+    onSuccess: async (_deletedSite, deletedSite) => {
+      const remainingSites = sites.filter(
+        (site) => site.id !== deletedSite.id && site.status !== "ARCHIVED",
+      );
+      const deletedActiveSite = session?.activeSite?.id === deletedSite.id;
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-sites", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
+
+      setSitePendingDeletionId(null);
+      if (recentSiteId === deletedSite.id) {
+        setRecentSiteId(null);
+      }
+
+      if (deletedActiveSite) {
+        const nextSite = remainingSites[0] ?? null;
+
+        try {
+          await switchWorkspace(
+            nextSite
+              ? { tenantId: deletedSite.tenantId, siteId: nextSite.id }
+              : { tenantId: deletedSite.tenantId },
+          );
+          toast.success(
+            nextSite
+              ? `${deletedSite.name} deleted. Context moved to ${nextSite.name}.`
+              : `${deletedSite.name} deleted. This workspace has no active site now.`,
+          );
+        } catch (error: unknown) {
+          toast.error(
+            readApiMessage(
+              error,
+              `${deletedSite.name} was deleted, but the workspace context could not refresh.`,
+            ),
+          );
+        }
+        return;
+      }
+
+      toast.success(`${deletedSite.name} deleted.`);
+    },
+    onError: (error: unknown) => {
+      toast.error(readApiMessage(error, "Unable to delete that site."));
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (member: WorkspaceMemberRecord) => {
+      if (!tenantId) {
+        throw new Error("Select a tenant before removing a member.");
+      }
+
+      return removeWorkspaceMember(tenantId, member.id);
+    },
+    onSuccess: async (member) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-members", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
+      setMemberPendingRemovalId(null);
+      toast.success(`${member.email} removed from this workspace.`);
+    },
+    onError: (error: unknown) => {
+      toast.error(readApiMessage(error, "Unable to remove that member."));
+    },
+  });
+
+  const resendInvitationMutation = useMutation({
+    mutationFn: async (invitation: WorkspaceInvitationRecord) => {
+      if (!tenantId) {
+        throw new Error("Select a tenant before resending an invitation.");
+      }
+
+      return resendWorkspaceInvitation(tenantId, invitation.id);
+    },
+    onSuccess: async (invitation) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-invitations", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
+      toast.success(`Invitation resent to ${invitation.email}.`);
+    },
+    onError: (error: unknown) => {
+      toast.error(readApiMessage(error, "Unable to resend that invitation."));
+    },
+  });
+
+  const revokeInvitationMutation = useMutation({
+    mutationFn: async (invitation: WorkspaceInvitationRecord) => {
+      if (!tenantId) {
+        throw new Error("Select a tenant before revoking an invitation.");
+      }
+
+      return revokeWorkspaceInvitation(tenantId, invitation.id);
+    },
+    onSuccess: async (invitation) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-invitations", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
+      setInvitationPendingRevocationId(null);
+      toast.success(`Invitation for ${invitation.email} revoked.`);
+    },
+    onError: (error: unknown) => {
+      toast.error(readApiMessage(error, "Unable to revoke that invitation."));
+    },
+  });
+
   if (!tenantId) {
     return (
       <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
@@ -394,10 +559,11 @@ export default function WorkspaceStudioPage() {
   const activeSite =
     sites.find((site) => site.id === session?.activeSite?.id) ?? null;
   const recentSite = sites.find((site) => site.id === recentSiteId) ?? null;
+  const canUseDangerActions = session?.activeMembershipRole === "OWNER";
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-4xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(226,232,240,0.82)_35%,_rgba(186,230,253,0.55)_70%,_rgba(255,255,255,0.92)_100%)] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+      <section className="relative overflow-hidden rounded-4xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.95),rgba(226,232,240,0.82)_35%,rgba(186,230,253,0.55)_70%,rgba(255,255,255,0.92)_100%)] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
         <div className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full bg-cyan-300/25 blur-3xl" />
         <div className="pointer-events-none absolute -left-12 bottom-0 h-44 w-44 rounded-full bg-amber-300/25 blur-3xl" />
         <div className="relative grid gap-8 lg:grid-cols-[1.4fr_0.9fr]">
@@ -583,71 +749,168 @@ export default function WorkspaceStudioPage() {
           </div>
         ) : (
           <div className="mt-6 grid gap-4 xl:grid-cols-2">
-            {pendingInvitations.map((invitation) => (
-              <article
-                key={invitation.id}
-                className="rounded-3xl border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(248,250,252,0.96),rgba(226,232,240,0.55))] p-5 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-slate-950">
-                      {invitation.email}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Invited as {describeMembershipRole(invitation.role)}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${MEMBER_ROLE_STYLES[invitation.role]}`}
-                  >
-                    {describeMembershipRole(invitation.role)}
-                  </span>
-                </div>
+            {pendingInvitations.map((invitation) => {
+              const pendingRevocation =
+                invitationPendingRevocationId === invitation.id;
+              const resending =
+                resendInvitationMutation.isPending &&
+                resendInvitationMutation.variables?.id === invitation.id;
+              const revoking =
+                revokeInvitationMutation.isPending &&
+                revokeInvitationMutation.variables?.id === invitation.id;
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white/80 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                      Sent
-                    </p>
-                    <p className="mt-2 text-sm font-medium text-slate-900">
-                      {formatRelativeTime(invitation.createdAt)}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {formatDate(invitation.createdAt)}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700/70">
-                      Expires
-                    </p>
-                    <div className="mt-2 flex items-center gap-2 text-sm font-medium text-amber-900">
-                      <Clock3 className="h-4 w-4" />
-                      {formatRelativeTime(invitation.expiresAt)}
+              return (
+                <article
+                  key={invitation.id}
+                  className="rounded-3xl border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(248,250,252,0.96),rgba(226,232,240,0.55))] p-5 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold text-slate-950">
+                        {invitation.email}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Invited as {describeMembershipRole(invitation.role)}
+                      </p>
                     </div>
-                    <p className="mt-1 text-xs text-amber-800/80">
-                      {formatDate(invitation.expiresAt)}
-                    </p>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${MEMBER_ROLE_STYLES[invitation.role]}`}
+                    >
+                      {describeMembershipRole(invitation.role)}
+                    </span>
                   </div>
-                </div>
 
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                      Sent by
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-slate-800">
-                      {invitation.invitedByEmail ??
-                        user?.email ??
-                        "Workspace admin"}
-                    </p>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 bg-white/80 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                        Sent
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-slate-900">
+                        {formatRelativeTime(invitation.createdAt)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {formatDate(invitation.createdAt)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700/70">
+                        Expires
+                      </p>
+                      <div className="mt-2 flex items-center gap-2 text-sm font-medium text-amber-900">
+                        <Clock3 className="h-4 w-4" />
+                        {formatRelativeTime(invitation.expiresAt)}
+                      </div>
+                      <p className="mt-1 text-xs text-amber-800/80">
+                        {formatDate(invitation.expiresAt)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Awaiting acceptance
+
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                        Sent by
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-slate-800">
+                        {invitation.invitedByEmail ??
+                          user?.email ??
+                          "Workspace admin"}
+                      </p>
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Awaiting acceptance
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+
+                  {canManageWorkspace ? (
+                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          resendInvitationMutation.mutate(invitation)
+                        }
+                        disabled={resending || revoking || pendingRevocation}
+                        title={`Resend invitation to ${invitation.email}`}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {resending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Mail className="h-3.5 w-3.5" />
+                        )}
+                        Resend invite
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setInvitationPendingRevocationId(
+                            pendingRevocation ? null : invitation.id,
+                          )
+                        }
+                        disabled={resending || revoking}
+                        title={`Revoke invitation for ${invitation.email}`}
+                        className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {revoking ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                        Revoke
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {pendingRevocation ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-white p-2 text-rose-700 shadow-sm">
+                          <AlertTriangle className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-rose-950">
+                            Revoke invitation for {invitation.email}?
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-rose-800">
+                            The invitation link will stop working immediately
+                            and this person will need a fresh invite to join.
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                revokeInvitationMutation.mutate(invitation)
+                              }
+                              disabled={revoking}
+                              className="inline-flex items-center gap-2 rounded-full bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-rose-300"
+                            >
+                              {revoking ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                              Revoke invitation
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setInvitationPendingRevocationId(null)
+                              }
+                              disabled={revoking}
+                              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
@@ -694,6 +957,10 @@ export default function WorkspaceStudioPage() {
               {sites.map((site) => {
                 const Icon = getSiteTypeIcon(site.siteType);
                 const isActive = site.id === session?.activeSite?.id;
+                const pendingDeletion = sitePendingDeletionId === site.id;
+                const deletingSite =
+                  deleteSiteMutation.isPending &&
+                  deleteSiteMutation.variables?.id === site.id;
                 return (
                   <article
                     key={site.id}
@@ -782,7 +1049,70 @@ export default function WorkspaceStudioPage() {
                           Open pages
                         </Link>
                       ) : null}
+                      {canUseDangerActions ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSitePendingDeletionId(
+                              pendingDeletion ? null : site.id,
+                            )
+                          }
+                          disabled={deletingSite}
+                          className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingSite ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Delete
+                        </button>
+                      ) : null}
                     </div>
+
+                    {pendingDeletion ? (
+                      <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-full bg-white p-2 text-rose-700 shadow-sm">
+                            <AlertTriangle className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-rose-950">
+                              Delete {site.name}?
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-rose-800">
+                              The site leaves the workspace atlas, its default
+                              subdomain is released, and connected domains are
+                              detached.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => deleteSiteMutation.mutate(site)}
+                                disabled={deletingSite}
+                                className="inline-flex items-center gap-2 rounded-full bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-rose-300"
+                              >
+                                {deletingSite ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                                Delete site
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSitePendingDeletionId(null)}
+                                disabled={deletingSite}
+                                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}
@@ -1104,41 +1434,126 @@ export default function WorkspaceStudioPage() {
             />
           ) : (
             <div className="mt-6 space-y-3">
-              {filteredMembers.map((member) => (
-                <article
-                  key={member.id}
-                  className="flex flex-col gap-3 rounded-[22px] border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {member.email}
-                      </p>
-                      {member.userId === session?.user.id ? (
-                        <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-700">
-                          You
+              {filteredMembers.map((member) => {
+                const isCurrentUser = member.userId === session?.user.id;
+                const isLastOwner = member.role === "OWNER" && ownerCount <= 1;
+                const pendingRemoval = memberPendingRemovalId === member.id;
+                const removingMember =
+                  removeMemberMutation.isPending &&
+                  removeMemberMutation.variables?.id === member.id;
+                const canRemoveMember =
+                  canUseDangerActions && !isCurrentUser && !isLastOwner;
+
+                return (
+                  <article
+                    key={member.id}
+                    className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-slate-900">
+                            {member.email}
+                          </p>
+                          {isCurrentUser ? (
+                            <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-700">
+                              You
+                            </span>
+                          ) : null}
+                          {member.isDefault ? (
+                            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                              Default workspace
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Added {formatRelativeTime(member.createdAt)} ·{" "}
+                          {formatDate(member.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${MEMBER_ROLE_STYLES[member.role]}`}
+                        >
+                          {describeMembershipRole(member.role)}
                         </span>
-                      ) : null}
-                      {member.isDefault ? (
-                        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                          Default workspace
-                        </span>
-                      ) : null}
+                        {canUseDangerActions ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setMemberPendingRemovalId(
+                                pendingRemoval ? null : member.id,
+                              )
+                            }
+                            disabled={!canRemoveMember || removingMember}
+                            title={
+                              isCurrentUser
+                                ? "You cannot remove yourself here"
+                                : isLastOwner
+                                  ? "A workspace must keep one owner"
+                                  : `Remove ${member.email}`
+                            }
+                            className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {removingMember ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <UserMinus className="h-3.5 w-3.5" />
+                            )}
+                            Remove
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Added {formatRelativeTime(member.createdAt)} ·{" "}
-                      {formatDate(member.createdAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${MEMBER_ROLE_STYLES[member.role]}`}
-                    >
-                      {describeMembershipRole(member.role)}
-                    </span>
-                  </div>
-                </article>
-              ))}
+
+                    {pendingRemoval ? (
+                      <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-full bg-white p-2 text-rose-700 shadow-sm">
+                            <AlertTriangle className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-rose-950">
+                              Remove {member.email}?
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-rose-800">
+                              Their access to this workspace ends immediately.
+                              Other workspace memberships on the account are not
+                              changed.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeMemberMutation.mutate(member)
+                                }
+                                disabled={removingMember}
+                                className="inline-flex items-center gap-2 rounded-full bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-rose-300"
+                              >
+                                {removingMember ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <UserMinus className="h-3.5 w-3.5" />
+                                )}
+                                Remove member
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMemberPendingRemovalId(null)}
+                                disabled={removingMember}
+                                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1174,8 +1589,8 @@ export default function WorkspaceStudioPage() {
                     Email invitation
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Send a secure invite link so the teammate can join the
-                    workspace from their inbox.
+                    Best for anyone who might already use StayLayer in another
+                    workspace.
                   </p>
                 </div>
               </div>
@@ -1198,7 +1613,8 @@ export default function WorkspaceStudioPage() {
                     Send account setup
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Create the user and email a secure password setup link.
+                    Create a brand-new customer login and send a password setup
+                    link.
                   </p>
                 </div>
               </div>
@@ -1208,10 +1624,10 @@ export default function WorkspaceStudioPage() {
           <div className="mt-6 space-y-4">
             {memberComposerMode === "invite" ? (
               <>
-                <FieldLabel label="Existing account email" icon={Mail} />
+                <FieldLabel label="Teammate email" icon={Mail} />
                 <p className="text-xs leading-5 text-slate-500">
-                  StayLayer emails a secure invitation link and the recipient
-                  accepts it from the public auth flow.
+                  Existing users confirm their password; new users choose a name
+                  and password from the invitation flow.
                 </p>
                 <input
                   value={inviteForm.email}

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -134,6 +135,128 @@ export class TenantMembersController {
       tenantId: resolvedTenantId,
       actorUserId: user?.sub ?? null,
       action: "tenant.member_created",
+      targetType: "tenant_membership",
+      targetId: member.id,
+      metadata: {
+        email: member.email,
+        role: member.role,
+        userId: member.userId,
+      },
+    });
+
+    return member;
+  }
+
+  @Delete("invitations/:invitationId")
+  @HttpCode(HttpStatus.OK)
+  async revokeInvitation(
+    @Param("tenantId") tenantId: string,
+    @Param("invitationId") invitationId: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedRequestUser | undefined;
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+
+    const invitation = await this.tenantWorkspaceService.revokeInvitation(
+      resolvedTenantId,
+      invitationId,
+    );
+
+    await this.adminService.createAuditLogForTenant({
+      tenantId: resolvedTenantId,
+      actorUserId: user?.sub ?? null,
+      action: "tenant.invitation_revoked",
+      targetType: "workspace_invitation",
+      targetId: invitation.id,
+      metadata: {
+        email: invitation.email,
+        role: invitation.role,
+      },
+    });
+
+    return invitation;
+  }
+
+  @Post("invitations/:invitationId/resend")
+  @HttpCode(HttpStatus.OK)
+  async resendInvitation(
+    @Param("tenantId") tenantId: string,
+    @Param("invitationId") invitationId: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedRequestUser | undefined;
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+
+    const invitation = await this.tenantWorkspaceService.resendInvitation(
+      resolvedTenantId,
+      invitationId,
+      user?.sub ?? null,
+    );
+
+    await this.adminService.createAuditLogForTenant({
+      tenantId: resolvedTenantId,
+      actorUserId: user?.sub ?? null,
+      action: "tenant.invitation_resent",
+      targetType: "workspace_invitation",
+      targetId: invitation.id,
+      metadata: {
+        previousInvitationId: invitationId,
+        email: invitation.email,
+        role: invitation.role,
+        expiresAt: invitation.expiresAt,
+      },
+    });
+
+    return invitation;
+  }
+
+  @Delete(":membershipId")
+  @MembershipRoles(TenantMembershipRole.OWNER)
+  @HttpCode(HttpStatus.OK)
+  async remove(
+    @Param("tenantId") tenantId: string,
+    @Param("membershipId") membershipId: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedRequestUser | undefined;
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+    const member = await this.tenantWorkspaceService.removeMember(
+      resolvedTenantId,
+      membershipId,
+      user?.sub ?? "",
+    );
+
+    await this.adminService.createAuditLogForTenant({
+      tenantId: resolvedTenantId,
+      actorUserId: user?.sub ?? null,
+      action: "tenant.member_removed",
       targetType: "tenant_membership",
       targetId: member.id,
       metadata: {

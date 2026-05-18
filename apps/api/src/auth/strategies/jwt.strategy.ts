@@ -73,18 +73,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         });
       }
 
+      let resolvedActiveSiteId = payload.activeSiteId ?? null;
+
       if (payload.activeSiteId) {
         const activeSite = activeMembership.tenant.sites.find(
           (site) => site.id === payload.activeSiteId,
         );
 
         if (!activeSite || activeSite.status === SiteStatus.ARCHIVED) {
-          throw new UnauthorizedException({
-            code: "SITE_ACCESS_DENIED",
-            message: "The active site is no longer available",
-          });
+          resolvedActiveSiteId = null;
         }
       }
+
+      return {
+        sub: payload.sub,
+        email: payload.email,
+        platformRole: payload.platformRole ?? null,
+        activeTenantId: payload.activeTenantId ?? null,
+        activeMembershipRole: payload.activeMembershipRole ?? null,
+        activeSiteId: resolvedActiveSiteId,
+      };
     }
 
     return {
@@ -93,7 +101,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       platformRole: payload.platformRole ?? null,
       activeTenantId: payload.activeTenantId ?? null,
       activeMembershipRole: payload.activeMembershipRole ?? null,
-      activeSiteId: payload.activeSiteId ?? null,
+      activeSiteId: null,
     };
   }
 }

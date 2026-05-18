@@ -82,6 +82,16 @@ export async function createWorkspaceSite(
   return data;
 }
 
+export async function deleteWorkspaceSite(
+  tenantId: string,
+  siteId: string,
+): Promise<WorkspaceSiteRecord> {
+  const { data } = await client.delete<WorkspaceSiteRecord>(
+    `/tenants/${tenantId}/sites/${siteId}`,
+  );
+  return data;
+}
+
 export async function getWorkspaceMembers(
   tenantId: string,
 ): Promise<WorkspaceMemberRecord[]> {
@@ -111,6 +121,26 @@ export async function getPendingWorkspaceInvitations(
   return data;
 }
 
+export async function resendWorkspaceInvitation(
+  tenantId: string,
+  invitationId: string,
+): Promise<WorkspaceInvitationRecord> {
+  const { data } = await client.post<WorkspaceInvitationRecord>(
+    `/tenants/${tenantId}/members/invitations/${invitationId}/resend`,
+  );
+  return data;
+}
+
+export async function revokeWorkspaceInvitation(
+  tenantId: string,
+  invitationId: string,
+): Promise<WorkspaceInvitationRecord> {
+  const { data } = await client.delete<WorkspaceInvitationRecord>(
+    `/tenants/${tenantId}/members/invitations/${invitationId}`,
+  );
+  return data;
+}
+
 export async function createWorkspaceMember(
   tenantId: string,
   payload: CreateWorkspaceMemberPayload,
@@ -118,6 +148,16 @@ export async function createWorkspaceMember(
   const { data } = await client.post<WorkspaceMemberRecord>(
     `/tenants/${tenantId}/members/create`,
     payload,
+  );
+  return data;
+}
+
+export async function removeWorkspaceMember(
+  tenantId: string,
+  membershipId: string,
+): Promise<WorkspaceMemberRecord> {
+  const { data } = await client.delete<WorkspaceMemberRecord>(
+    `/tenants/${tenantId}/members/${membershipId}`,
   );
   return data;
 }

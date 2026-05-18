@@ -3,6 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
+import { SiteStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthenticatedRequestUser } from "./auth.types";
 
@@ -104,10 +105,14 @@ export class WorkspaceAccessService {
 
     const site = await this.prisma.site.findUnique({
       where: { id: siteId },
-      select: { tenantId: true },
+      select: { tenantId: true, status: true },
     });
 
-    if (!site || site.tenantId !== tenantId) {
+    if (
+      !site ||
+      site.tenantId !== tenantId ||
+      site.status === SiteStatus.ARCHIVED
+    ) {
       throw new ForbiddenException({
         code: "SITE_ACCESS_DENIED",
         message: "The selected site is not available in the active tenant",

@@ -433,6 +433,124 @@ export class CustomerAccessService {
     };
   }
 
+  async revokeWorkspaceInvitation(input: {
+    tenantId: string;
+    invitationId: string;
+  }): Promise<SentWorkspaceInvitationSummary> {
+    const invitation = await this.prisma.workspaceInvitation.findFirst({
+      where: { id: input.invitationId, tenantId: input.tenantId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        expiresAt: true,
+        acceptedAt: true,
+        revokedAt: true,
+        tenantId: true,
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Workspace invitation not found",
+      });
+    }
+
+    if (invitation.acceptedAt) {
+      throw new ConflictException({
+        code: "INVITATION_ALREADY_ACCEPTED",
+        message:
+          "This invitation has already been accepted and cannot be revoked.",
+      });
+    }
+
+    if (invitation.revokedAt) {
+      throw new ConflictException({
+        code: "INVITATION_ALREADY_REVOKED",
+        message: "This invitation has already been revoked.",
+      });
+    }
+
+    const updated = await this.prisma.workspaceInvitation.update({
+      where: { id: invitation.id },
+      data: { revokedAt: new Date() },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
+
+    await this.notificationsService.createForTenantRoles({
+      tenantId: invitation.tenantId,
+      roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
+      category: NotificationCategory.SYSTEM,
+      title: `Invitation revoked for ${invitation.email}`,
+      body: `The pending ${this.describeRole(invitation.role)} invitation was revoked and the invitation link is no longer valid.`,
+      actionUrl: "/workspace#pending-invitations",
+      metadata: {
+        invitationId: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+      },
+    });
+
+    return {
+      id: updated.id,
+      email: updated.email,
+      role: updated.role,
+      status: "pending",
+      createdAt: updated.createdAt.toISOString(),
+      expiresAt: updated.expiresAt.toISOString(),
+    };
+  }
+
+  async resendWorkspaceInvitation(input: {
+    tenantId: string;
+    invitationId: string;
+    invitedByUserId: string | null;
+  }): Promise<SentWorkspaceInvitationSummary> {
+    const invitation = await this.prisma.workspaceInvitation.findFirst({
+      where: { id: input.invitationId, tenantId: input.tenantId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        acceptedAt: true,
+        tenantId: true,
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Workspace invitation not found",
+      });
+    }
+
+    if (invitation.acceptedAt) {
+      throw new ConflictException({
+        code: "INVITATION_ALREADY_ACCEPTED",
+        message:
+          "This invitation has already been accepted and cannot be resent.",
+      });
+    }
+
+    // Recreate the invitation: createWorkspaceInvitation atomically revokes
+    // any prior pending invitations for the same (tenant, email) and issues
+    // a new token + email, which is the desired "resend" semantic.
+    return this.createWorkspaceInvitation({
+      tenantId: invitation.tenantId,
+      email: invitation.email,
+      role: invitation.role,
+      invitedByUserId: input.invitedByUserId,
+    });
+  }
+
   async listPendingWorkspaceInvitations(
     tenantId: string,
   ): Promise<PendingWorkspaceInvitationSummary[]> {

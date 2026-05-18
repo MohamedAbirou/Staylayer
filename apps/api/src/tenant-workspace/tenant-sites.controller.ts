@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -78,6 +79,46 @@ export class TenantSitesController {
       metadata: {
         siteName: site.name,
         siteSlug: site.slug,
+        siteType: site.siteType,
+      },
+    });
+
+    return site;
+  }
+
+  @Delete(":siteId")
+  @MembershipRoles(TenantMembershipRole.OWNER)
+  @HttpCode(HttpStatus.OK)
+  async remove(
+    @Param("tenantId") tenantId: string,
+    @Param("siteId") siteId: string,
+    @Req() req: Request,
+  ) {
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+    const site = await this.tenantWorkspaceService.deleteSite(
+      resolvedTenantId,
+      siteId,
+    );
+    const user = req.user as AuthenticatedRequestUser | undefined;
+
+    await this.adminService.createAuditLogForTenant({
+      tenantId: resolvedTenantId,
+      actorUserId: user?.sub ?? null,
+      action: "site.deleted",
+      targetType: "site",
+      targetId: siteId,
+      metadata: {
+        siteName: site.name,
+        archivedSlug: site.slug,
         siteType: site.siteType,
       },
     });

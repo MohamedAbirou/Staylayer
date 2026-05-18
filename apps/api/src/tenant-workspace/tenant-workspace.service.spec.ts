@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 
+import { ConflictException } from "@nestjs/common";
 import { SiteStatus, SiteType, TenantMembershipRole } from "@prisma/client";
 import { TenantWorkspaceService } from "./tenant-workspace.service";
 
@@ -8,7 +9,13 @@ function buildPrismaMock() {
     $transaction: jest.fn(),
     site: {
       create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    domain: {
+      deleteMany: jest.fn(),
     },
     siteSettings: {
       create: jest.fn(),
@@ -17,9 +24,12 @@ function buildPrismaMock() {
       findUnique: jest.fn(),
     },
     tenantMembership: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       count: jest.fn(),
       create: jest.fn(),
+      delete: jest.fn(),
+      update: jest.fn(),
     },
     user: {
       create: jest.fn(),
@@ -46,11 +56,15 @@ describe("TenantWorkspaceService", () => {
   let customerAccessService: {
     createWorkspaceInvitation: jest.Mock;
     sendWorkspaceAccountSetupEmail: jest.Mock;
+    revokeWorkspaceInvitation: jest.Mock;
+    resendWorkspaceInvitation: jest.Mock;
   };
   let notificationsService: {
     create: jest.Mock;
     createForTenantRoles: jest.Mock;
   };
+  let configService: { get: jest.Mock };
+  let publicRuntimeCacheService: { deleteKeys: jest.Mock };
   let service: TenantWorkspaceService;
 
   beforeEach(() => {
@@ -70,10 +84,20 @@ describe("TenantWorkspaceService", () => {
       sendWorkspaceAccountSetupEmail: jest.fn().mockResolvedValue({
         accepted: true,
       }),
+      revokeWorkspaceInvitation: jest.fn(),
+      resendWorkspaceInvitation: jest.fn(),
     };
     notificationsService = {
       create: jest.fn().mockResolvedValue(null),
       createForTenantRoles: jest.fn().mockResolvedValue([]),
+    };
+    configService = {
+      get: jest.fn((key: string) =>
+        key === "HOSTED_SITE_ROOT_DOMAIN" ? "staylayer.test" : undefined,
+      ),
+    };
+    publicRuntimeCacheService = {
+      deleteKeys: jest.fn().mockResolvedValue(undefined),
     };
 
     service = new TenantWorkspaceService(
@@ -82,6 +106,23 @@ describe("TenantWorkspaceService", () => {
       usersService as never,
       customerAccessService as never,
       notificationsService as never,
+      configService as never,
+      publicRuntimeCacheService as never,
+    );
+  });
+
+  it("hides archived sites from the workspace studio site list", async () => {
+    prisma.site.findMany.mockResolvedValue([]);
+
+    await service.listSites("tenant-1");
+
+    expect(prisma.site.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          tenantId: "tenant-1",
+          status: { not: SiteStatus.ARCHIVED },
+        },
+      }),
     );
   });
 
@@ -192,6 +233,71 @@ describe("TenantWorkspaceService", () => {
     expect(prisma.site.create).not.toHaveBeenCalled();
   });
 
+  it("archives a site, detaches domains, and releases public routing identifiers", async () => {
+    prisma.site.findFirst.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      name: "Azure Bay Villas",
+      slug: "azure-bay-villas",
+      publicSubdomain: "azure-bay-villas",
+      status: SiteStatus.ACTIVE,
+      primaryLocale: "en",
+      enabledLocales: ["en"],
+      siteType: SiteType.VACATION_RENTAL,
+      createdAt: new Date("2026-05-06T12:00:00.000Z"),
+      domains: [{ host: "azure.example" }],
+    });
+    prisma.site.update.mockResolvedValue({
+      id: "site-1",
+      tenantId: "tenant-1",
+      name: "Azure Bay Villas",
+      slug: "azure-bay-villas-archived-site-1",
+      publicSubdomain: null,
+      status: SiteStatus.ARCHIVED,
+      primaryLocale: "en",
+      enabledLocales: ["en"],
+      siteType: SiteType.VACATION_RENTAL,
+      createdAt: new Date("2026-05-06T12:00:00.000Z"),
+    });
+
+    const deleted = await service.deleteSite("tenant-1", "site-1");
+
+    expect(prisma.site.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: "site-1",
+          tenantId: "tenant-1",
+          status: { not: SiteStatus.ARCHIVED },
+        },
+      }),
+    );
+    expect(prisma.domain.deleteMany).toHaveBeenCalledWith({
+      where: { siteId: "site-1" },
+    });
+    expect(prisma.site.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "site-1" },
+        data: {
+          status: SiteStatus.ARCHIVED,
+          slug: "azure-bay-villas-archived-site-1",
+          publicSubdomain: null,
+        },
+      }),
+    );
+    expect(publicRuntimeCacheService.deleteKeys).toHaveBeenCalledWith([
+      "runtime:host:azure-bay-villas.staylayer.test",
+      "runtime:host:azure.example",
+      "runtime:host:www.azure.example",
+    ]);
+    expect(notificationsService.createForTenantRoles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-1",
+        title: "Azure Bay Villas was deleted from Workspace Studio",
+      }),
+    );
+    expect(deleted.status).toBe(SiteStatus.ARCHIVED);
+  });
+
   it("sends a workspace invitation instead of attaching a member immediately", async () => {
     customerAccessService.createWorkspaceInvitation.mockResolvedValue({
       id: "invite-1",
@@ -270,5 +376,166 @@ describe("TenantWorkspaceService", () => {
       role: TenantMembershipRole.EDITOR,
     });
     expect(member.userId).toBe("user-2");
+  });
+
+  it("removes a workspace member and reassigns their default workspace", async () => {
+    prisma.tenantMembership.findFirst
+      .mockResolvedValueOnce({
+        id: "membership-2",
+        tenantId: "tenant-1",
+        role: TenantMembershipRole.EDITOR,
+        isDefault: true,
+        createdAt: new Date("2026-05-06T12:00:00.000Z"),
+        user: {
+          id: "user-2",
+          email: "editor@example.com",
+        },
+      })
+      .mockResolvedValueOnce({ id: "membership-3" });
+
+    const removed = await service.removeMember(
+      "tenant-1",
+      "membership-2",
+      "owner-1",
+    );
+
+    expect(prisma.tenantMembership.delete).toHaveBeenCalledWith({
+      where: { id: "membership-2" },
+    });
+    expect(prisma.tenantMembership.update).toHaveBeenCalledWith({
+      where: { id: "membership-3" },
+      data: { isDefault: true },
+    });
+    expect(notificationsService.createForTenantRoles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-1",
+        title: "Team member removed: editor@example.com",
+      }),
+    );
+    expect(removed.email).toBe("editor@example.com");
+  });
+
+  it("blocks self-removal from workspace studio", async () => {
+    prisma.tenantMembership.findFirst.mockResolvedValue({
+      id: "membership-1",
+      tenantId: "tenant-1",
+      role: TenantMembershipRole.OWNER,
+      isDefault: true,
+      createdAt: new Date("2026-05-06T12:00:00.000Z"),
+      user: {
+        id: "owner-1",
+        email: "owner@example.com",
+      },
+    });
+
+    await expect(
+      service.removeMember("tenant-1", "membership-1", "owner-1"),
+    ).rejects.toMatchObject({
+      response: {
+        code: "SELF_REMOVAL_BLOCKED",
+      },
+    });
+    expect(prisma.tenantMembership.delete).not.toHaveBeenCalled();
+  });
+
+  it("blocks removing the final owner", async () => {
+    prisma.tenantMembership.findFirst.mockResolvedValue({
+      id: "membership-1",
+      tenantId: "tenant-1",
+      role: TenantMembershipRole.OWNER,
+      isDefault: false,
+      createdAt: new Date("2026-05-06T12:00:00.000Z"),
+      user: {
+        id: "owner-2",
+        email: "owner2@example.com",
+      },
+    });
+    prisma.tenantMembership.count.mockResolvedValue(1);
+
+    await expect(
+      service.removeMember("tenant-1", "membership-1", "owner-1"),
+    ).rejects.toMatchObject({
+      response: {
+        code: "LAST_OWNER_BLOCKED",
+      },
+    });
+    expect(prisma.tenantMembership.delete).not.toHaveBeenCalled();
+  });
+
+  it("delegates revokeInvitation to the customer access service", async () => {
+    customerAccessService.revokeWorkspaceInvitation.mockResolvedValue({
+      id: "inv-1",
+      email: "guest@example.com",
+      role: TenantMembershipRole.EDITOR,
+      status: "pending",
+      createdAt: "2026-05-01T10:00:00.000Z",
+      expiresAt: "2026-05-08T10:00:00.000Z",
+    });
+
+    const result = await service.revokeInvitation("tenant-1", "inv-1");
+
+    expect(
+      customerAccessService.revokeWorkspaceInvitation,
+    ).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
+      invitationId: "inv-1",
+    });
+    expect(result.id).toBe("inv-1");
+  });
+
+  it("surfaces conflict errors from revokeInvitation", async () => {
+    customerAccessService.revokeWorkspaceInvitation.mockRejectedValue(
+      new ConflictException({
+        code: "INVITATION_ALREADY_ACCEPTED",
+        message: "x",
+      }),
+    );
+
+    await expect(
+      service.revokeInvitation("tenant-1", "inv-1"),
+    ).rejects.toMatchObject({
+      response: { code: "INVITATION_ALREADY_ACCEPTED" },
+    });
+  });
+
+  it("delegates resendInvitation to the customer access service", async () => {
+    customerAccessService.resendWorkspaceInvitation.mockResolvedValue({
+      id: "inv-2",
+      email: "guest@example.com",
+      role: TenantMembershipRole.EDITOR,
+      status: "pending",
+      createdAt: "2026-05-09T10:00:00.000Z",
+      expiresAt: "2026-05-16T10:00:00.000Z",
+    });
+
+    const result = await service.resendInvitation(
+      "tenant-1",
+      "inv-1",
+      "owner-1",
+    );
+
+    expect(
+      customerAccessService.resendWorkspaceInvitation,
+    ).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
+      invitationId: "inv-1",
+      invitedByUserId: "owner-1",
+    });
+    expect(result.id).toBe("inv-2");
+  });
+
+  it("surfaces conflict errors from resendInvitation", async () => {
+    customerAccessService.resendWorkspaceInvitation.mockRejectedValue(
+      new ConflictException({
+        code: "INVITATION_ALREADY_ACCEPTED",
+        message: "x",
+      }),
+    );
+
+    await expect(
+      service.resendInvitation("tenant-1", "inv-1", "owner-1"),
+    ).rejects.toMatchObject({
+      response: { code: "INVITATION_ALREADY_ACCEPTED" },
+    });
   });
 });
