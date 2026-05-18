@@ -20,9 +20,14 @@ function buildPrismaMock() {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    tenant: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
     tenantMembership: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
+      create: jest.fn(),
       updateMany: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -44,6 +49,9 @@ function buildPrismaMock() {
     },
     notificationPreference: {
       deleteMany: jest.fn(),
+    },
+    tenantOnboarding: {
+      create: jest.fn(),
     },
     site: {
       groupBy: jest.fn(),
@@ -212,6 +220,111 @@ describe("ProfileService", () => {
         }),
       );
       expect(result).toEqual({ tenantId: "t1", tenantName: "Acme" });
+    });
+  });
+
+  describe("createWorkspace", () => {
+    beforeEach(() => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: "u1",
+        platformRole: null,
+      });
+      prisma.tenant.findUnique.mockResolvedValue(null);
+      prisma.tenantMembership.count.mockResolvedValue(0);
+      prisma.tenant.create.mockResolvedValue({
+        id: "t1",
+        name: "Acme Stays",
+        slug: "acme-stays",
+      });
+      prisma.tenantMembership.create.mockResolvedValue({
+        id: "m1",
+        role: TenantMembershipRole.OWNER,
+        isDefault: true,
+        createdAt: new Date("2026-01-02T03:04:05.000Z"),
+      });
+      prisma.tenantOnboarding.create.mockResolvedValue({ id: "onboarding-1" });
+    });
+
+    it("creates a tenant and default owner membership for the user", async () => {
+      const result = await service.createWorkspace("u1", {
+        name: "Acme Stays",
+      });
+
+      expect(prisma.tenantMembership.updateMany).toHaveBeenCalledWith({
+        where: { userId: "u1" },
+        data: { isDefault: false },
+      });
+      expect(prisma.tenant.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { name: "Acme Stays", slug: "acme-stays" },
+        }),
+      );
+      expect(prisma.tenantMembership.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            tenantId: "t1",
+            userId: "u1",
+            role: TenantMembershipRole.OWNER,
+            isDefault: true,
+          },
+        }),
+      );
+      expect(prisma.tenantOnboarding.create).toHaveBeenCalledWith({
+        data: { tenantId: "t1" },
+      });
+      expect(result).toEqual({
+        tenantId: "t1",
+        tenantSlug: "acme-stays",
+        tenantName: "Acme Stays",
+        membershipId: "m1",
+        role: TenantMembershipRole.OWNER,
+        isDefault: true,
+        joinedAt: "2026-01-02T03:04:05.000Z",
+      });
+    });
+
+    it("suffixes the slug when the base slug already exists", async () => {
+      prisma.tenant.findUnique
+        .mockResolvedValueOnce({ id: "existing" })
+        .mockResolvedValueOnce(null);
+      prisma.tenant.create.mockResolvedValue({
+        id: "t2",
+        name: "Acme Stays",
+        slug: "acme-stays-2",
+      });
+
+      await service.createWorkspace("u1", { name: "Acme Stays" });
+
+      expect(prisma.tenant.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { name: "Acme Stays", slug: "acme-stays-2" },
+        }),
+      );
+    });
+
+    it("blocks platform users from creating customer workspaces", async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: "u1",
+        platformRole: "PLATFORM_OWNER",
+      });
+
+      await expect(
+        service.createWorkspace("u1", { name: "Operator Workspace" }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.tenant.create).not.toHaveBeenCalled();
+    });
+
+    it("blocks self-service workspace creation after the owner limit", async () => {
+      prisma.tenantMembership.count.mockResolvedValue(10);
+
+      await expect(
+        service.createWorkspace("u1", { name: "One More Workspace" }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: "WORKSPACE_CREATE_LIMIT_REACHED",
+        }),
+      });
+      expect(prisma.tenant.create).not.toHaveBeenCalled();
     });
   });
 

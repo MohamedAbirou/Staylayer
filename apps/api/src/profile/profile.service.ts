@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -9,6 +10,7 @@ import {
 import {
   NotificationCategory,
   PlatformRole,
+  Prisma,
   SiteStatus,
   TenantMembershipRole,
   TenantStatus,
@@ -54,6 +56,16 @@ export interface ProfileOverview {
   pendingInvitations: ProfilePendingInvitationSummary[];
 }
 
+export interface CreatedWorkspaceSummary {
+  tenantId: string;
+  tenantSlug: string;
+  tenantName: string;
+  membershipId: string;
+  role: TenantMembershipRole;
+  isDefault: boolean;
+  joinedAt: string;
+}
+
 export interface DeletionImpactWorkspaceEntry {
   tenantId: string;
   tenantSlug: string;
@@ -74,6 +86,8 @@ export interface AccountDeletionImpact {
   assignedSeoAuditTasks: number;
   hasPlatformRole: boolean;
 }
+
+const SELF_SERVICE_WORKSPACE_CREATE_LIMIT = 10;
 
 @Injectable()
 export class ProfileService {
@@ -164,6 +178,112 @@ export class ProfileService {
       memberships,
       pendingInvitations,
     };
+  }
+
+  async createWorkspace(
+    userId: string,
+    input: { name: string; slug?: string },
+  ): Promise<CreatedWorkspaceSummary> {
+    const name = this.normalizeRequiredValue(input.name, "name");
+    const baseSlug = this.normalizeSlug(input.slug ?? name, "slug");
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, platformRole: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    if (user.platformRole) {
+      throw new ForbiddenException({
+        code: "PLATFORM_USER_WORKSPACE_CREATE_BLOCKED",
+        message:
+          "Internal operator accounts cannot create customer workspaces from this flow.",
+      });
+    }
+
+    const ownedWorkspaceCount = await this.prisma.tenantMembership.count({
+      where: { userId, role: TenantMembershipRole.OWNER },
+    });
+
+    if (ownedWorkspaceCount >= SELF_SERVICE_WORKSPACE_CREATE_LIMIT) {
+      throw new ForbiddenException({
+        code: "WORKSPACE_CREATE_LIMIT_REACHED",
+        message:
+          "You have reached the self-service workspace creation limit. Contact support if you need more workspaces.",
+        limit: SELF_SERVICE_WORKSPACE_CREATE_LIMIT,
+      });
+    }
+
+    for (let suffix = 1; suffix <= 20; suffix += 1) {
+      const candidate = suffix === 1 ? baseSlug : `${baseSlug}-${suffix}`;
+      const existing = await this.prisma.tenant.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
+
+      if (existing) {
+        continue;
+      }
+
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          await tx.tenantMembership.updateMany({
+            where: { userId },
+            data: { isDefault: false },
+          });
+
+          const tenant = await tx.tenant.create({
+            data: { name, slug: candidate },
+            select: { id: true, name: true, slug: true },
+          });
+
+          const membership = await tx.tenantMembership.create({
+            data: {
+              tenantId: tenant.id,
+              userId,
+              role: TenantMembershipRole.OWNER,
+              isDefault: true,
+            },
+            select: {
+              id: true,
+              role: true,
+              isDefault: true,
+              createdAt: true,
+            },
+          });
+
+          await tx.tenantOnboarding.create({
+            data: { tenantId: tenant.id },
+          });
+
+          return {
+            tenantId: tenant.id,
+            tenantSlug: tenant.slug,
+            tenantName: tenant.name,
+            membershipId: membership.id,
+            role: membership.role,
+            isDefault: membership.isDefault,
+            joinedAt: membership.createdAt.toISOString(),
+          };
+        });
+      } catch (error) {
+        if (this.isTenantSlugConflict(error)) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new ConflictException({
+      code: "WORKSPACE_SLUG_UNAVAILABLE",
+      message: "Could not find an available workspace slug.",
+    });
   }
 
   async changePassword(
@@ -692,5 +812,43 @@ export class ProfileService {
       result[row.tenantId]!.activeSiteCount = row._count._all;
     }
     return result;
+  }
+
+  private normalizeSlug(value: string, fieldName: string): string {
+    const normalized = this.normalizeRequiredValue(value, fieldName)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .replace(/-{2,}/g, "-");
+
+    if (!normalized) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `${fieldName} must contain at least one letter or number`,
+      });
+    }
+
+    return normalized;
+  }
+
+  private normalizeRequiredValue(value: string, fieldName: string): string {
+    const normalized = value.trim();
+    if (!normalized) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `${fieldName} is required`,
+      });
+    }
+
+    return normalized;
+  }
+
+  private isTenantSlugConflict(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      Array.isArray(error.meta?.target) &&
+      error.meta?.target.includes("slug")
+    );
   }
 }

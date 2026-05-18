@@ -43,6 +43,21 @@ export interface ProfileOverview {
   pendingInvitations: ProfilePendingInvitationSummary[];
 }
 
+export interface CreateWorkspacePayload {
+  name: string;
+  slug?: string;
+}
+
+export interface CreatedWorkspaceSummary {
+  tenantId: string;
+  tenantSlug: string;
+  tenantName: string;
+  membershipId: string;
+  role: WorkspaceMemberRole;
+  isDefault: boolean;
+  joinedAt: string;
+}
+
 export interface DeletionImpactWorkspaceEntry {
   tenantId: string;
   tenantSlug: string;
@@ -66,6 +81,16 @@ export interface AccountDeletionImpact {
 
 export async function getProfileOverview(): Promise<ProfileOverview> {
   const { data } = await client.get<ProfileOverview>("/me");
+  return data;
+}
+
+export async function createWorkspace(
+  payload: CreateWorkspacePayload,
+): Promise<CreatedWorkspaceSummary> {
+  const { data } = await client.post<CreatedWorkspaceSummary>(
+    "/me/workspaces",
+    payload,
+  );
   return data;
 }
 

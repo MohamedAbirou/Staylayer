@@ -104,12 +104,16 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        path: "/no-workspace",
-        element: <NoWorkspacePage />,
-      },
-      {
         element: <Layout />,
         children: [
+          {
+            path: "/no-workspace",
+            element: <NoWorkspacePage />,
+          },
+          {
+            path: "/workspaces/new",
+            element: <NoWorkspacePage mode="create" />,
+          },
           {
             path: "/",
             element: (

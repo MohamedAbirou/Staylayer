@@ -18,6 +18,7 @@ import { AuthService } from "../auth/auth.service";
 import { AuthenticatedRequestUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ChangePasswordDto } from "./dto/change-password.dto";
+import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
 import { DeleteAccountDto } from "./dto/delete-account.dto";
 import { LeaveWorkspaceDto } from "./dto/leave-workspace.dto";
 import { ProfileService } from "./profile.service";
@@ -35,6 +36,28 @@ export class ProfileController {
   async overview(@Req() req: Request) {
     const user = req.user as AuthenticatedRequestUser;
     return this.profileService.getOverview(user.sub);
+  }
+
+  @Post("workspaces")
+  @HttpCode(HttpStatus.CREATED)
+  async createWorkspace(@Body() dto: CreateWorkspaceDto, @Req() req: Request) {
+    const user = req.user as AuthenticatedRequestUser;
+    const workspace = await this.profileService.createWorkspace(user.sub, dto);
+
+    await this.adminService.createAuditLogForTenant({
+      tenantId: workspace.tenantId,
+      actorUserId: user.sub,
+      action: "tenant.created",
+      targetType: "tenant",
+      targetId: workspace.tenantId,
+      metadata: {
+        tenantName: workspace.tenantName,
+        tenantSlug: workspace.tenantSlug,
+        source: "dashboard_workspace_create",
+      },
+    });
+
+    return workspace;
   }
 
   @Post("password")

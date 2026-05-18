@@ -60,6 +60,10 @@ export function getDefaultAuthenticatedPath(
     return "/admin";
   }
 
+  if (session && session.memberships.length === 0) {
+    return "/no-workspace";
+  }
+
   return "/login";
 }
 

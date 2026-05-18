@@ -19,6 +19,7 @@ import {
   Search,
   ArrowRight,
   ChevronDown,
+  PlusCircle,
 } from "lucide-react";
 import {
   BILLING_MEMBERSHIP_ROLES,
@@ -91,6 +92,8 @@ export function Sidebar() {
     session?.memberships.find(
       (membership) => membership.tenantId === session.activeTenant?.id,
     ) ?? null;
+  const isNoWorkspaceCustomer =
+    session?.memberships.length === 0 && !hasPlatformRole(session);
 
   const { data: pendingInvitations = [] } = useQuery({
     queryKey: ["workspace-invitations", tenantId],
@@ -101,6 +104,7 @@ export function Sidebar() {
   });
 
   const siteName =
+    (isNoWorkspaceCustomer ? "No workspace yet" : null) ||
     session?.activeSite?.name ||
     settings?.siteName ||
     (hasPlatformRole(session, PLATFORM_ROLES)
@@ -172,23 +176,29 @@ export function Sidebar() {
     : null;
   const pendingInvitationCount = pendingInvitations.length;
   const navFilter = navQuery.trim().toLowerCase();
-  const primaryQuickAction = canManageWorkspace
+  const primaryQuickAction = isNoWorkspaceCustomer
     ? {
-        to: "/workspace",
-        label: "Workspace Studio",
-        icon: Users,
+        to: "/no-workspace",
+        label: "Create workspace",
+        icon: Building2,
       }
-    : hasContentAccess && hasActiveSite(session)
+    : canManageWorkspace
       ? {
-          to: "/pages",
-          label: "Pages",
-          icon: FileText,
+          to: "/workspace",
+          label: "Workspace Studio",
+          icon: Users,
         }
-      : {
-          to: getDefaultAuthenticatedPath(session),
-          label: "Dashboard",
-          icon: LayoutDashboard,
-        };
+      : hasContentAccess && hasActiveSite(session)
+        ? {
+            to: "/pages",
+            label: "Pages",
+            icon: FileText,
+          }
+        : {
+            to: getDefaultAuthenticatedPath(session),
+            label: "Dashboard",
+            icon: LayoutDashboard,
+          };
   const secondaryQuickAction = hasBillingAccess
     ? {
         to: "/billing",
@@ -396,9 +406,19 @@ export function Sidebar() {
             {session?.memberships.length ? (
               <div className="mt-4 space-y-2.5">
                 <label className="block">
-                  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Workspace
-                  </span>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      Workspace
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/workspaces/new")}
+                      className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200 transition hover:text-slate-950 hover:shadow-md"
+                    >
+                      <PlusCircle className="h-3 w-3" />
+                      New
+                    </button>
+                  </div>
                   <div className="relative">
                     <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <select
@@ -502,7 +522,9 @@ export function Sidebar() {
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
           {navigationGroups.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-              No navigation items match that search.
+              {isNoWorkspaceCustomer
+                ? "Create or join a workspace to unlock dashboard navigation."
+                : "No navigation items match that search."}
             </div>
           ) : (
             <div className="space-y-4">
