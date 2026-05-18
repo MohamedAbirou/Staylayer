@@ -538,4 +538,183 @@ describe("TenantWorkspaceService", () => {
       response: { code: "INVITATION_ALREADY_ACCEPTED" },
     });
   });
+
+  describe("updateMemberRole", () => {
+    const targetMembership = {
+      id: "membership-2",
+      tenantId: "tenant-1",
+      role: TenantMembershipRole.EDITOR,
+      isDefault: false,
+      createdAt: new Date("2026-05-06T12:00:00.000Z"),
+      user: {
+        id: "user-2",
+        email: "editor@example.com",
+      },
+    };
+
+    function mockActorRole(role: TenantMembershipRole | null) {
+      prisma.tenantMembership.findFirst
+        .mockResolvedValueOnce(targetMembership)
+        .mockResolvedValueOnce(role ? { role } : null);
+    }
+
+    it("updates a member's role and notifies admins and the member", async () => {
+      mockActorRole(TenantMembershipRole.OWNER);
+      prisma.tenantMembership.update.mockResolvedValue({
+        ...targetMembership,
+        role: TenantMembershipRole.ADMIN,
+      });
+
+      const updated = await service.updateMemberRole(
+        "tenant-1",
+        "membership-2",
+        TenantMembershipRole.ADMIN,
+        "owner-1",
+      );
+
+      expect(prisma.tenantMembership.update).toHaveBeenCalledWith({
+        where: { id: "membership-2" },
+        data: { role: TenantMembershipRole.ADMIN },
+        select: expect.any(Object),
+      });
+      expect(notificationsService.createForTenantRoles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: "tenant-1",
+          title: "Role updated: editor@example.com",
+        }),
+      );
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: "tenant-1",
+          userId: "user-2",
+          title: "Your workspace role changed",
+        }),
+      );
+      expect(updated.role).toBe(TenantMembershipRole.ADMIN);
+    });
+
+    it("no-ops when the next role matches the current role", async () => {
+      prisma.tenantMembership.findFirst.mockResolvedValueOnce(targetMembership);
+
+      const result = await service.updateMemberRole(
+        "tenant-1",
+        "membership-2",
+        TenantMembershipRole.EDITOR,
+        "owner-1",
+      );
+
+      expect(prisma.tenantMembership.update).not.toHaveBeenCalled();
+      expect(result.role).toBe(TenantMembershipRole.EDITOR);
+    });
+
+    it("blocks changing your own role", async () => {
+      prisma.tenantMembership.findFirst.mockResolvedValueOnce({
+        ...targetMembership,
+        user: { id: "owner-1", email: "owner@example.com" },
+        role: TenantMembershipRole.OWNER,
+      });
+
+      await expect(
+        service.updateMemberRole(
+          "tenant-1",
+          "membership-2",
+          TenantMembershipRole.ADMIN,
+          "owner-1",
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "SELF_ROLE_CHANGE_BLOCKED" },
+      });
+      expect(prisma.tenantMembership.update).not.toHaveBeenCalled();
+    });
+
+    it("404s when the membership is missing", async () => {
+      prisma.tenantMembership.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        service.updateMemberRole(
+          "tenant-1",
+          "missing",
+          TenantMembershipRole.ADMIN,
+          "owner-1",
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "NOT_FOUND" },
+      });
+    });
+
+    it("rejects ADMIN actors granting the OWNER role", async () => {
+      mockActorRole(TenantMembershipRole.ADMIN);
+
+      await expect(
+        service.updateMemberRole(
+          "tenant-1",
+          "membership-2",
+          TenantMembershipRole.OWNER,
+          "admin-1",
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "OWNER_ROLE_CHANGE_REQUIRES_OWNER" },
+      });
+      expect(prisma.tenantMembership.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects ADMIN actors demoting an OWNER", async () => {
+      prisma.tenantMembership.findFirst
+        .mockResolvedValueOnce({
+          ...targetMembership,
+          role: TenantMembershipRole.OWNER,
+          user: { id: "owner-2", email: "owner2@example.com" },
+        })
+        .mockResolvedValueOnce({ role: TenantMembershipRole.ADMIN });
+
+      await expect(
+        service.updateMemberRole(
+          "tenant-1",
+          "membership-2",
+          TenantMembershipRole.ADMIN,
+          "admin-1",
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "OWNER_ROLE_CHANGE_REQUIRES_OWNER" },
+      });
+    });
+
+    it("blocks demoting the final OWNER", async () => {
+      prisma.tenantMembership.findFirst
+        .mockResolvedValueOnce({
+          ...targetMembership,
+          role: TenantMembershipRole.OWNER,
+          user: { id: "owner-2", email: "owner2@example.com" },
+        })
+        .mockResolvedValueOnce({ role: TenantMembershipRole.OWNER });
+      prisma.tenantMembership.count.mockResolvedValue(1);
+
+      await expect(
+        service.updateMemberRole(
+          "tenant-1",
+          "membership-2",
+          TenantMembershipRole.ADMIN,
+          "owner-1",
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "LAST_OWNER_BLOCKED" },
+      });
+      expect(prisma.tenantMembership.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects actors who are not workspace members", async () => {
+      mockActorRole(null);
+
+      await expect(
+        service.updateMemberRole(
+          "tenant-1",
+          "membership-2",
+          TenantMembershipRole.ADMIN,
+          "outsider",
+        ),
+      ).rejects.toMatchObject({
+        response: { code: "ACTOR_NOT_MEMBER" },
+      });
+    });
+  });
 });

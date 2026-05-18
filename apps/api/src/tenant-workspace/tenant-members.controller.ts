@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -20,6 +21,7 @@ import { RolesGuard } from "../auth/guards/roles.guard";
 import { WorkspaceAccessService } from "../auth/workspace-access.service";
 import { CreateTenantMemberDto } from "./dto/create-tenant-member.dto";
 import { InviteTenantMemberDto } from "./dto/invite-tenant-member.dto";
+import { UpdateTenantMemberRoleDto } from "./dto/update-tenant-member-role.dto";
 import { TenantWorkspaceService } from "./tenant-workspace.service";
 
 @Controller("tenants/:tenantId/members")
@@ -226,6 +228,49 @@ export class TenantMembersController {
     });
 
     return invitation;
+  }
+
+  @Patch(":membershipId/role")
+  @HttpCode(HttpStatus.OK)
+  async updateRole(
+    @Param("tenantId") tenantId: string,
+    @Param("membershipId") membershipId: string,
+    @Body() dto: UpdateTenantMemberRoleDto,
+    @Req() req: Request,
+  ) {
+    const user = req.user as AuthenticatedRequestUser | undefined;
+    const resolvedTenantId =
+      await this.workspaceAccessService.ensureTenantAccess(
+        req as Request & {
+          user?: AuthenticatedRequestUser;
+          query: Record<string, unknown>;
+          headers: Record<string, string | string[] | undefined>;
+          params: Record<string, string>;
+        },
+        tenantId,
+      );
+
+    const member = await this.tenantWorkspaceService.updateMemberRole(
+      resolvedTenantId,
+      membershipId,
+      dto.role,
+      user?.sub ?? "",
+    );
+
+    await this.adminService.createAuditLogForTenant({
+      tenantId: resolvedTenantId,
+      actorUserId: user?.sub ?? null,
+      action: "tenant.member_role_updated",
+      targetType: "tenant_membership",
+      targetId: member.id,
+      metadata: {
+        email: member.email,
+        role: member.role,
+        userId: member.userId,
+      },
+    });
+
+    return member;
   }
 
   @Delete(":membershipId")

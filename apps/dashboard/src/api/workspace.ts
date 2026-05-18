@@ -161,3 +161,15 @@ export async function removeWorkspaceMember(
   );
   return data;
 }
+
+export async function updateWorkspaceMemberRole(
+  tenantId: string,
+  membershipId: string,
+  role: WorkspaceMemberRole,
+): Promise<WorkspaceMemberRecord> {
+  const { data } = await client.patch<WorkspaceMemberRecord>(
+    `/tenants/${tenantId}/members/${membershipId}/role`,
+    { role },
+  );
+  return data;
+}

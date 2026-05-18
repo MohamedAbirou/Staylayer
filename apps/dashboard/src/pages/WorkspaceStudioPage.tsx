@@ -43,6 +43,7 @@ import {
   removeWorkspaceMember,
   resendWorkspaceInvitation,
   revokeWorkspaceInvitation,
+  updateWorkspaceMemberRole,
   type CreateWorkspaceMemberPayload,
   type CreateWorkspaceSitePayload,
   type InviteWorkspaceMemberPayload,
@@ -183,6 +184,9 @@ export default function WorkspaceStudioPage() {
   >(null);
   const [invitationPendingRevocationId, setInvitationPendingRevocationId] =
     useState<string | null>(null);
+  const [memberRoleEdits, setMemberRoleEdits] = useState<
+    Record<string, WorkspaceMemberRole>
+  >({});
   const [siteForm, setSiteForm] = useState<CreateWorkspaceSitePayload>({
     name: "",
     slug: "",
@@ -460,6 +464,47 @@ export default function WorkspaceStudioPage() {
     },
     onError: (error: unknown) => {
       toast.error(readApiMessage(error, "Unable to remove that member."));
+    },
+  });
+
+  const updateMemberRoleMutation = useMutation({
+    mutationFn: async (variables: {
+      member: WorkspaceMemberRecord;
+      role: WorkspaceMemberRole;
+    }) => {
+      if (!tenantId) {
+        throw new Error("Select a tenant before changing member roles.");
+      }
+
+      return updateWorkspaceMemberRole(
+        tenantId,
+        variables.member.id,
+        variables.role,
+      );
+    },
+    onSuccess: async (member) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["workspace-members", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count", tenantId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "list", tenantId],
+        }),
+      ]);
+      setMemberRoleEdits((current) => {
+        const next = { ...current };
+        delete next[member.id];
+        return next;
+      });
+      toast.success(
+        `${member.email} is now ${describeMembershipRole(member.role)}.`,
+      );
+    },
+    onError: (error: unknown) => {
+      toast.error(readApiMessage(error, "Unable to update that member role."));
     },
   });
 
@@ -1443,6 +1488,29 @@ export default function WorkspaceStudioPage() {
                   removeMemberMutation.variables?.id === member.id;
                 const canRemoveMember =
                   canUseDangerActions && !isCurrentUser && !isLastOwner;
+                const actorRole = session?.activeMembershipRole ?? null;
+                const isActorOwner = actorRole === "OWNER";
+                const ownerInvolvedForActor =
+                  member.role === "OWNER" && !isActorOwner;
+                const canEditRole =
+                  !isCurrentUser &&
+                  !ownerInvolvedForActor &&
+                  (actorRole === "OWNER" || actorRole === "ADMIN");
+                const pendingRole = memberRoleEdits[member.id] ?? member.role;
+                const updatingRole =
+                  updateMemberRoleMutation.isPending &&
+                  updateMemberRoleMutation.variables?.member.id === member.id;
+                const roleOptionsForMember = MEMBER_ROLE_OPTIONS.filter(
+                  (option) => option.value !== "OWNER" || isActorOwner,
+                );
+                const roleDirty =
+                  pendingRole !== member.role &&
+                  roleOptionsForMember.some(
+                    (option) => option.value === pendingRole,
+                  );
+                const promotingFromOwner =
+                  member.role === "OWNER" && pendingRole !== "OWNER";
+                const blockedByLastOwner = promotingFromOwner && isLastOwner;
 
                 return (
                   <article
@@ -1472,11 +1540,91 @@ export default function WorkspaceStudioPage() {
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${MEMBER_ROLE_STYLES[member.role]}`}
-                        >
-                          {describeMembershipRole(member.role)}
-                        </span>
+                        {canEditRole ? (
+                          <div className="flex items-center gap-2">
+                            <label
+                              className="sr-only"
+                              htmlFor={`role-${member.id}`}
+                            >
+                              Role for {member.email}
+                            </label>
+                            <select
+                              id={`role-${member.id}`}
+                              value={pendingRole}
+                              onChange={(event) => {
+                                const nextRole = event.target
+                                  .value as WorkspaceMemberRole;
+                                setMemberRoleEdits((current) => ({
+                                  ...current,
+                                  [member.id]: nextRole,
+                                }));
+                              }}
+                              disabled={updatingRole}
+                              className={`rounded-full border px-3 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60 ${MEMBER_ROLE_STYLES[pendingRole]}`}
+                            >
+                              {!roleOptionsForMember.some(
+                                (option) => option.value === member.role,
+                              ) ? (
+                                <option value={member.role}>
+                                  {describeMembershipRole(member.role)}
+                                </option>
+                              ) : null}
+                              {roleOptionsForMember.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            {roleDirty ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateMemberRoleMutation.mutate({
+                                      member,
+                                      role: pendingRole,
+                                    })
+                                  }
+                                  disabled={updatingRole || blockedByLastOwner}
+                                  title={
+                                    blockedByLastOwner
+                                      ? "A workspace must keep at least one owner. Promote another member to Owner first."
+                                      : `Save role for ${member.email}`
+                                  }
+                                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                >
+                                  {updatingRole ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Check className="h-3.5 w-3.5" />
+                                  )}
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setMemberRoleEdits((current) => {
+                                      const next = { ...current };
+                                      delete next[member.id];
+                                      return next;
+                                    })
+                                  }
+                                  disabled={updatingRole}
+                                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  Cancel
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${MEMBER_ROLE_STYLES[member.role]}`}
+                          >
+                            {describeMembershipRole(member.role)}
+                          </span>
+                        )}
                         {canUseDangerActions ? (
                           <button
                             type="button"

@@ -454,6 +454,140 @@ export class TenantWorkspaceService {
     return this.serializeMember(membership);
   }
 
+  async updateMemberRole(
+    tenantId: string,
+    membershipId: string,
+    nextRole: TenantMembershipRole,
+    actorUserId: string,
+  ): Promise<TenantMemberSummary> {
+    const membership = await this.prisma.tenantMembership.findFirst({
+      where: { id: membershipId, tenantId },
+      select: {
+        id: true,
+        tenantId: true,
+        role: true,
+        isDefault: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!membership) {
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Workspace member not found",
+      });
+    }
+
+    if (membership.user.id === actorUserId) {
+      throw new BadRequestException({
+        code: "SELF_ROLE_CHANGE_BLOCKED",
+        message:
+          "You cannot change your own role here. Use Transfer ownership or ask another owner.",
+      });
+    }
+
+    if (membership.role === nextRole) {
+      return this.serializeMember(membership);
+    }
+
+    const actorMembership = await this.prisma.tenantMembership.findFirst({
+      where: { tenantId, userId: actorUserId },
+      select: { role: true },
+    });
+
+    if (!actorMembership) {
+      throw new BadRequestException({
+        code: "ACTOR_NOT_MEMBER",
+        message: "Only workspace members can change member roles.",
+      });
+    }
+
+    const ownerInvolved =
+      nextRole === TenantMembershipRole.OWNER ||
+      membership.role === TenantMembershipRole.OWNER;
+
+    if (ownerInvolved && actorMembership.role !== TenantMembershipRole.OWNER) {
+      throw new BadRequestException({
+        code: "OWNER_ROLE_CHANGE_REQUIRES_OWNER",
+        message:
+          "Only an Owner can grant or revoke the Owner role on a workspace.",
+      });
+    }
+
+    if (
+      membership.role === TenantMembershipRole.OWNER &&
+      nextRole !== TenantMembershipRole.OWNER
+    ) {
+      const ownerCount = await this.prisma.tenantMembership.count({
+        where: { tenantId, role: TenantMembershipRole.OWNER },
+      });
+
+      if (ownerCount <= 1) {
+        throw new BadRequestException({
+          code: "LAST_OWNER_BLOCKED",
+          message:
+            "A workspace must keep at least one owner. Promote another member to Owner first.",
+        });
+      }
+    }
+
+    const updated = await this.prisma.tenantMembership.update({
+      where: { id: membership.id },
+      data: { role: nextRole },
+      select: {
+        id: true,
+        tenantId: true,
+        role: true,
+        isDefault: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    await Promise.all([
+      this.notificationsService.createForTenantRoles({
+        tenantId,
+        roles: [TenantMembershipRole.OWNER, TenantMembershipRole.ADMIN],
+        category: NotificationCategory.SYSTEM,
+        title: `Role updated: ${updated.user.email}`,
+        body: `${updated.user.email} is now ${this.describeRole(updated.role)} (was ${this.describeRole(membership.role)}).`,
+        actionUrl: "/workspace",
+        metadata: {
+          membershipId: updated.id,
+          userId: updated.user.id,
+          email: updated.user.email,
+          previousRole: membership.role,
+          role: updated.role,
+        },
+      }),
+      this.notificationsService.create({
+        tenantId,
+        userId: updated.user.id,
+        category: NotificationCategory.SYSTEM,
+        title: "Your workspace role changed",
+        body: `Your role in this workspace was updated to ${this.describeRole(updated.role)}. You may need to sign back in for permissions to refresh.`,
+        actionUrl: "/",
+        metadata: {
+          previousRole: membership.role,
+          role: updated.role,
+        },
+      }),
+    ]);
+
+    return this.serializeMember(updated);
+  }
+
   async removeMember(
     tenantId: string,
     membershipId: string,
