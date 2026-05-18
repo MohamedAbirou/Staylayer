@@ -118,14 +118,12 @@ const PRIMARY_NAV: NavItem[] = [
     to: "/permissions",
     label: "Permissions",
     icon: Shield,
-    pending: true,
     anyOf: [OPERATOR_PERMISSIONS.PERMISSION_MANAGE_ALL],
   },
   {
     to: "/operator-users",
     label: "Operator Users",
     icon: Users,
-    pending: true,
     anyOf: [
       OPERATOR_PERMISSIONS.OPERATOR_USER_READ_ALL,
       OPERATOR_PERMISSIONS.OPERATOR_USER_MANAGE_ALL,

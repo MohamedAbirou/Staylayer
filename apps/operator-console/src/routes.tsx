@@ -32,6 +32,10 @@ import AnalyticsSupportPage from "./pages/AnalyticsSupportPage";
 import AnalyticsOperationsPage from "./pages/AnalyticsOperationsPage";
 import TenantHealthPage from "./pages/TenantHealthPage";
 import ObservabilityPage from "./pages/ObservabilityPage";
+import OperatorUsersListPage from "./pages/OperatorUsersListPage";
+import OperatorUserNewPage from "./pages/OperatorUserNewPage";
+import OperatorUserDetailPage from "./pages/OperatorUserDetailPage";
+import PermissionsCatalogPage from "./pages/PermissionsCatalogPage";
 import ForbiddenPage from "./pages/ForbiddenPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -503,6 +507,68 @@ export const router = createBrowserRouter([
                 element: (
                   <ErrorBoundary>
                     <ObservabilityPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.OPERATOR_USER_READ_ALL,
+                  OPERATOR_PERMISSIONS.OPERATOR_USER_MANAGE_ALL,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/operator-users",
+                element: (
+                  <ErrorBoundary>
+                    <OperatorUsersListPage />
+                  </ErrorBoundary>
+                ),
+              },
+              {
+                path: "/operator-users/:operatorUserId",
+                element: (
+                  <ErrorBoundary>
+                    <OperatorUserDetailPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[OPERATOR_PERMISSIONS.OPERATOR_USER_MANAGE_ALL]}
+              />
+            ),
+            children: [
+              {
+                path: "/operator-users/new",
+                element: (
+                  <ErrorBoundary>
+                    <OperatorUserNewPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[OPERATOR_PERMISSIONS.PERMISSION_MANAGE_ALL]}
+              />
+            ),
+            children: [
+              {
+                path: "/permissions",
+                element: (
+                  <ErrorBoundary>
+                    <PermissionsCatalogPage />
                   </ErrorBoundary>
                 ),
               },

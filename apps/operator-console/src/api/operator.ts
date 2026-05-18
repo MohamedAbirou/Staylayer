@@ -2259,3 +2259,169 @@ export async function fetchObservability(): Promise<ObservabilityResponse> {
   );
   return res.data;
 }
+
+// ─── Operator users & permission management (Phase 11) ─────────────────
+//
+// All mutations in this section call `/operator/users/*` which is gated by
+// the `OperatorAuditInterceptor` with `sensitive: true`, so every request
+// body MUST include `reason` (8–500 chars). The backend also enforces
+// per-action permissions (`operator_user.*.all`, `permission.manage.all`).
+
+export interface OperatorUserListItem {
+  id: string;
+  email: string;
+  platformRole: PlatformRole;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  locked: boolean;
+  lockedUntil: string | null;
+  failedAttempts: number;
+  activeSessions: number;
+}
+
+export interface OperatorUsersListResponse {
+  data: OperatorUserListItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface OperatorUserSession {
+  id: string;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  revokedReason: string | null;
+}
+
+export interface OperatorUserDetail extends OperatorUserListItem {
+  permissions: string[];
+  recentSessions: OperatorUserSession[];
+}
+
+export interface OperatorRoleBundle {
+  role: PlatformRole;
+  label: string;
+  description: string;
+  permissions: string[];
+}
+
+export interface OperatorRoleBundlesResponse {
+  allPermissions: string[];
+  bundles: OperatorRoleBundle[];
+}
+
+export interface OperatorUsersListParams {
+  page?: number;
+  limit?: number;
+  q?: string;
+  platformRole?: PlatformRole;
+  lockedOnly?: boolean;
+}
+
+export async function fetchOperatorUsers(
+  params: OperatorUsersListParams = {},
+): Promise<OperatorUsersListResponse> {
+  const res = await client.get<OperatorUsersListResponse>("/operator/users", {
+    params,
+  });
+  return res.data;
+}
+
+export async function fetchOperatorUser(
+  operatorUserId: string,
+): Promise<OperatorUserDetail> {
+  const res = await client.get<OperatorUserDetail>(
+    `/operator/users/${operatorUserId}`,
+  );
+  return res.data;
+}
+
+export async function fetchOperatorRoleBundles(): Promise<OperatorRoleBundlesResponse> {
+  const res = await client.get<OperatorRoleBundlesResponse>(
+    "/operator/users/role-bundles",
+  );
+  return res.data;
+}
+
+export interface CreateOperatorUserBody {
+  email: string;
+  password: string;
+  platformRole: PlatformRole;
+  reason: string;
+}
+
+export async function createOperatorUser(
+  body: CreateOperatorUserBody,
+): Promise<OperatorUserDetail> {
+  const res = await client.post<OperatorUserDetail>("/operator/users", body);
+  return res.data;
+}
+
+export interface UpdateOperatorUserBody {
+  email?: string;
+  platformRole?: PlatformRole;
+  reason: string;
+}
+
+export async function updateOperatorUser(
+  operatorUserId: string,
+  body: UpdateOperatorUserBody,
+): Promise<OperatorUserDetail> {
+  const res = await client.patch<OperatorUserDetail>(
+    `/operator/users/${operatorUserId}`,
+    body,
+  );
+  return res.data;
+}
+
+export interface ResetOperatorUserPasswordBody {
+  password: string;
+  reason: string;
+}
+
+export async function resetOperatorUserPassword(
+  operatorUserId: string,
+  body: ResetOperatorUserPasswordBody,
+): Promise<{ success: true; revokedSessions: number }> {
+  const res = await client.post<{ success: true; revokedSessions: number }>(
+    `/operator/users/${operatorUserId}/password-reset`,
+    body,
+  );
+  return res.data;
+}
+
+export async function unlockOperatorUser(
+  operatorUserId: string,
+  body: { reason: string },
+): Promise<OperatorUserDetail> {
+  const res = await client.post<OperatorUserDetail>(
+    `/operator/users/${operatorUserId}/unlock`,
+    body,
+  );
+  return res.data;
+}
+
+export async function revokeOperatorUserSessions(
+  operatorUserId: string,
+  body: { reason: string },
+): Promise<{ revokedSessions: number }> {
+  const res = await client.post<{ revokedSessions: number }>(
+    `/operator/users/${operatorUserId}/revoke-sessions`,
+    body,
+  );
+  return res.data;
+}
+
+export async function revokeOperatorUser(
+  operatorUserId: string,
+  body: { reason: string },
+): Promise<{ success: true; revokedSessions: number }> {
+  const res = await client.delete<{ success: true; revokedSessions: number }>(
+    `/operator/users/${operatorUserId}`,
+    { data: body },
+  );
+  return res.data;
+}
