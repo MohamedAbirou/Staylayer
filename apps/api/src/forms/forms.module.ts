@@ -24,6 +24,6 @@ import { SubmissionOperationsService } from "./submission-operations.service";
     FormEmailRendererService,
     SubmissionOperationsService,
   ],
-  exports: [FormsService],
+  exports: [FormsService, SubmissionOperationsService],
 })
 export class FormsModule {}

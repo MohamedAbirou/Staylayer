@@ -234,6 +234,57 @@ export class SubmissionOperationsService
     void this.processDueDeliveries({ submissionId: submission.id });
   }
 
+  /**
+   * Operator-triggered replay of a specific FormDelivery row. Resets the row
+   * to PENDING with an immediate next-attempt window, clears the prior error,
+   * and synchronously runs the delivery processor scoped to the submission so
+   * the operator gets immediate feedback. Throws when the row is missing or
+   * already delivered (no-op replay is rejected to prevent silent confusion).
+   */
+  async requeueDelivery(deliveryId: string): Promise<{
+    id: string;
+    submissionId: string;
+    status: FormDeliveryStatus;
+  }> {
+    const existing = await this.prisma.formDelivery.findUnique({
+      where: { id: deliveryId },
+      select: { id: true, submissionId: true, status: true },
+    });
+    if (!existing) {
+      throw Object.assign(new Error("Form delivery not found"), {
+        status: 404,
+        code: "FORM_DELIVERY_NOT_FOUND",
+      });
+    }
+    if (existing.status === FormDeliveryStatus.DELIVERED) {
+      throw Object.assign(new Error("Form delivery has already succeeded"), {
+        status: 400,
+        code: "FORM_DELIVERY_ALREADY_DELIVERED",
+      });
+    }
+
+    const updated = await this.prisma.formDelivery.update({
+      where: { id: deliveryId },
+      data: {
+        status: FormDeliveryStatus.PENDING,
+        errorMessage: null,
+        nextAttemptAt: new Date(),
+      },
+      select: { id: true, submissionId: true, status: true },
+    });
+
+    // Run scoped to this submission so the replay is processed immediately
+    // rather than waiting for the next interval tick.
+    await this.processDueDeliveries({ submissionId: updated.submissionId });
+
+    const refreshed = await this.prisma.formDelivery.findUnique({
+      where: { id: deliveryId },
+      select: { id: true, submissionId: true, status: true },
+    });
+
+    return refreshed ?? updated;
+  }
+
   async processDueDeliveries(options?: { submissionId?: string }) {
     if (this.deliveryRunInProgress) {
       return;

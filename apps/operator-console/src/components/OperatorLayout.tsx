@@ -5,7 +5,7 @@ import {
   Building2,
   CreditCard,
   LifeBuoy,
-  Receipt,
+  Rocket,
   ScrollText,
   Search,
   Settings,
@@ -73,12 +73,16 @@ const PRIMARY_NAV: NavItem[] = [
   {
     to: "/operations",
     label: "Operations",
-    icon: Receipt,
-    pending: true,
+    icon: Rocket,
     anyOf: [
       OPERATOR_PERMISSIONS.DEPLOYMENT_READ_ALL,
       OPERATOR_PERMISSIONS.DOMAIN_READ_ALL,
       OPERATOR_PERMISSIONS.FORM_DELIVERY_READ_ALL,
+      OPERATOR_PERMISSIONS.FORM_SUBMISSION_READ_ALL,
+      OPERATOR_PERMISSIONS.OPERATIONAL_ALERT_READ_ALL,
+      OPERATOR_PERMISSIONS.SEO_READ_ALL,
+      OPERATOR_PERMISSIONS.TRANSLATION_JOB_READ_ALL,
+      OPERATOR_PERMISSIONS.NOTIFICATION_READ_ALL,
     ],
   },
   {

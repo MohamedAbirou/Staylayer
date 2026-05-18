@@ -1459,3 +1459,497 @@ export async function rejectBillingAction(
   );
   return res.data;
 }
+
+// ─── Phase 9 — Operations Modules ─────────────────────────────────────
+//
+// Surfaces the existing customer-dashboard operational features
+// (deployments, domains, form submissions/deliveries, operational alerts,
+// SEO submissions, translation jobs/glossaries, notifications) for operator
+// users. All endpoints follow the operator list contract from
+// `operator-console-docs/05`: `{ data, total, page, limit, filters,
+// generatedAt }`. Mutations require a `reason` (≥8 chars, audited).
+
+export interface OperatorListEnvelope<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  filters: Record<string, unknown>;
+  generatedAt: string;
+}
+
+// Phase 9 Deployments
+export type OperatorDeploymentStatus =
+  | "PENDING"
+  | "CREATING_PROJECT"
+  | "SYNCING_ENV"
+  | "DEPLOYING"
+  | "LIVE"
+  | "FAILED"
+  | "RETRYING";
+
+export interface OperatorOpsDeploymentListItem {
+  id: string;
+  siteId: string;
+  siteName: string;
+  tenantId: string;
+  tenantName: string;
+  status: OperatorDeploymentStatus;
+  providerProjectId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OperatorOpsDeploymentDetail extends OperatorOpsDeploymentListItem {
+  generatedAt: string;
+  providerDeployId: string | null;
+  url: string | null;
+  siteTimeline: Array<{
+    id: string;
+    status: OperatorDeploymentStatus;
+    providerProjectId: string | null;
+    providerDeployId: string | null;
+    url: string | null;
+    errorMessage: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  auditContext: {
+    targetType: string;
+    targetId: string;
+    tenantId: string;
+    siteId: string;
+  };
+}
+
+export async function listOperatorDeployments(params: {
+  status?: OperatorDeploymentStatus;
+  siteId?: string;
+  tenantId?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsDeploymentListItem>> {
+  const res = await client.get<
+    OperatorListEnvelope<OperatorOpsDeploymentListItem>
+  >("/operator/operations/deployments", { params });
+  return res.data;
+}
+
+export async function getOperatorDeployment(
+  id: string,
+): Promise<OperatorOpsDeploymentDetail> {
+  const res = await client.get<OperatorOpsDeploymentDetail>(
+    `/operator/operations/deployments/${encodeURIComponent(id)}`,
+  );
+  return res.data;
+}
+
+export async function retryOperatorDeployment(
+  id: string,
+  body: { reason: string },
+): Promise<{ id: string; status: OperatorDeploymentStatus }> {
+  const res = await client.post<{
+    id: string;
+    status: OperatorDeploymentStatus;
+  }>(`/operator/operations/deployments/${encodeURIComponent(id)}/retry`, body);
+  return res.data;
+}
+
+// Phase 9 Domains
+export type OperatorOpsDomainStatus =
+  | "PENDING"
+  | "DNS_REQUIRED"
+  | "VERIFYING"
+  | "PROVIDER_ATTACH_PENDING"
+  | "SSL_PROVISIONING"
+  | "ACTIVE"
+  | "FAILED";
+
+export interface OperatorOpsDomainListItem {
+  id: string;
+  host: string;
+  isPrimary: boolean;
+  status: OperatorOpsDomainStatus;
+  lastError: string | null;
+  lastCheckedAt: string | null;
+  verifiedAt: string | null;
+  siteId: string;
+  siteName: string;
+  tenantId: string;
+  tenantName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listOperatorDomains(params: {
+  status?: OperatorOpsDomainStatus;
+  siteId?: string;
+  tenantId?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsDomainListItem>> {
+  const res = await client.get<OperatorListEnvelope<OperatorOpsDomainListItem>>(
+    "/operator/operations/domains",
+    { params },
+  );
+  return res.data;
+}
+
+export async function retryOperatorDomainVerification(
+  id: string,
+  body: { reason: string },
+): Promise<{ id: string; status: OperatorOpsDomainStatus }> {
+  const res = await client.post<{
+    id: string;
+    status: OperatorOpsDomainStatus;
+  }>(
+    `/operator/operations/domains/${encodeURIComponent(id)}/retry-verification`,
+    body,
+  );
+  return res.data;
+}
+
+// Phase 9 Forms — submissions & deliveries
+export type OperatorOpsFormSubmissionStatus =
+  | "PENDING"
+  | "PROCESSED"
+  | "QUARANTINED"
+  | "FAILED"
+  | "REJECTED";
+
+export type OperatorOpsFormDeliveryStatus =
+  | "PENDING"
+  | "RETRYING"
+  | "DELIVERED"
+  | "FAILED"
+  | "SKIPPED";
+
+export interface OperatorOpsFormSubmissionListItem {
+  id: string;
+  formType: string;
+  formKey: string | null;
+  formName: string | null;
+  status: OperatorOpsFormSubmissionStatus;
+  spamScore: number | null;
+  siteId: string;
+  siteName: string;
+  tenantId: string;
+  tenantName: string;
+  deliveries: Array<{
+    id: string;
+    status: OperatorOpsFormDeliveryStatus;
+    channel: string;
+    attempts: number;
+  }>;
+  createdAt: string;
+}
+
+export interface OperatorOpsFormDeliveryListItem {
+  id: string;
+  submissionId: string;
+  purpose: string;
+  channel: string;
+  destination: string;
+  status: OperatorOpsFormDeliveryStatus;
+  attempts: number;
+  responseCode: number | null;
+  errorMessage: string | null;
+  nextAttemptAt: string | null;
+  lastAttemptAt: string | null;
+  deliveredAt: string | null;
+  siteId: string;
+  siteName: string;
+  tenantId: string;
+  tenantName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listOperatorFormSubmissions(params: {
+  status?: OperatorOpsFormSubmissionStatus;
+  siteId?: string;
+  tenantId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsFormSubmissionListItem>> {
+  const res = await client.get<
+    OperatorListEnvelope<OperatorOpsFormSubmissionListItem>
+  >("/operator/operations/forms/submissions", { params });
+  return res.data;
+}
+
+export async function listOperatorFormDeliveries(params: {
+  status?: OperatorOpsFormDeliveryStatus;
+  siteId?: string;
+  tenantId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsFormDeliveryListItem>> {
+  const res = await client.get<
+    OperatorListEnvelope<OperatorOpsFormDeliveryListItem>
+  >("/operator/operations/forms/deliveries", { params });
+  return res.data;
+}
+
+export async function replayOperatorFormDelivery(
+  id: string,
+  body: { reason: string },
+): Promise<{
+  id: string;
+  submissionId: string;
+  status: OperatorOpsFormDeliveryStatus;
+}> {
+  const res = await client.post<{
+    id: string;
+    submissionId: string;
+    status: OperatorOpsFormDeliveryStatus;
+  }>(
+    `/operator/operations/forms/deliveries/${encodeURIComponent(id)}/replay`,
+    body,
+  );
+  return res.data;
+}
+
+// Phase 9 Operational alerts
+export type OperatorOpsAlertStatus = "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+export type OperatorOpsAlertSeverity = "INFO" | "WARNING" | "CRITICAL";
+
+export interface OperatorOpsAlertListItem {
+  id: string;
+  type: string;
+  severity: OperatorOpsAlertSeverity;
+  status: OperatorOpsAlertStatus;
+  fingerprint: string;
+  message: string;
+  siteId: string;
+  siteName: string;
+  tenantId: string;
+  tenantName: string;
+  firstTriggeredAt: string;
+  lastTriggeredAt: string;
+  resolvedAt: string | null;
+}
+
+export async function listOperatorAlerts(params: {
+  status?: OperatorOpsAlertStatus;
+  severity?: OperatorOpsAlertSeverity;
+  type?: string;
+  siteId?: string;
+  tenantId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsAlertListItem>> {
+  const res = await client.get<OperatorListEnvelope<OperatorOpsAlertListItem>>(
+    "/operator/operations/alerts",
+    { params },
+  );
+  return res.data;
+}
+
+export async function resolveOperatorAlert(
+  id: string,
+  body: { reason: string },
+): Promise<{ id: string; status: OperatorOpsAlertStatus }> {
+  const res = await client.post<{ id: string; status: OperatorOpsAlertStatus }>(
+    `/operator/operations/alerts/${encodeURIComponent(id)}/resolve`,
+    body,
+  );
+  return res.data;
+}
+
+// Phase 9 SEO summary
+export interface OperatorOpsSeoSiteSummary {
+  generatedAt: string;
+  site: { id: string; name: string; tenantId: string; tenantName: string };
+  redirects: { total: number };
+  structuredData: {
+    id: string;
+    businessType: string;
+    enabledSchemas: string[];
+    updatedAt: string;
+  } | null;
+  sitemapSubmissions: Array<{
+    id: string;
+    target: string;
+    status: string;
+    urlCount: number;
+    attempts: number;
+    responseStatus: number | null;
+    reason: string | null;
+    lastAttemptAt: string | null;
+    createdAt: string;
+  }>;
+  psi: {
+    id: string;
+    status: string;
+    strategy: string;
+    createdAt: string;
+  } | null;
+  hreflang: {
+    id: string;
+    status: string;
+    errorCount: number;
+    warningCount: number;
+    createdAt: string;
+  } | null;
+  crawl: { id: string; status: string; createdAt: string } | null;
+  auditContext: {
+    targetType: string;
+    targetId: string;
+    tenantId: string;
+    siteId: string;
+  };
+}
+
+export async function getOperatorSeoSiteSummary(
+  siteId: string,
+): Promise<OperatorOpsSeoSiteSummary> {
+  const res = await client.get<OperatorOpsSeoSiteSummary>(
+    `/operator/operations/seo/sites/${encodeURIComponent(siteId)}`,
+  );
+  return res.data;
+}
+
+export async function retryOperatorSitemapSubmission(
+  siteId: string,
+  logId: string,
+  body: { reason: string },
+): Promise<{ id: string; status: string }> {
+  const res = await client.post<{ id: string; status: string }>(
+    `/operator/operations/seo/sites/${encodeURIComponent(
+      siteId,
+    )}/sitemap-submissions/${encodeURIComponent(logId)}/retry`,
+    body,
+  );
+  return res.data;
+}
+
+// Phase 9 Translations
+export type OperatorOpsTranslationJobStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "COMPLETED"
+  | "COMPLETED_WITH_ERRORS"
+  | "FAILED"
+  | "CANCELED";
+
+export interface OperatorOpsTranslationJobListItem {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  siteId: string;
+  siteName: string;
+  sourceLocale: string;
+  targetLocale: string;
+  status: OperatorOpsTranslationJobStatus;
+  totalPages: number;
+  completedPages: number;
+  failedPages: number;
+  charactersUsed: number;
+  error: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface OperatorOpsGlossaryListItem {
+  id: string;
+  name: string;
+  tenantId: string;
+  tenantName: string;
+  siteId: string | null;
+  siteName: string | null;
+  termCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OperatorOpsLocaleCompleteness {
+  generatedAt: string;
+  siteId: string;
+  data: unknown;
+}
+
+export async function listOperatorTranslationJobs(params: {
+  status?: OperatorOpsTranslationJobStatus;
+  tenantId?: string;
+  siteId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsTranslationJobListItem>> {
+  const res = await client.get<
+    OperatorListEnvelope<OperatorOpsTranslationJobListItem>
+  >("/operator/operations/translations/jobs", { params });
+  return res.data;
+}
+
+export async function retryOperatorTranslationJob(
+  id: string,
+  body: { reason: string },
+): Promise<{ id: string; status: OperatorOpsTranslationJobStatus }> {
+  const res = await client.post<{
+    id: string;
+    status: OperatorOpsTranslationJobStatus;
+  }>(
+    `/operator/operations/translations/jobs/${encodeURIComponent(id)}/retry`,
+    body,
+  );
+  return res.data;
+}
+
+export async function listOperatorGlossaries(params: {
+  tenantId?: string;
+  siteId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsGlossaryListItem>> {
+  const res = await client.get<
+    OperatorListEnvelope<OperatorOpsGlossaryListItem>
+  >("/operator/operations/translations/glossaries", { params });
+  return res.data;
+}
+
+export async function getOperatorLocaleCompleteness(
+  siteId: string,
+): Promise<OperatorOpsLocaleCompleteness> {
+  const res = await client.get<OperatorOpsLocaleCompleteness>(
+    `/operator/operations/translations/sites/${encodeURIComponent(
+      siteId,
+    )}/completeness`,
+  );
+  return res.data;
+}
+
+// Phase 9 Notifications
+export interface OperatorOpsNotificationListItem {
+  id: string;
+  tenantId: string;
+  tenantName: string | null;
+  userId: string | null;
+  userEmail: string | null;
+  siteId: string | null;
+  category: string;
+  channel: string;
+  title: string;
+  body: string;
+  actionUrl: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export async function listOperatorNotifications(params: {
+  tenantId?: string;
+  userId?: string;
+  category?: string;
+  unreadOnly?: boolean;
+  page?: number;
+  limit?: number;
+}): Promise<OperatorListEnvelope<OperatorOpsNotificationListItem>> {
+  const res = await client.get<
+    OperatorListEnvelope<OperatorOpsNotificationListItem>
+  >("/operator/operations/notifications", { params });
+  return res.data;
+}

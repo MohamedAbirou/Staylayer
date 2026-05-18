@@ -18,6 +18,14 @@ import BillingAccountsListPage from "./pages/BillingAccountsListPage";
 import BillingAccountDetailPage from "./pages/BillingAccountDetailPage";
 import BillingActionRequestsPage from "./pages/BillingActionRequestsPage";
 import BillingWebhooksPage from "./pages/BillingWebhooksPage";
+import OperationsLandingPage from "./pages/OperationsLandingPage";
+import OperationsDeploymentsPage from "./pages/OperationsDeploymentsPage";
+import OperationsDomainsPage from "./pages/OperationsDomainsPage";
+import OperationsFormsPage from "./pages/OperationsFormsPage";
+import OperationsAlertsPage from "./pages/OperationsAlertsPage";
+import OperationsSeoPage from "./pages/OperationsSeoPage";
+import OperationsTranslationsPage from "./pages/OperationsTranslationsPage";
+import OperationsNotificationsPage from "./pages/OperationsNotificationsPage";
 import ForbiddenPage from "./pages/ForbiddenPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -225,6 +233,153 @@ export const router = createBrowserRouter([
                 element: (
                   <ErrorBoundary>
                     <BillingWebhooksPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.DEPLOYMENT_READ_ALL,
+                  OPERATOR_PERMISSIONS.DOMAIN_READ_ALL,
+                  OPERATOR_PERMISSIONS.FORM_DELIVERY_READ_ALL,
+                  OPERATOR_PERMISSIONS.FORM_SUBMISSION_READ_ALL,
+                  OPERATOR_PERMISSIONS.OPERATIONAL_ALERT_READ_ALL,
+                  OPERATOR_PERMISSIONS.SEO_READ_ALL,
+                  OPERATOR_PERMISSIONS.TRANSLATION_JOB_READ_ALL,
+                  OPERATOR_PERMISSIONS.NOTIFICATION_READ_ALL,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/operations",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsLandingPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[OPERATOR_PERMISSIONS.DEPLOYMENT_READ_ALL]}
+              />
+            ),
+            children: [
+              {
+                path: "/operations/deployments",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsDeploymentsPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute anyOf={[OPERATOR_PERMISSIONS.DOMAIN_READ_ALL]} />
+            ),
+            children: [
+              {
+                path: "/operations/domains",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsDomainsPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.FORM_DELIVERY_READ_ALL,
+                  OPERATOR_PERMISSIONS.FORM_SUBMISSION_READ_ALL,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/operations/forms",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsFormsPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[OPERATOR_PERMISSIONS.OPERATIONAL_ALERT_READ_ALL]}
+              />
+            ),
+            children: [
+              {
+                path: "/operations/alerts",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsAlertsPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute anyOf={[OPERATOR_PERMISSIONS.SEO_READ_ALL]} />
+            ),
+            children: [
+              {
+                path: "/operations/seo",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsSeoPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[
+                  OPERATOR_PERMISSIONS.TRANSLATION_JOB_READ_ALL,
+                  OPERATOR_PERMISSIONS.TRANSLATION_GLOSSARY_READ_ALL,
+                ]}
+              />
+            ),
+            children: [
+              {
+                path: "/operations/translations",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsTranslationsPage />
+                  </ErrorBoundary>
+                ),
+              },
+            ],
+          },
+          {
+            element: (
+              <PermissionRoute
+                anyOf={[OPERATOR_PERMISSIONS.NOTIFICATION_READ_ALL]}
+              />
+            ),
+            children: [
+              {
+                path: "/operations/notifications",
+                element: (
+                  <ErrorBoundary>
+                    <OperationsNotificationsPage />
                   </ErrorBoundary>
                 ),
               },

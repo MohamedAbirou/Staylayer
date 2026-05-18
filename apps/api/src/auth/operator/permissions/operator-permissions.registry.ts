@@ -73,8 +73,25 @@ export const OPERATOR_PERMISSIONS = {
   DEPLOYMENT_RETRY_ALL: "deployment.retry.all",
   DOMAIN_READ_ALL: "domain.read.all",
   DOMAIN_RETRY_VERIFICATION_ALL: "domain.retry_verification.all",
+  FORM_SUBMISSION_READ_ALL: "form_submission.read.all",
   FORM_DELIVERY_READ_ALL: "form_delivery.read.all",
   FORM_DELIVERY_REPLAY_ALL: "form_delivery.replay.all",
+
+  // ── Operational alerts ───────────────────────────────────────────────
+  OPERATIONAL_ALERT_READ_ALL: "operational_alert.read.all",
+  OPERATIONAL_ALERT_RESOLVE_ALL: "operational_alert.resolve.all",
+
+  // ── SEO operations (read + safe re-runs) ─────────────────────────────
+  SEO_READ_ALL: "seo.read.all",
+  SEO_RESUBMIT_ALL: "seo.resubmit.all",
+
+  // ── Translation operations ───────────────────────────────────────────
+  TRANSLATION_JOB_READ_ALL: "translation_job.read.all",
+  TRANSLATION_JOB_RETRY_ALL: "translation_job.retry.all",
+  TRANSLATION_GLOSSARY_READ_ALL: "translation_glossary.read.all",
+
+  // ── Notifications (cross-tenant read) ────────────────────────────────
+  NOTIFICATION_READ_ALL: "notification.read.all",
 
   // ── Audit ────────────────────────────────────────────────────────────
   AUDIT_READ_ALL: "audit.read.all",
@@ -132,8 +149,17 @@ const SUPPORT_ADMIN_PERMISSIONS: ReadonlyArray<OperatorPermissionKey> = [
   P.DEPLOYMENT_RETRY_ALL,
   P.DOMAIN_READ_ALL,
   P.DOMAIN_RETRY_VERIFICATION_ALL,
+  P.FORM_SUBMISSION_READ_ALL,
   P.FORM_DELIVERY_READ_ALL,
   P.FORM_DELIVERY_REPLAY_ALL,
+  P.OPERATIONAL_ALERT_READ_ALL,
+  P.OPERATIONAL_ALERT_RESOLVE_ALL,
+  P.SEO_READ_ALL,
+  P.SEO_RESUBMIT_ALL,
+  P.TRANSLATION_JOB_READ_ALL,
+  P.TRANSLATION_JOB_RETRY_ALL,
+  P.TRANSLATION_GLOSSARY_READ_ALL,
+  P.NOTIFICATION_READ_ALL,
   P.AUDIT_READ_SUPPORT,
 ];
 
@@ -161,7 +187,13 @@ const FINANCE_ADMIN_PERMISSIONS: ReadonlyArray<OperatorPermissionKey> = [
   P.BILLING_CREDIT_ISSUE_ALL,
   P.DEPLOYMENT_READ_ALL,
   P.DOMAIN_READ_ALL,
+  P.FORM_SUBMISSION_READ_ALL,
   P.FORM_DELIVERY_READ_ALL,
+  P.OPERATIONAL_ALERT_READ_ALL,
+  P.SEO_READ_ALL,
+  P.TRANSLATION_JOB_READ_ALL,
+  P.TRANSLATION_GLOSSARY_READ_ALL,
+  P.NOTIFICATION_READ_ALL,
   P.AUDIT_READ_BILLING,
 ];
 
