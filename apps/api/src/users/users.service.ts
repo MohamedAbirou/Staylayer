@@ -29,6 +29,10 @@ const authUserSelect = Prisma.validator<Prisma.UserSelect>()({
   platformRole: true,
   failedAttempts: true,
   lockedUntil: true,
+  operatorFailedAttempts: true,
+  operatorLockedUntil: true,
+  operatorMfaSecret: true,
+  operatorMfaEnrolledAt: true,
   memberships: {
     orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
     select: {
@@ -301,6 +305,50 @@ export class UsersService {
       data: {
         failedAttempts: 0,
         lockedUntil: null,
+      },
+    });
+  }
+
+  /**
+   * Phase 12 — operator-isolated failed-attempt counter.
+   *
+   * Keeps customer-surface and operator-surface brute-force counters
+   * separated so that a malicious actor cannot lock out a real operator
+   * via the customer dashboard login (and vice-versa). Uses the same
+   * threshold + lockout duration as the customer surface.
+   */
+  async incrementOperatorFailedAttempts(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+
+    const operatorFailedAttempts = user.operatorFailedAttempts + 1;
+    const updateData: Prisma.UserUpdateInput = {
+      operatorFailedAttempts,
+    };
+
+    if (operatorFailedAttempts >= MAX_FAILED_ATTEMPTS) {
+      const lockedUntil = new Date();
+      lockedUntil.setMinutes(
+        lockedUntil.getMinutes() + LOCKOUT_DURATION_MINUTES,
+      );
+      updateData.operatorLockedUntil = lockedUntil;
+      this.logger.warn(
+        `Operator account locked for user ${userId} after ${operatorFailedAttempts} failed attempts`,
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+  }
+
+  async resetOperatorFailedAttempts(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        operatorFailedAttempts: 0,
+        operatorLockedUntil: null,
       },
     });
   }

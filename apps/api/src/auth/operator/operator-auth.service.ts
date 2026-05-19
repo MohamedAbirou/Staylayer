@@ -18,23 +18,46 @@ import {
   OPERATOR_ACCESS_TOKEN_TTL_SECONDS,
   OPERATOR_JWT_AUDIENCE,
   OPERATOR_JWT_ISSUER,
+  OPERATOR_MFA_CHALLENGE_TTL_SECONDS,
   OPERATOR_REFRESH_COOKIE_PATH,
   OPERATOR_REFRESH_TOKEN_TTL_SECONDS,
   OperatorAuthResponse,
   OperatorJwtAccessPayload,
   OperatorJwtRefreshPayload,
+  OperatorMfaChallenge,
+  OperatorMfaChallengePayload,
   OperatorSessionResponse,
 } from "./operator-auth.types";
+import {
+  buildOtpauthUri,
+  decryptMfaSecret,
+  encryptMfaSecret,
+  generateRecoveryCodes,
+  generateTotpSecret,
+  hashRecoveryCode,
+  verifyTotpCode,
+} from "./mfa/operator-mfa.util";
 
 interface ValidatedOperator {
   id: string;
   email: string;
   platformRole: PlatformRole;
+  mfaEnrolled?: boolean;
 }
 
 export interface OperatorSessionContext {
   userAgent?: string | null;
   ip?: string | null;
+}
+
+export interface OperatorEnrollmentInitiation {
+  secret: string;
+  otpauthUri: string;
+}
+
+export interface OperatorEnrollmentConfirmation {
+  enrolledAt: string;
+  recoveryCodes: string[];
 }
 
 @Injectable()
@@ -73,10 +96,10 @@ export class OperatorAuthService {
       throw this.invalidCredentials();
     }
 
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
+    if (user.operatorLockedUntil && user.operatorLockedUntil > new Date()) {
       throw new ForbiddenException({
         code: "ACCOUNT_LOCKED",
-        message: `Account locked. Try again after ${user.lockedUntil.toISOString()}`,
+        message: `Account locked. Try again after ${user.operatorLockedUntil.toISOString()}`,
       });
     }
 
@@ -86,7 +109,7 @@ export class OperatorAuthService {
     );
 
     if (!passwordValid) {
-      await this.usersService.incrementFailedAttempts(user.id);
+      await this.usersService.incrementOperatorFailedAttempts(user.id);
       this.logger.warn(
         `[operator-auth] failed password for ${this.maskEmail(user.email)}`,
       );
@@ -94,19 +117,20 @@ export class OperatorAuthService {
     }
 
     if (!user.platformRole) {
-      await this.usersService.resetFailedAttempts(user.id);
+      await this.usersService.resetOperatorFailedAttempts(user.id);
       this.logger.warn(
         `[operator-auth] customer-only user attempted operator login: ${this.maskEmail(user.email)}`,
       );
       throw this.invalidCredentials();
     }
 
-    await this.usersService.resetFailedAttempts(user.id);
+    await this.usersService.resetOperatorFailedAttempts(user.id);
 
     return {
       id: user.id,
       email: user.email,
       platformRole: user.platformRole,
+      mfaEnrolled: !!user.operatorMfaEnrolledAt && !!user.operatorMfaSecret,
     };
   }
 
@@ -245,7 +269,7 @@ export class OperatorAuthService {
       });
     }
 
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
+    if (user.operatorLockedUntil && user.operatorLockedUntil > new Date()) {
       throw new ForbiddenException({
         code: "ACCOUNT_LOCKED",
         message: "Operator account is locked",
@@ -349,7 +373,6 @@ export class OperatorAuthService {
       data: { revokedAt: new Date(), revokedReason: reason },
     });
   }
-
   getRefreshCookieOptions(): {
     httpOnly: true;
     secure: boolean;
@@ -386,7 +409,11 @@ export class OperatorAuthService {
     return getPermissionsForRole(role);
   }
 
-  private async signAccessToken(operator: ValidatedOperator): Promise<string> {
+  private async signAccessToken(operator: {
+    id: string;
+    email: string;
+    platformRole: PlatformRole;
+  }): Promise<string> {
     const payload: OperatorJwtAccessPayload = {
       sub: operator.id,
       email: operator.email,
@@ -434,5 +461,307 @@ export class OperatorAuthService {
   private hash(value: string | null): string | null {
     if (!value) return null;
     return createHash("sha256").update(value).digest("hex").slice(0, 32);
+  }
+
+  // ── Phase 12 — MFA ────────────────────────────────────────────────
+
+  /**
+   * Issue a short-lived challenge token after password validation when the
+   * operator has TOTP enrolled. The caller must complete `mfaVerify` with
+   * this token + a valid TOTP (or recovery) code to receive their access
+   * + refresh tokens.
+   */
+  async issueMfaChallenge(operatorId: string): Promise<OperatorMfaChallenge> {
+    const payload: OperatorMfaChallengePayload = {
+      sub: operatorId,
+      type: "operator-mfa-challenge",
+    };
+    const challengeToken = await this.jwtService.signAsync(payload, {
+      audience: OPERATOR_JWT_AUDIENCE,
+      issuer: OPERATOR_JWT_ISSUER,
+      expiresIn: OPERATOR_MFA_CHALLENGE_TTL_SECONDS,
+    });
+    return {
+      mfaRequired: true,
+      challengeToken,
+      expiresIn: OPERATOR_MFA_CHALLENGE_TTL_SECONDS,
+    };
+  }
+
+  /**
+   * Verify a TOTP / recovery code against a challenge token. On success
+   * issues the operator's access + refresh tokens exactly as
+   * {@link issueLoginTokens}.
+   */
+  async verifyMfaChallenge(
+    challengeToken: string,
+    code: string,
+    ctx: OperatorSessionContext = {},
+  ): Promise<{ auth: OperatorAuthResponse; refreshToken: string }> {
+    let payload: OperatorMfaChallengePayload;
+    try {
+      payload = await this.jwtService.verifyAsync<OperatorMfaChallengePayload>(
+        challengeToken,
+        {
+          audience: OPERATOR_JWT_AUDIENCE,
+          issuer: OPERATOR_JWT_ISSUER,
+        },
+      );
+    } catch {
+      throw new UnauthorizedException({
+        code: "OPERATOR_MFA_CHALLENGE_INVALID",
+        message: "MFA challenge expired or invalid",
+      });
+    }
+    if (payload.type !== "operator-mfa-challenge") {
+      throw new UnauthorizedException({
+        code: "OPERATOR_MFA_CHALLENGE_INVALID",
+        message: "MFA challenge invalid",
+      });
+    }
+
+    const user = await this.usersService.findAuthUserById(payload.sub);
+    if (!user || !user.platformRole) {
+      throw new UnauthorizedException({
+        code: "OPERATOR_INVALID_CREDENTIALS",
+        message: "Invalid operator credentials",
+      });
+    }
+    if (user.operatorLockedUntil && user.operatorLockedUntil > new Date()) {
+      throw new ForbiddenException({
+        code: "ACCOUNT_LOCKED",
+        message: "Operator account is locked",
+      });
+    }
+    if (!user.operatorMfaSecret || !user.operatorMfaEnrolledAt) {
+      // Should never happen: a challenge is only issued when enrolled.
+      // Treat as soft-failure — emit nothing, force re-login.
+      throw new UnauthorizedException({
+        code: "OPERATOR_MFA_NOT_ENROLLED",
+        message: "MFA is not enrolled for this operator",
+      });
+    }
+
+    const submitted = (code ?? "").trim().toUpperCase();
+    let accepted = false;
+
+    if (/^\d{6}$/.test(submitted)) {
+      const secret = decryptMfaSecret(
+        user.operatorMfaSecret,
+        this.mfaEncryptionKey(),
+      );
+      accepted = verifyTotpCode(secret, submitted);
+    } else {
+      // Recovery code path. Constant-time hash + delete-on-use.
+      const codeHash = hashRecoveryCode(submitted);
+      const row = await this.prisma.operatorMfaRecoveryCode.findUnique({
+        where: { codeHash },
+      });
+      if (row && !row.consumedAt && row.userId === user.id) {
+        const result = await this.prisma.operatorMfaRecoveryCode.updateMany({
+          where: { id: row.id, consumedAt: null },
+          data: { consumedAt: new Date() },
+        });
+        accepted = result.count === 1;
+      }
+    }
+
+    if (!accepted) {
+      await this.usersService.incrementOperatorFailedAttempts(user.id);
+      this.logger.warn(
+        `[operator-auth] mfa failure for ${this.maskEmail(user.email)}`,
+      );
+      throw new UnauthorizedException({
+        code: "OPERATOR_MFA_CODE_INVALID",
+        message: "MFA code invalid",
+      });
+    }
+
+    await this.usersService.resetOperatorFailedAttempts(user.id);
+    this.logger.log(
+      `[operator-auth] mfa success ${this.maskEmail(user.email)} role=${user.platformRole}`,
+    );
+
+    return this.issueLoginTokens(
+      {
+        id: user.id,
+        email: user.email,
+        platformRole: user.platformRole,
+        mfaEnrolled: true,
+      },
+      ctx,
+    );
+  }
+
+  /**
+   * Begin TOTP enrollment for the currently authenticated operator. The
+   * operator stays enrolled in their previous state until they submit a
+   * valid code via {@link confirmMfaEnrollment}. The returned secret is
+   * shown to the operator once.
+   */
+  async initiateMfaEnrollment(
+    operatorId: string,
+  ): Promise<OperatorEnrollmentInitiation> {
+    const user = await this.usersService.findAuthUserById(operatorId);
+    if (!user || !user.platformRole) {
+      throw new UnauthorizedException({
+        code: "OPERATOR_NOT_FOUND",
+        message: "Operator not found",
+      });
+    }
+    const secret = generateTotpSecret();
+    const sealed = encryptMfaSecret(secret, this.mfaEncryptionKey());
+    // Stash the pending secret without setting `operatorMfaEnrolledAt` —
+    // the enrollment is only "active" once a code is confirmed.
+    await this.prisma.user.update({
+      where: { id: operatorId },
+      data: {
+        operatorMfaSecret: sealed,
+        operatorMfaEnrolledAt: null,
+      },
+    });
+    return {
+      secret,
+      otpauthUri: buildOtpauthUri({
+        secret,
+        label: user.email,
+        issuer:
+          this.configService.get<string>("OPERATOR_MFA_ISSUER") ??
+          "Staylayer Operator",
+      }),
+    };
+  }
+
+  /**
+   * Confirm enrollment by submitting a valid TOTP code for the pending
+   * secret. Issues a fresh set of recovery codes (returned once).
+   */
+  async confirmMfaEnrollment(
+    operatorId: string,
+    code: string,
+  ): Promise<OperatorEnrollmentConfirmation> {
+    const user = await this.usersService.findAuthUserById(operatorId);
+    if (!user || !user.platformRole || !user.operatorMfaSecret) {
+      throw new ForbiddenException({
+        code: "OPERATOR_MFA_NOT_INITIATED",
+        message: "Begin MFA enrollment first",
+      });
+    }
+    const secret = decryptMfaSecret(
+      user.operatorMfaSecret,
+      this.mfaEncryptionKey(),
+    );
+    if (!verifyTotpCode(secret, (code ?? "").trim())) {
+      throw new UnauthorizedException({
+        code: "OPERATOR_MFA_CODE_INVALID",
+        message: "MFA code invalid",
+      });
+    }
+    const codes = generateRecoveryCodes();
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: operatorId },
+        data: { operatorMfaEnrolledAt: now },
+      });
+      await tx.operatorMfaRecoveryCode.deleteMany({
+        where: { userId: operatorId },
+      });
+      await tx.operatorMfaRecoveryCode.createMany({
+        data: codes.map((c) => ({
+          userId: operatorId,
+          codeHash: hashRecoveryCode(c),
+        })),
+      });
+    });
+    this.logger.log(
+      `[operator-auth] mfa enrolled ${this.maskEmail(user.email)}`,
+    );
+    return { enrolledAt: now.toISOString(), recoveryCodes: codes };
+  }
+
+  /**
+   * Regenerate the recovery codes for an already-enrolled operator. The
+   * caller must submit a fresh TOTP code from their authenticator app —
+   * this proves the second factor is still in their possession before we
+   * invalidate the old set. The new plaintext codes are returned once
+   * and only their scrypt hashes are persisted (same model as the
+   * initial enrollment).
+   *
+   * On success the previous recovery-code rows are deleted and the
+   * 10 new ones replace them atomically. Refresh sessions are
+   * deliberately left alone — this is a self-service "rotate", not a
+   * security-incident response. (The Platform-Owner `resetMfaForUser`
+   * path remains for that.)
+   */
+  async regenerateRecoveryCodes(
+    operatorId: string,
+    code: string,
+  ): Promise<{ recoveryCodes: string[] }> {
+    const user = await this.usersService.findAuthUserById(operatorId);
+    if (
+      !user ||
+      !user.platformRole ||
+      !user.operatorMfaSecret ||
+      !user.operatorMfaEnrolledAt
+    ) {
+      throw new ForbiddenException({
+        code: "OPERATOR_MFA_NOT_ENROLLED",
+        message: "MFA is not enrolled for this account",
+      });
+    }
+    const secret = decryptMfaSecret(
+      user.operatorMfaSecret,
+      this.mfaEncryptionKey(),
+    );
+    if (!verifyTotpCode(secret, (code ?? "").trim())) {
+      throw new UnauthorizedException({
+        code: "OPERATOR_MFA_CODE_INVALID",
+        message: "MFA code invalid",
+      });
+    }
+    const codes = generateRecoveryCodes();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.operatorMfaRecoveryCode.deleteMany({
+        where: { userId: operatorId },
+      });
+      await tx.operatorMfaRecoveryCode.createMany({
+        data: codes.map((c) => ({
+          userId: operatorId,
+          codeHash: hashRecoveryCode(c),
+        })),
+      });
+    });
+    this.logger.log(
+      `[operator-auth] mfa recovery codes regenerated ${this.maskEmail(user.email)}`,
+    );
+    return { recoveryCodes: codes };
+  }
+
+  /**
+   * Reset MFA for an operator (Platform Owner only — gated at the
+   * controller level). Clears the secret + recovery codes and revokes
+   * all refresh sessions so the operator must re-authenticate and
+   * re-enroll on next sign-in.
+   */
+  async resetMfaForUser(userId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { operatorMfaSecret: null, operatorMfaEnrolledAt: null },
+      });
+      await tx.operatorMfaRecoveryCode.deleteMany({ where: { userId } });
+      await tx.operatorRefreshSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date(), revokedReason: "mfa_reset" },
+      });
+    });
+  }
+
+  private mfaEncryptionKey(): string | undefined {
+    return (
+      this.configService.get<string>("OPERATOR_MFA_ENCRYPTION_KEY") ??
+      this.configService.get<string>("JWT_SECRET")
+    );
   }
 }

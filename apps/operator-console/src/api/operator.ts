@@ -2425,3 +2425,14 @@ export async function revokeOperatorUser(
   );
   return res.data;
 }
+
+export async function resetOperatorUserMfa(
+  operatorUserId: string,
+  body: { reason: string },
+): Promise<{ success: true }> {
+  const res = await client.post<{ success: true }>(
+    `/operator/users/${operatorUserId}/mfa/reset`,
+    body,
+  );
+  return res.data;
+}

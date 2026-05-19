@@ -3,6 +3,7 @@ import { PrismaModule } from "../prisma/prisma.module";
 import { OperatorAuthModule } from "../auth/operator/operator-auth.module";
 import { SupportCasesController } from "./support-cases.controller";
 import { SupportCasesService } from "./support-cases.service";
+import { SupportCasesSlaCronService } from "./support-cases-sla-cron.service";
 
 /**
  * Phase 5 — native support system backend.
@@ -13,14 +14,13 @@ import { SupportCasesService } from "./support-cases.service";
  * audit interceptor used by every other operator surface protect these
  * routes too.
  *
- * The service itself is exported so future phases (Phase 6 UI helpers,
- * Phase 9 operations-driven case creation, Phase 12 SLA reconciliation
- * cron) can call it without a circular import on the controller.
+ * Phase 12 adds the SLA breach cron which periodically flags cases that
+ * have crossed their first-response / resolution deadlines.
  */
 @Module({
   imports: [PrismaModule, OperatorAuthModule],
   controllers: [SupportCasesController],
-  providers: [SupportCasesService],
+  providers: [SupportCasesService, SupportCasesSlaCronService],
   exports: [SupportCasesService],
 })
 export class SupportCasesModule {}

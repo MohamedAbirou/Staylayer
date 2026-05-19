@@ -9,6 +9,7 @@ import { OperatorJwtStrategy } from "./operator-jwt.strategy";
 import { OperatorPermissionGuard } from "./permissions/operator-permission.guard";
 import { OperatorAuditService } from "./audit/operator-audit.service";
 import { OperatorAuditInterceptor } from "./audit/operator-audit.interceptor";
+import { OperatorRefreshSessionCleanupService } from "./operator-refresh-session-cleanup.service";
 
 /**
  * Operator auth + RBAC + audit module.
@@ -37,6 +38,7 @@ import { OperatorAuditInterceptor } from "./audit/operator-audit.interceptor";
     OperatorPermissionGuard,
     OperatorAuditService,
     OperatorAuditInterceptor,
+    OperatorRefreshSessionCleanupService,
   ],
   exports: [
     OperatorAuthService,

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import {
   ActivitySquare,
   BarChart3,
@@ -12,6 +13,7 @@ import {
   Search,
   Settings,
   Shield,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { useOperatorAuth } from "../auth/useOperatorAuth";
@@ -218,6 +220,19 @@ export function OperatorLayout() {
               </p>
             </div>
           </div>
+          <NavLink
+            to="/account/mfa"
+            className={({ isActive }) =>
+              `mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium ${
+                isActive
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+              }`
+            }
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Two-factor auth
+          </NavLink>
           <button
             type="button"
             onClick={() => {
@@ -251,7 +266,20 @@ export function OperatorLayout() {
             Open full search
           </button>
         </div>
-        <Outlet />
+        {/*
+         * Single Suspense boundary for all route-level lazy chunks. Keeping
+         * the boundary at the layout level means tab navigation flashes a
+         * single, predictable spinner instead of unmounting the chrome.
+         */}
+        <Suspense
+          fallback={
+            <div className="flex h-64 items-center justify-center text-slate-500">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
       <CommandPalette
         open={paletteOpen}

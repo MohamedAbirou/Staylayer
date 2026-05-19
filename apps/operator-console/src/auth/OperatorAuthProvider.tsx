@@ -17,8 +17,11 @@ import {
   fetchOperatorSession,
   operatorLogin,
   operatorLogout,
+  operatorMfaVerify,
 } from "../api/auth";
+import { isMfaChallenge } from "./types";
 import type { OperatorSession } from "./types";
+import type { OperatorLoginOutcome } from "./AuthContext";
 
 // Refresh the access token a little before it expires so an idle dashboard
 // stays signed in across the 15-minute access token lifetime. Backend issues
@@ -114,8 +117,32 @@ export function OperatorAuthProvider({ children }: { children: ReactNode }) {
   }, [clearRefreshTimer, scheduleSilentRefresh]);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<OperatorSession> => {
-      const auth = await operatorLogin(email, password);
+    async (email: string, password: string): Promise<OperatorLoginOutcome> => {
+      const result = await operatorLogin(email, password);
+      if (isMfaChallenge(result)) {
+        // Do NOT set any access token or session yet — the caller must
+        // post a TOTP/recovery code to /operator/auth/mfa/verify first.
+        return {
+          kind: "mfa-required",
+          challengeToken: result.challengeToken,
+          expiresIn: result.expiresIn,
+        };
+      }
+      setAccessToken(result.accessToken);
+      const next: OperatorSession = {
+        user: result.user,
+        permissions: result.permissions,
+      };
+      setSession(next);
+      scheduleSilentRefresh(result.expiresIn);
+      return { kind: "session", session: next };
+    },
+    [scheduleSilentRefresh],
+  );
+
+  const verifyMfa = useCallback(
+    async (challengeToken: string, code: string): Promise<OperatorSession> => {
+      const auth = await operatorMfaVerify(challengeToken, code);
       setAccessToken(auth.accessToken);
       const next: OperatorSession = {
         user: auth.user,
@@ -157,7 +184,7 @@ export function OperatorAuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <OperatorAuthContext.Provider
-      value={{ session, loading, login, logout, refresh }}
+      value={{ session, loading, login, verifyMfa, logout, refresh }}
     >
       {children}
     </OperatorAuthContext.Provider>

@@ -15,6 +15,8 @@ import {
   OPERATOR_PERMISSIONS,
   type OperatorPermissionKey,
 } from "../auth/operator/permissions/operator-permissions.registry";
+import { OperatorAuthService } from "../auth/operator/operator-auth.service";
+import { OperatorNotificationsService } from "./operator-notifications.service";
 
 export interface OperatorUserListItem {
   id: string;
@@ -90,6 +92,8 @@ export class OperatorUsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly notifications: OperatorNotificationsService,
+    private readonly operatorAuth: OperatorAuthService,
   ) {}
 
   // ── Read ───────────────────────────────────────────────────────────
@@ -284,6 +288,7 @@ export class OperatorUsersService {
 
   async update(input: {
     actorId: string;
+    actorEmail: string;
     actorRole: PlatformRole;
     operatorUserId: string;
     email?: string;
@@ -388,17 +393,27 @@ export class OperatorUsersService {
     this.logger.log(
       `[operator-users] update id=${input.operatorUserId} roleChanged=${roleChanged} actor=${input.actorId}`,
     );
+    if (roleChanged && input.platformRole) {
+      // best-effort out-of-band notification (Phase 12 hardening)
+      void this.notifications.notifyRoleChanged({
+        to: current.email,
+        previousRole: current.platformRole,
+        nextRole: input.platformRole,
+        actorEmail: input.actorEmail,
+      });
+    }
     return this.detail(input.operatorUserId);
   }
 
   async resetPassword(input: {
     actorId: string;
+    actorEmail: string;
     operatorUserId: string;
     newPassword: string;
   }): Promise<{ success: true; revokedSessions: number }> {
     const user = await this.prisma.user.findUnique({
       where: { id: input.operatorUserId },
-      select: { id: true, platformRole: true },
+      select: { id: true, email: true, platformRole: true },
     });
     if (!user || !user.platformRole) {
       throw new NotFoundException({
@@ -415,8 +430,12 @@ export class OperatorUsersService {
         where: { id: user.id },
         data: {
           passwordHash,
+          // Reset both customer + operator brute-force counters so the
+          // operator can sign in immediately with the new password.
           failedAttempts: 0,
           lockedUntil: null,
+          operatorFailedAttempts: 0,
+          operatorLockedUntil: null,
         },
       });
       const { count } = await tx.operatorRefreshSession.updateMany({
@@ -429,6 +448,10 @@ export class OperatorUsersService {
     this.logger.log(
       `[operator-users] password-reset id=${user.id} revokedSessions=${result} actor=${input.actorId}`,
     );
+    void this.notifications.notifyPasswordReset({
+      to: user.email,
+      actorEmail: input.actorEmail,
+    });
     return { success: true, revokedSessions: result };
   }
 
@@ -448,7 +471,12 @@ export class OperatorUsersService {
     }
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { failedAttempts: 0, lockedUntil: null },
+      data: {
+        failedAttempts: 0,
+        lockedUntil: null,
+        operatorFailedAttempts: 0,
+        operatorLockedUntil: null,
+      },
     });
     this.logger.log(
       `[operator-users] unlock id=${user.id} actor=${input.actorId}`,
@@ -486,6 +514,7 @@ export class OperatorUsersService {
 
   async revoke(input: {
     actorId: string;
+    actorEmail: string;
     actorRole: PlatformRole;
     operatorUserId: string;
   }): Promise<{ success: true; revokedSessions: number }> {
@@ -534,7 +563,54 @@ export class OperatorUsersService {
     this.logger.log(
       `[operator-users] revoke id=${user.id} revokedSessions=${revokedSessions} actor=${input.actorId}`,
     );
+    void this.notifications.notifyAccessRevoked({
+      to: user.email,
+      actorEmail: input.actorEmail,
+    });
     return { success: true, revokedSessions };
+  }
+
+  /**
+   * Phase 12 — Platform Owner emergency MFA reset.
+   *
+   * Clears the target operator's TOTP secret + all recovery codes and
+   * revokes every active operator refresh session. The operator will be
+   * prompted to re-enroll a new authenticator on next sign-in. This must
+   * only be invoked when the operator has lost access to their device
+   * AND their recovery codes — it lowers the account back to single-factor
+   * temporarily, so it is permission-gated to `operator_user.manage.all`
+   * and audited with `sensitive: true` at the controller layer.
+   */
+  async resetMfa(input: {
+    actorId: string;
+    actorEmail: string;
+    operatorUserId: string;
+  }): Promise<{ success: true }> {
+    if (input.operatorUserId === input.actorId) {
+      throw new ForbiddenException({
+        code: "OPERATOR_USER_SELF_MFA_RESET_FORBIDDEN",
+        message: "Use the dedicated MFA disable flow for your own account.",
+      });
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: input.operatorUserId },
+      select: { id: true, email: true, platformRole: true },
+    });
+    if (!user || !user.platformRole) {
+      throw new NotFoundException({
+        code: "OPERATOR_USER_NOT_FOUND",
+        message: "Operator user not found",
+      });
+    }
+    await this.operatorAuth.resetMfaForUser(user.id);
+    this.logger.log(
+      `[operator-users] mfa-reset id=${user.id} actor=${input.actorId}`,
+    );
+    void this.notifications.notifyMfaReset({
+      to: user.email,
+      actorEmail: input.actorEmail,
+    });
+    return { success: true };
   }
 
   // ── Internals ──────────────────────────────────────────────────────

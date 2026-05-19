@@ -130,6 +130,7 @@ export class OperatorUsersController {
     const actor = requireActor(req);
     return this.service.update({
       actorId: actor.id,
+      actorEmail: actor.email,
       actorRole: actor.platformRole,
       operatorUserId,
       email: body.email,
@@ -154,6 +155,7 @@ export class OperatorUsersController {
     const actor = requireActor(req);
     return this.service.resetPassword({
       actorId: actor.id,
+      actorEmail: actor.email,
       operatorUserId,
       newPassword: body.password,
     });
@@ -215,7 +217,30 @@ export class OperatorUsersController {
     const actor = requireActor(req);
     return this.service.revoke({
       actorId: actor.id,
+      actorEmail: actor.email,
       actorRole: actor.platformRole,
+      operatorUserId,
+    });
+  }
+
+  @Post(":operatorUserId/mfa/reset")
+  @HttpCode(200)
+  @RequireOperatorPermissions(OPERATOR_PERMISSIONS.OPERATOR_USER_MANAGE_ALL)
+  @OperatorAudit({
+    action: "operator_user.mfa.reset",
+    targetType: "operator_user",
+    targetIdParam: "operatorUserId",
+    sensitive: true,
+  })
+  async resetMfa(
+    @Req() req: Request,
+    @Param("operatorUserId") operatorUserId: string,
+    @Body() _body: OperatorUserReasonDto,
+  ) {
+    const actor = requireActor(req);
+    return this.service.resetMfa({
+      actorId: actor.id,
+      actorEmail: actor.email,
       operatorUserId,
     });
   }

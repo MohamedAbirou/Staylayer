@@ -601,6 +601,12 @@ export class OperatorBillingService {
     eventRowId: string,
     reason: string,
   ) {
+    // SECURITY (Phase 12): see
+    // `BillingService.replayStoredWebhookEvent` for the rationale on
+    // not re-verifying the Stripe signature of a stored payload. Replay
+    // is permission-gated (`billing.stripe.replay.all`), audited with
+    // `sensitive: true`, and requires an explicit operator reason which
+    // is persisted on `BillingActionRequest`.
     this.assertPermission(
       actor,
       OPERATOR_PERMISSIONS.BILLING_STRIPE_REPLAY_ALL,

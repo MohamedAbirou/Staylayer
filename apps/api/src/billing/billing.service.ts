@@ -2837,6 +2837,24 @@ export class BillingService {
    * Replay a previously stored Stripe webhook event by id. The original
    * payload is re-parsed and `processStripeEvent` re-runs. Only the
    * operator console calls this — customer flows never need replay.
+   *
+   * SECURITY (Phase 12): replay reuses the *stored* event payload from
+   * `BillingWebhookEvent`. The Stripe signature on that payload is
+   * almost certainly expired by the time an operator decides to replay
+   * (Stripe signatures are timestamped). We deliberately do NOT re-verify
+   * the signature here, because:
+   *   1. The original webhook signature was verified when the row was
+   *      first ingested (`processStripeEvent` only persists after
+   *      `constructEvent` succeeds, so we trust the payload provenance).
+   *   2. Replay is gated by the `billing.stripe.replay.all` permission,
+   *      restricted to operator roles, captured in the operator audit
+   *      log with `sensitive: true`, and requires an explicit reason
+   *      string. There is no path for an attacker to inject a forged
+   *      payload because rows are inserted only by the verified webhook
+   *      ingest path.
+   * If you ever expose a code path that inserts `BillingWebhookEvent`
+   * rows without prior signature verification, this method must
+   * re-verify (or be removed).
    */
   async replayStoredWebhookEvent(eventRowId: string): Promise<{
     eventId: string;

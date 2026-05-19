@@ -34,6 +34,20 @@ export interface OperatorAuthResponse {
   permissions: string[];
 }
 
+export interface OperatorMfaChallenge {
+  mfaRequired: true;
+  challengeToken: string;
+  expiresIn: number;
+}
+
+export type OperatorLoginResult = OperatorAuthResponse | OperatorMfaChallenge;
+
+export function isMfaChallenge(
+  result: OperatorLoginResult,
+): result is OperatorMfaChallenge {
+  return (result as OperatorMfaChallenge).mfaRequired === true;
+}
+
 export interface OperatorAuthError {
   code: string;
   message: string;

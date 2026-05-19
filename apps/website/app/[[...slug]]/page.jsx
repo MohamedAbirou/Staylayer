@@ -341,7 +341,24 @@ export default async function TenantPage({ params }) {
         <script
           key={index}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(entry) }}
+          // SECURITY: escape characters that can break out of the inline
+          // <script> tag or be interpreted as HTML when the JSON is parsed
+          // as application/ld+json. `JSON.stringify` alone is insufficient
+          // because tenant-supplied strings could contain `</script>` or
+          // line-separator characters that browsers treat specially.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(entry).replace(
+              /[<>&\u2028\u2029]/g,
+              (ch) =>
+                ({
+                  "<": "\\u003c",
+                  ">": "\\u003e",
+                  "&": "\\u0026",
+                  "\u2028": "\\u2028",
+                  "\u2029": "\\u2029",
+                })[ch],
+            ),
+          }}
         />
       ))}
       <main id={payload.page.slug || "home"}>

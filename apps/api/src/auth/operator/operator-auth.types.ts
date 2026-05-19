@@ -76,6 +76,30 @@ export interface OperatorAuthResponse extends OperatorSessionResponse {
   expiresIn: number;
 }
 
+/**
+ * Phase 12 — returned by /operator/auth/login when the operator has MFA
+ * enrolled. The caller must then POST to /operator/auth/mfa/verify with
+ * the totp (or recovery) code and this challenge token to receive the
+ * full {@link OperatorAuthResponse}.
+ */
+export interface OperatorMfaChallenge {
+  mfaRequired: true;
+  challengeToken: string;
+  /** Seconds until the challenge token expires (short-lived). */
+  expiresIn: number;
+}
+
+export interface OperatorMfaChallengePayload {
+  sub: string;
+  type: "operator-mfa-challenge";
+  iat?: number;
+  exp?: number;
+  aud?: string;
+  iss?: string;
+}
+
+export const OPERATOR_MFA_CHALLENGE_TTL_SECONDS = 5 * 60;
+
 export interface OperatorAuthenticatedRequestUser extends OperatorUserProfile {
   /** Always carries the operator audience. */
   aud: typeof OPERATOR_JWT_AUDIENCE;

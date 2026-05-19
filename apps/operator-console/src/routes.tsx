@@ -1,43 +1,113 @@
+import { lazy, type ComponentType } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import { OperatorLayout } from "./components/OperatorLayout";
 import { ProtectedOperatorRoute } from "./auth/ProtectedOperatorRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { PermissionRoute, OPERATOR_PERMISSIONS } from "./permissions";
 import LoginPage from "./pages/LoginPage";
-import CommandCenterPage from "./pages/CommandCenterPage";
-import TenantsListPage from "./pages/TenantsListPage";
-import TenantDetailPage from "./pages/TenantDetailPage";
-import SiteDetailPage from "./pages/SiteDetailPage";
-import AuditLogPage from "./pages/AuditLogPage";
-import GlobalSearchPage from "./pages/GlobalSearchPage";
-import SupportInboxPage from "./pages/SupportInboxPage";
-import SupportCaseDetailPage from "./pages/SupportCaseDetailPage";
-import SupportCaseNewPage from "./pages/SupportCaseNewPage";
-import BillingOverviewPage from "./pages/BillingOverviewPage";
-import BillingAccountsListPage from "./pages/BillingAccountsListPage";
-import BillingAccountDetailPage from "./pages/BillingAccountDetailPage";
-import BillingActionRequestsPage from "./pages/BillingActionRequestsPage";
-import BillingWebhooksPage from "./pages/BillingWebhooksPage";
-import OperationsLandingPage from "./pages/OperationsLandingPage";
-import OperationsDeploymentsPage from "./pages/OperationsDeploymentsPage";
-import OperationsDomainsPage from "./pages/OperationsDomainsPage";
-import OperationsFormsPage from "./pages/OperationsFormsPage";
-import OperationsAlertsPage from "./pages/OperationsAlertsPage";
-import OperationsSeoPage from "./pages/OperationsSeoPage";
-import OperationsTranslationsPage from "./pages/OperationsTranslationsPage";
-import OperationsNotificationsPage from "./pages/OperationsNotificationsPage";
-import AnalyticsLandingPage from "./pages/AnalyticsLandingPage";
-import AnalyticsBusinessPage from "./pages/AnalyticsBusinessPage";
-import AnalyticsSupportPage from "./pages/AnalyticsSupportPage";
-import AnalyticsOperationsPage from "./pages/AnalyticsOperationsPage";
-import TenantHealthPage from "./pages/TenantHealthPage";
-import ObservabilityPage from "./pages/ObservabilityPage";
-import OperatorUsersListPage from "./pages/OperatorUsersListPage";
-import OperatorUserNewPage from "./pages/OperatorUserNewPage";
-import OperatorUserDetailPage from "./pages/OperatorUserDetailPage";
-import PermissionsCatalogPage from "./pages/PermissionsCatalogPage";
 import ForbiddenPage from "./pages/ForbiddenPage";
 import NotFoundPage from "./pages/NotFoundPage";
+
+/**
+ * Route-level code splitting.
+ *
+ * Each authenticated page is loaded on demand via `React.lazy`, so the
+ * initial bundle for the operator console only ships the shell + auth
+ * machinery. This both:
+ *   - reduces time-to-interactive on the first paint (especially over
+ *     slow links — the operator console is used worldwide), and
+ *   - narrows the blast radius of any single page bug (a syntax error
+ *     in a rarely-visited page no longer breaks login).
+ *
+ * The shared `Suspense` fallback lives in `OperatorLayout` so navigating
+ * between tabs flashes a single spinner instead of unmounting the chrome.
+ *
+ * Login / Forbidden / NotFound are intentionally eager-loaded — they
+ * are tiny and must render even when the network is partitioned.
+ */
+function lazyPage<T extends ComponentType<unknown>>(
+  loader: () => Promise<{ default: T }>,
+) {
+  return lazy(loader);
+}
+
+const CommandCenterPage = lazyPage(() => import("./pages/CommandCenterPage"));
+const TenantsListPage = lazyPage(() => import("./pages/TenantsListPage"));
+const TenantDetailPage = lazyPage(() => import("./pages/TenantDetailPage"));
+const SiteDetailPage = lazyPage(() => import("./pages/SiteDetailPage"));
+const AuditLogPage = lazyPage(() => import("./pages/AuditLogPage"));
+const GlobalSearchPage = lazyPage(() => import("./pages/GlobalSearchPage"));
+const SupportInboxPage = lazyPage(() => import("./pages/SupportInboxPage"));
+const SupportCaseDetailPage = lazyPage(
+  () => import("./pages/SupportCaseDetailPage"),
+);
+const SupportCaseNewPage = lazyPage(() => import("./pages/SupportCaseNewPage"));
+const BillingOverviewPage = lazyPage(
+  () => import("./pages/BillingOverviewPage"),
+);
+const BillingAccountsListPage = lazyPage(
+  () => import("./pages/BillingAccountsListPage"),
+);
+const BillingAccountDetailPage = lazyPage(
+  () => import("./pages/BillingAccountDetailPage"),
+);
+const BillingActionRequestsPage = lazyPage(
+  () => import("./pages/BillingActionRequestsPage"),
+);
+const BillingWebhooksPage = lazyPage(
+  () => import("./pages/BillingWebhooksPage"),
+);
+const OperationsLandingPage = lazyPage(
+  () => import("./pages/OperationsLandingPage"),
+);
+const OperationsDeploymentsPage = lazyPage(
+  () => import("./pages/OperationsDeploymentsPage"),
+);
+const OperationsDomainsPage = lazyPage(
+  () => import("./pages/OperationsDomainsPage"),
+);
+const OperationsFormsPage = lazyPage(
+  () => import("./pages/OperationsFormsPage"),
+);
+const OperationsAlertsPage = lazyPage(
+  () => import("./pages/OperationsAlertsPage"),
+);
+const OperationsSeoPage = lazyPage(() => import("./pages/OperationsSeoPage"));
+const OperationsTranslationsPage = lazyPage(
+  () => import("./pages/OperationsTranslationsPage"),
+);
+const OperationsNotificationsPage = lazyPage(
+  () => import("./pages/OperationsNotificationsPage"),
+);
+const AnalyticsLandingPage = lazyPage(
+  () => import("./pages/AnalyticsLandingPage"),
+);
+const AnalyticsBusinessPage = lazyPage(
+  () => import("./pages/AnalyticsBusinessPage"),
+);
+const AnalyticsSupportPage = lazyPage(
+  () => import("./pages/AnalyticsSupportPage"),
+);
+const AnalyticsOperationsPage = lazyPage(
+  () => import("./pages/AnalyticsOperationsPage"),
+);
+const TenantHealthPage = lazyPage(() => import("./pages/TenantHealthPage"));
+const ObservabilityPage = lazyPage(() => import("./pages/ObservabilityPage"));
+const OperatorUsersListPage = lazyPage(
+  () => import("./pages/OperatorUsersListPage"),
+);
+const OperatorUserNewPage = lazyPage(
+  () => import("./pages/OperatorUserNewPage"),
+);
+const OperatorUserDetailPage = lazyPage(
+  () => import("./pages/OperatorUserDetailPage"),
+);
+const OperatorMfaEnrollPage = lazyPage(
+  () => import("./pages/OperatorMfaEnrollPage"),
+);
+const PermissionsCatalogPage = lazyPage(
+  () => import("./pages/PermissionsCatalogPage"),
+);
 
 // Phase 4 router. Each authenticated route is wrapped in a `PermissionRoute`
 // so a session that lacks the relevant permission set is redirected to
@@ -579,6 +649,14 @@ export const router = createBrowserRouter([
             element: (
               <ErrorBoundary>
                 <GlobalSearchPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: "/account/mfa",
+            element: (
+              <ErrorBoundary>
+                <OperatorMfaEnrollPage />
               </ErrorBoundary>
             ),
           },

@@ -181,18 +181,33 @@ model User {
   /// Platform operator role. Null means the account is customer-only.
   platformRole    PlatformRole? @map("platform_role")
 
-  // Brute-force protection
+  // Brute-force protection for the customer dashboard.
   failedAttempts Int       @default(0) @map("failed_attempts")
   lockedUntil    DateTime? @map("locked_until")
+
+  // Phase 12 — isolated brute-force protection for the operator console so
+  // that a malicious actor cannot lock out a real operator via the customer
+  // login surface (and vice-versa). Tracked independently from
+  // `failedAttempts` / `lockedUntil`.
+  operatorFailedAttempts Int       @default(0) @map("operator_failed_attempts")
+  operatorLockedUntil    DateTime? @map("operator_locked_until")
+
+  // Phase 12 — TOTP MFA for operator sign-in. Secret is stored AES-GCM
+  // encrypted (`<iv>:<authTag>:<ciphertext>` hex) under
+  // OPERATOR_MFA_ENCRYPTION_KEY; null means the operator has not enrolled.
+  // Recovery codes live in OperatorMfaRecoveryCode.
+  operatorMfaSecret     String?   @map("operator_mfa_secret")
+  operatorMfaEnrolledAt DateTime? @map("operator_mfa_enrolled_at")
 
   memberships              TenantMembership[]
   emailVerificationTokens  EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
-  sentWorkspaceInvitations WorkspaceInvitation[]    @relation("WorkspaceInvitationSender")
-  assignedSeoAuditTasks    SeoAuditTask[]           @relation("SeoAuditTaskAssignee")
-  createdSeoAuditTasks     SeoAuditTask[]           @relation("SeoAuditTaskCreator")
-  operatorRefreshSessions  OperatorRefreshSession[] @relation("OperatorRefreshSessionUser")
-  operatorAuditLogs        OperatorAuditLog[]       @relation("OperatorAuditLogActor")
+  sentWorkspaceInvitations WorkspaceInvitation[]     @relation("WorkspaceInvitationSender")
+  assignedSeoAuditTasks    SeoAuditTask[]            @relation("SeoAuditTaskAssignee")
+  createdSeoAuditTasks     SeoAuditTask[]            @relation("SeoAuditTaskCreator")
+  operatorRefreshSessions  OperatorRefreshSession[]  @relation("OperatorRefreshSessionUser")
+  operatorAuditLogs        OperatorAuditLog[]        @relation("OperatorAuditLogActor")
+  operatorMfaRecoveryCodes OperatorMfaRecoveryCode[] @relation("OperatorMfaRecoveryCodeUser")
 
   // ── Phase 5: support cases ─────────────────────────────────────────
   supportCasesRequested           SupportCase[]               @relation("SupportCaseRequester")
@@ -2298,6 +2313,24 @@ model OperatorRefreshSession {
   @@index([userId, revokedAt])
   @@index([expiresAt])
   @@map("operator_refresh_sessions")
+}
+
+/// Phase 12 — one-time MFA recovery codes for operator accounts. Each row
+/// stores a SHA-256 hash of the recovery code (the plaintext is shown to
+/// the operator at enrollment time and never persisted). Consuming a code
+/// flips `consumedAt`; the row is kept so the operator can audit usage.
+model OperatorMfaRecoveryCode {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  /// SHA-256 hex of the plaintext code. Indexed for constant-time lookup.
+  codeHash   String    @unique @map("code_hash")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation("OperatorMfaRecoveryCodeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, consumedAt])
+  @@map("operator_mfa_recovery_codes")
 }
 
 /// Append-only audit trail of operator console actions. Written by the

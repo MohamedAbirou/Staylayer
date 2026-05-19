@@ -7,7 +7,7 @@
     "build": "pnpm run db:generate && pnpm run db:migrate && nest build",
     "dev": "nest start --watch",
     "start": "pnpm run db:seed && node dist/main",
-    "start:prod": "node dist/main",
+    "start:prod": "pnpm run bootstrap:owner && node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "type-check": "tsc --noEmit",
     "test": "jest",
@@ -15,7 +15,8 @@
     "db:generate": "prisma generate --schema=src/prisma/schema.prisma",
     "db:migrate": "prisma migrate deploy --schema=src/prisma/schema.prisma",
     "db:migrate:dev": "prisma migrate dev --schema=src/prisma/schema.prisma",
-    "db:seed": "ts-node -r tsconfig-paths/register src/prisma/seed.ts"
+    "db:seed": "ts-node -r tsconfig-paths/register src/prisma/seed.ts",
+    "bootstrap:owner": "ts-node -r tsconfig-paths/register src/bootstrap/bootstrap-owner.ts"
   },
   "prisma": {
     "schema": "src/prisma/schema.prisma"
@@ -32,6 +33,7 @@
     "argon2": "^0.41.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "compression": "^1.7.5",
     "cookie-parser": "^1.4.7",
     "helmet": "^8.0.0",
     "nodemailer": "^8.0.7",
@@ -47,6 +49,7 @@
     "@nestjs/cli": "^10.4.0",
     "@nestjs/schematics": "^10.1.0",
     "@nestjs/testing": "^10.4.0",
+    "@types/compression": "^1.7.5",
     "@types/cookie-parser": "^1.4.7",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",

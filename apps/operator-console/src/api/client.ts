@@ -117,6 +117,7 @@ const REFRESH_EXEMPT_PATHS = [
   "/operator/auth/refresh",
   "/operator/auth/login",
   "/operator/auth/logout",
+  "/operator/auth/mfa/verify",
 ];
 
 function isRefreshExempt(url: string | undefined): boolean {

@@ -19,6 +19,7 @@ import {
   getPermissionsForRole,
   hasAllPermissions,
 } from "../auth/operator/permissions/operator-permissions.registry";
+import { redactAuditMetadata } from "../common/redact-audit-metadata";
 import type { OperatorAuditScope } from "./dto/operator-audit-query.dto";
 
 /**
@@ -983,7 +984,9 @@ export class OperatorResourcesService {
   ): Record<string, unknown> | null {
     if (!value || typeof value !== "object" || Array.isArray(value))
       return null;
-    return value as Record<string, unknown>;
+    // Phase 12 — never surface raw audit metadata to the operator console;
+    // PII / secrets are key-masked before leaving the service boundary.
+    return redactAuditMetadata(value) as Record<string, unknown>;
   }
 
   private mergeAuditFeeds(

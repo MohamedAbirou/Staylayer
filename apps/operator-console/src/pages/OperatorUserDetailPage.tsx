@@ -16,6 +16,7 @@ import {
 import {
   fetchOperatorRoleBundles,
   fetchOperatorUser,
+  resetOperatorUserMfa,
   resetOperatorUserPassword,
   revokeOperatorUser,
   revokeOperatorUserSessions,
@@ -41,6 +42,7 @@ type ModalKind =
   | { kind: "password" }
   | { kind: "revoke-sessions" }
   | { kind: "unlock" }
+  | { kind: "mfa-reset" }
   | { kind: "revoke" };
 
 function passwordError(password: string): string | null {
@@ -146,6 +148,15 @@ export default function OperatorUserDetailPage() {
     },
   });
 
+  const mfaResetMutation = useMutation({
+    mutationFn: ({ reason }: { reason: string }) =>
+      resetOperatorUserMfa(operatorUserId, { reason }),
+    onSuccess: () => {
+      invalidateAll();
+      setModal(null);
+    },
+  });
+
   const detail = detailQuery.data;
 
   return (
@@ -198,6 +209,7 @@ export default function OperatorUserDetailPage() {
             <DangerZone
               isSelf={isSelf}
               onPasswordReset={() => setModal({ kind: "password" })}
+              onMfaReset={() => setModal({ kind: "mfa-reset" })}
               onRevoke={() => setModal({ kind: "revoke" })}
             />
           ) : null}
@@ -314,6 +326,23 @@ export default function OperatorUserDetailPage() {
           error={extractMessage(revokeMutation.error)}
           onCancel={() => setModal(null)}
           onConfirm={(reason) => revokeMutation.mutateAsync({ reason })}
+        />
+      ) : null}
+
+      {modal?.kind === "mfa-reset" && detail ? (
+        <ReasonModal
+          open
+          title="Reset two-factor enrollment"
+          description="Clears the operator's TOTP secret and all recovery codes, then revokes every active session. They will be required to re-enroll a new authenticator on their next sign-in. Only use this when the operator has lost both their device AND their recovery codes."
+          confirmLabel="Reset MFA"
+          confirmTone="danger"
+          highRisk
+          highRiskToken={detail.email}
+          minReasonLength={8}
+          submitting={mfaResetMutation.isPending}
+          error={extractMessage(mfaResetMutation.error)}
+          onCancel={() => setModal(null)}
+          onConfirm={(reason) => mfaResetMutation.mutateAsync({ reason })}
         />
       ) : null}
     </div>
@@ -571,10 +600,12 @@ function RecentSessions({ detail }: { detail: OperatorUserDetail }) {
 function DangerZone({
   isSelf,
   onPasswordReset,
+  onMfaReset,
   onRevoke,
 }: {
   isSelf: boolean;
   onPasswordReset: () => void;
+  onMfaReset: () => void;
   onRevoke: () => void;
 }) {
   return (
@@ -594,6 +625,19 @@ function DangerZone({
           className="inline-flex items-center gap-1 rounded-md border border-amber-800 bg-amber-950 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-900/60"
         >
           <KeyRound className="h-3.5 w-3.5" /> Reset password
+        </button>
+        <button
+          type="button"
+          onClick={onMfaReset}
+          disabled={isSelf}
+          className="inline-flex items-center gap-1 rounded-md border border-amber-800 bg-amber-950 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-900/60 disabled:cursor-not-allowed disabled:opacity-50"
+          title={
+            isSelf
+              ? "Use the MFA enrollment page for your own account."
+              : "Clear TOTP secret + recovery codes and revoke active sessions."
+          }
+        >
+          <ShieldCheck className="h-3.5 w-3.5" /> Reset MFA
         </button>
         <button
           type="button"
