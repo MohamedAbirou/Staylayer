@@ -61,29 +61,6 @@ function validateEmail(email: string): boolean {
 }
 
 async function main(): Promise<void> {
-  const email = (process.env.BOOTSTRAP_OWNER_EMAIL ?? "").trim().toLowerCase();
-  const password = process.env.BOOTSTRAP_OWNER_PASSWORD ?? "";
-
-  if (!email || !password) {
-    console.error(
-      "[bootstrap-owner] BOOTSTRAP_OWNER_EMAIL and BOOTSTRAP_OWNER_PASSWORD must both be set.",
-    );
-    process.exit(1);
-  }
-
-  if (!validateEmail(email)) {
-    console.error(
-      "[bootstrap-owner] BOOTSTRAP_OWNER_EMAIL is not a valid email address.",
-    );
-    process.exit(1);
-  }
-
-  const passwordError = validatePassword(password);
-  if (passwordError) {
-    console.error(`[bootstrap-owner] ${passwordError}`);
-    process.exit(1);
-  }
-
   const prisma = new PrismaClient();
 
   try {
@@ -93,11 +70,38 @@ async function main(): Promise<void> {
     });
 
     if (existingOwner) {
-      console.error(
-        "[bootstrap-owner] Refusing to run: a PLATFORM_OWNER already exists. " +
-          "Use the operator console at /operator-users to manage additional users.",
+      console.log(
+        "[bootstrap-owner] PLATFORM_OWNER already exists; skipping bootstrap.",
       );
-      process.exit(2);
+      return;
+    }
+
+    const email = (process.env.BOOTSTRAP_OWNER_EMAIL ?? "")
+      .trim()
+      .toLowerCase();
+    const password = process.env.BOOTSTRAP_OWNER_PASSWORD ?? "";
+
+    if (!email || !password) {
+      console.error(
+        "[bootstrap-owner] BOOTSTRAP_OWNER_EMAIL and BOOTSTRAP_OWNER_PASSWORD must both be set.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      console.error(
+        "[bootstrap-owner] BOOTSTRAP_OWNER_EMAIL is not a valid email address.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      console.error(`[bootstrap-owner] ${passwordError}`);
+      process.exitCode = 1;
+      return;
     }
 
     const conflicting = await prisma.user.findUnique({
@@ -111,7 +115,8 @@ async function main(): Promise<void> {
           `(platformRole=${conflicting.platformRole ?? "null"}). ` +
           "Pick a fresh, dedicated operator email — customer accounts must never be reused.",
       );
-      process.exit(3);
+      process.exitCode = 3;
+      return;
     }
 
     const passwordHash = await argon2.hash(password, ARGON2_CONFIG);
@@ -141,7 +146,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error("[bootstrap-owner] Unexpected error:", err);
+main().catch((error) => {
+  console.error("[bootstrap-owner] Unexpected error:", error);
   process.exit(10);
 });

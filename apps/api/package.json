@@ -7,7 +7,7 @@
     "build": "pnpm run db:generate && pnpm run db:migrate && nest build",
     "dev": "nest start --watch",
     "start": "pnpm run db:seed && node dist/main",
-    "start:prod": "pnpm run bootstrap:owner && node dist/main",
+    "start:prod": "pnpm run bootstrap:owner:prod && node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "type-check": "tsc --noEmit",
     "test": "jest",
@@ -16,7 +16,8 @@
     "db:migrate": "prisma migrate deploy --schema=src/prisma/schema.prisma",
     "db:migrate:dev": "prisma migrate dev --schema=src/prisma/schema.prisma",
     "db:seed": "ts-node -r tsconfig-paths/register src/prisma/seed.ts",
-    "bootstrap:owner": "ts-node -r tsconfig-paths/register src/bootstrap/bootstrap-owner.ts"
+    "bootstrap:owner": "ts-node -r tsconfig-paths/register src/bootstrap/bootstrap-owner.ts",
+    "bootstrap:owner:prod": "node dist/bootstrap/bootstrap-owner.js"
   },
   "prisma": {
     "schema": "src/prisma/schema.prisma"
