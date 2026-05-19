@@ -15,8 +15,10 @@ function buildOperatorUser(overrides: Record<string, unknown> = {}) {
     passwordHash: "argon2-hash",
     emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
     platformRole: PlatformRole.SUPPORT_ADMIN,
-    failedAttempts: 0,
-    lockedUntil: null,
+    operatorFailedAttempts: 0,
+    operatorLockedUntil: null,
+    operatorMfaEnrolledAt: null,
+    operatorMfaSecret: null,
     memberships: [],
     ...overrides,
   };
@@ -102,8 +104,8 @@ describe("OperatorAuthService", () => {
     findAuthUserById: jest.Mock;
     findAuthUserByEmail: jest.Mock;
     verifyPassword: jest.Mock;
-    incrementFailedAttempts: jest.Mock;
-    resetFailedAttempts: jest.Mock;
+    incrementOperatorFailedAttempts: jest.Mock;
+    resetOperatorFailedAttempts: jest.Mock;
   };
   let jwtService: { signAsync: jest.Mock; verifyAsync: jest.Mock };
   let configService: { get: jest.Mock };
@@ -115,8 +117,8 @@ describe("OperatorAuthService", () => {
       findAuthUserById: jest.fn(),
       findAuthUserByEmail: jest.fn(),
       verifyPassword: jest.fn(),
-      incrementFailedAttempts: jest.fn(),
-      resetFailedAttempts: jest.fn(),
+      incrementOperatorFailedAttempts: jest.fn(),
+      resetOperatorFailedAttempts: jest.fn(),
     };
     jwtService = {
       signAsync: jest.fn().mockResolvedValue("signed-token"),
@@ -147,8 +149,11 @@ describe("OperatorAuthService", () => {
         id: "op-1",
         email: "support@staylayer.com",
         platformRole: PlatformRole.SUPPORT_ADMIN,
+        mfaEnrolled: false,
       });
-      expect(usersService.resetFailedAttempts).toHaveBeenCalledWith("op-1");
+      expect(usersService.resetOperatorFailedAttempts).toHaveBeenCalledWith(
+        "op-1",
+      );
     });
 
     it("rejects a customer-only account with a generic credentials error", async () => {
@@ -160,7 +165,9 @@ describe("OperatorAuthService", () => {
       ).rejects.toMatchObject({
         response: { code: "OPERATOR_INVALID_CREDENTIALS" },
       });
-      expect(usersService.resetFailedAttempts).toHaveBeenCalledWith("user-1");
+      expect(usersService.resetOperatorFailedAttempts).toHaveBeenCalledWith(
+        "user-1",
+      );
     });
 
     it("rejects on unknown email with the generic credentials error", async () => {
@@ -181,13 +188,15 @@ describe("OperatorAuthService", () => {
       ).rejects.toMatchObject({
         response: { code: "OPERATOR_INVALID_CREDENTIALS" },
       });
-      expect(usersService.incrementFailedAttempts).toHaveBeenCalledWith("op-1");
+      expect(usersService.incrementOperatorFailedAttempts).toHaveBeenCalledWith(
+        "op-1",
+      );
     });
 
     it("denies access when the account is locked", async () => {
       const future = new Date(Date.now() + 60_000);
       usersService.findAuthUserByEmail.mockResolvedValue(
-        buildOperatorUser({ lockedUntil: future }),
+        buildOperatorUser({ operatorLockedUntil: future }),
       );
 
       await expect(
@@ -217,7 +226,12 @@ describe("OperatorAuthService", () => {
       expect(Array.isArray(result.auth.permissions)).toBe(true);
       expect(result.auth.permissions).toContain("support_case.read.all");
 
+      const refreshPayload = jwtService.signAsync.mock.calls[1][0] as Record<
+        string,
+        unknown
+      >;
       const refreshOptions = jwtService.signAsync.mock.calls[1][1];
+      expect(refreshPayload.jti).toBeUndefined();
       expect(refreshOptions).toMatchObject({
         audience: OPERATOR_JWT_AUDIENCE,
         issuer: OPERATOR_JWT_ISSUER,

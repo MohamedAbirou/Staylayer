@@ -431,9 +431,8 @@ export class OperatorAuthService {
     operatorId: string,
     jti: string,
   ): Promise<string> {
-    const payload: OperatorJwtRefreshPayload = {
+    const payload: Omit<OperatorJwtRefreshPayload, "jti"> = {
       sub: operatorId,
-      jti,
       type: "operator-refresh",
     };
     return this.jwtService.signAsync(payload, {
