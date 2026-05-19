@@ -92,6 +92,8 @@ export class OperatorJwtStrategy extends PassportStrategy(
       id: user.id,
       email: user.email,
       platformRole: user.platformRole,
+      mfaEnrolled: !!user.operatorMfaSecret && !!user.operatorMfaEnrolledAt,
+      mfaEnrolledAt: user.operatorMfaEnrolledAt?.toISOString() ?? null,
       aud: OPERATOR_JWT_AUDIENCE,
     };
   }

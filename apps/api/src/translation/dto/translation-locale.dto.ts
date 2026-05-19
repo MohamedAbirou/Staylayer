@@ -9,6 +9,7 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
+import { SiteScopeQueryDto } from "../../common/dto/site-scope-query.dto";
 import { SUPPORTED_LOCALES } from "../../common/supported-locales";
 
 const normalizeLocaleValue = () =>
@@ -62,7 +63,7 @@ export class CreateTranslationJobDto {
   autoPublish?: boolean;
 }
 
-export class TranslationGlossaryPreviewQueryDto {
+export class TranslationGlossaryPreviewQueryDto extends SiteScopeQueryDto {
   @normalizeLocaleValue()
   @IsString()
   @IsIn([...SUPPORTED_LOCALES])

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -43,6 +44,7 @@ interface ValidatedOperator {
   email: string;
   platformRole: PlatformRole;
   mfaEnrolled?: boolean;
+  mfaEnrolledAt?: Date | string | null;
 }
 
 export interface OperatorSessionContext {
@@ -131,6 +133,7 @@ export class OperatorAuthService {
       email: user.email,
       platformRole: user.platformRole,
       mfaEnrolled: !!user.operatorMfaEnrolledAt && !!user.operatorMfaSecret,
+      mfaEnrolledAt: user.operatorMfaEnrolledAt,
     };
   }
 
@@ -167,11 +170,7 @@ export class OperatorAuthService {
         accessToken,
         expiresIn: OPERATOR_ACCESS_TOKEN_TTL_SECONDS,
         permissions,
-        user: {
-          id: operator.id,
-          email: operator.email,
-          platformRole: operator.platformRole,
-        },
+        user: this.buildOperatorUserProfile(operator),
       },
       refreshToken,
     };
@@ -314,11 +313,13 @@ export class OperatorAuthService {
         accessToken,
         expiresIn: OPERATOR_ACCESS_TOKEN_TTL_SECONDS,
         permissions,
-        user: {
+        user: this.buildOperatorUserProfile({
           id: user.id,
           email: user.email,
           platformRole: user.platformRole,
-        },
+          mfaEnrolled: !!user.operatorMfaSecret && !!user.operatorMfaEnrolledAt,
+          mfaEnrolledAt: user.operatorMfaEnrolledAt,
+        }),
       },
       refreshToken,
     };
@@ -362,6 +363,8 @@ export class OperatorAuthService {
         id: user.id,
         email: user.email,
         platformRole: user.platformRole,
+        mfaEnrolled: !!user.operatorMfaSecret && !!user.operatorMfaEnrolledAt,
+        mfaEnrolledAt: user.operatorMfaEnrolledAt?.toISOString() ?? null,
       },
       permissions: this.permissionsForRole(user.platformRole),
     };
@@ -460,6 +463,22 @@ export class OperatorAuthService {
   private hash(value: string | null): string | null {
     if (!value) return null;
     return createHash("sha256").update(value).digest("hex").slice(0, 32);
+  }
+
+  private buildOperatorUserProfile(operator: ValidatedOperator) {
+    const enrolledAt = operator.mfaEnrolledAt
+      ? operator.mfaEnrolledAt instanceof Date
+        ? operator.mfaEnrolledAt.toISOString()
+        : operator.mfaEnrolledAt
+      : null;
+
+    return {
+      id: operator.id,
+      email: operator.email,
+      platformRole: operator.platformRole,
+      mfaEnrolled: operator.mfaEnrolled ?? !!enrolledAt,
+      mfaEnrolledAt: enrolledAt,
+    };
   }
 
   // ── Phase 12 — MFA ────────────────────────────────────────────────
@@ -587,6 +606,7 @@ export class OperatorAuthService {
         email: user.email,
         platformRole: user.platformRole,
         mfaEnrolled: true,
+        mfaEnrolledAt: user.operatorMfaEnrolledAt,
       },
       ctx,
     );
@@ -606,6 +626,12 @@ export class OperatorAuthService {
       throw new UnauthorizedException({
         code: "OPERATOR_NOT_FOUND",
         message: "Operator not found",
+      });
+    }
+    if (user.operatorMfaSecret && user.operatorMfaEnrolledAt) {
+      throw new BadRequestException({
+        code: "OPERATOR_MFA_ALREADY_ENROLLED",
+        message: "MFA is already enabled for this operator",
       });
     }
     const secret = generateTotpSecret();

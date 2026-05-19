@@ -7,7 +7,7 @@
     "build": "pnpm run db:generate && pnpm run db:migrate && nest build",
     "dev": "nest start --watch",
     "start": "pnpm run db:seed && node dist/main",
-    "start:prod": "pnpm run bootstrap:owner:prod && node dist/main",
+    "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "type-check": "tsc --noEmit",
     "test": "jest",

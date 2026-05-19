@@ -150,6 +150,7 @@ describe("OperatorAuthService", () => {
         email: "support@staylayer.com",
         platformRole: PlatformRole.SUPPORT_ADMIN,
         mfaEnrolled: false,
+        mfaEnrolledAt: null,
       });
       expect(usersService.resetOperatorFailedAttempts).toHaveBeenCalledWith(
         "op-1",
@@ -220,6 +221,8 @@ describe("OperatorAuthService", () => {
         id: "op-1",
         email: "support@staylayer.com",
         platformRole: PlatformRole.SUPPORT_ADMIN,
+        mfaEnrolled: false,
+        mfaEnrolledAt: null,
       });
       expect(result.auth.accessToken).toBe("signed-token");
       expect(result.refreshToken).toBe("signed-token");
@@ -405,6 +408,8 @@ describe("OperatorAuthService", () => {
         id: "op-1",
         email: "support@staylayer.com",
         platformRole: PlatformRole.SUPPORT_ADMIN,
+        mfaEnrolled: false,
+        mfaEnrolledAt: null,
       });
       expect(session.permissions).toEqual(
         expect.arrayContaining([

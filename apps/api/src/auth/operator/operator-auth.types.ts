@@ -58,6 +58,8 @@ export interface OperatorUserProfile {
   id: string;
   email: string;
   platformRole: PlatformRole;
+  mfaEnrolled: boolean;
+  mfaEnrolledAt: string | null;
 }
 
 export interface OperatorSessionResponse {

@@ -150,10 +150,9 @@ export class TranslationController {
   )
   async getGlossaryPreview(
     @Req() req: Request,
-    @Query("siteId") siteId: string,
     @Query() query: TranslationGlossaryPreviewQueryDto,
   ) {
-    await this.ensureSiteAccess(req);
+    const siteId = await this.ensureSiteAccess(req);
     const user = this.getUser(req);
     return this.translationService.getGlossaryPreview(
       user.activeTenantId!,

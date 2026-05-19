@@ -137,8 +137,8 @@ function navLinkClass({ isActive }: { isActive: boolean }) {
   return [
     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition",
     isActive
-      ? "bg-slate-800 text-white"
-      : "text-slate-300 hover:bg-slate-800/60 hover:text-white",
+      ? "bg-cyan-50 text-cyan-800"
+      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
   ].join(" ");
 }
 
@@ -169,14 +169,16 @@ export function OperatorLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900">
-        <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-cyan-600">
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
+      <aside className="flex h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white">
+        <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-cyan-700">
             <Shield className="h-4 w-4 text-white" />
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-white">Operator Console</p>
+            <p className="text-sm font-semibold text-slate-950">
+              Operator Console
+            </p>
             <p className="text-[11px] uppercase tracking-widest text-slate-500">
               Internal control plane
             </p>
@@ -198,7 +200,7 @@ export function OperatorLayout() {
                 <Icon className="h-4 w-4" />
                 <span className="flex-1">{item.label}</span>
                 {item.pending ? (
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                     Soon
                   </span>
                 ) : null}
@@ -206,13 +208,13 @@ export function OperatorLayout() {
             );
           })}
         </nav>
-        <div className="border-t border-slate-800 p-3">
+        <div className="border-t border-slate-200 p-3">
           <div className="flex items-center gap-3 rounded-md px-3 py-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-slate-200">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
               {session?.user.email?.[0]?.toUpperCase() ?? "?"}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-white">
+              <p className="truncate text-xs font-medium text-slate-950">
                 {session?.user.email ?? "Not signed in"}
               </p>
               <p className="text-[10px] uppercase tracking-widest text-slate-500">
@@ -225,8 +227,8 @@ export function OperatorLayout() {
             className={({ isActive }) =>
               `mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium ${
                 isActive
-                  ? "bg-slate-800 text-white"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  ? "bg-cyan-50 text-cyan-800"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
               }`
             }
           >
@@ -238,30 +240,30 @@ export function OperatorLayout() {
             onClick={() => {
               void logout();
             }}
-            className="mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-950"
           >
             <Settings className="h-3.5 w-3.5" />
             Sign out
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-30 flex items-center justify-end gap-2 border-b border-slate-800 bg-slate-950/80 px-6 py-2 backdrop-blur">
+      <main className="min-w-0 flex-1 overflow-y-auto bg-slate-50">
+        <div className="sticky top-0 z-30 flex items-center justify-end gap-2 border-b border-slate-200 bg-white/90 px-6 py-2 backdrop-blur">
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:border-slate-700 hover:text-slate-100"
+            className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 hover:border-slate-300 hover:text-slate-950"
           >
             <Search className="h-3.5 w-3.5" />
             <span>Quick search</span>
-            <span className="ml-2 rounded border border-slate-700 px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-slate-500">
+            <span className="ml-2 rounded border border-slate-200 px-1.5 py-0.5 text-[10px] uppercase tracking-widest text-slate-500">
               ⌘K
             </span>
           </button>
           <button
             type="button"
             onClick={() => navigate("/search")}
-            className="text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-300"
+            className="text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-800"
           >
             Open full search
           </button>
