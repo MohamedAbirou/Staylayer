@@ -231,12 +231,12 @@ describe("OperatorAuthService", () => {
         unknown
       >;
       const refreshOptions = jwtService.signAsync.mock.calls[1][1];
-      expect(refreshPayload.jti).toBeUndefined();
+      expect(refreshPayload.jti).toBeTruthy();
       expect(refreshOptions).toMatchObject({
         audience: OPERATOR_JWT_AUDIENCE,
         issuer: OPERATOR_JWT_ISSUER,
       });
-      expect(refreshOptions.jwtid).toBeTruthy();
+      expect(refreshOptions.jwtid).toBeUndefined();
       expect(prisma.operatorRefreshSession.create).toHaveBeenCalledTimes(1);
       const created = prisma.operatorRefreshSession.create.mock.calls[0][0]
         .data as Record<string, unknown>;

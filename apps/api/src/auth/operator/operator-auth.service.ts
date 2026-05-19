@@ -431,15 +431,15 @@ export class OperatorAuthService {
     operatorId: string,
     jti: string,
   ): Promise<string> {
-    const payload: Omit<OperatorJwtRefreshPayload, "jti"> = {
+    const payload: OperatorJwtRefreshPayload = {
       sub: operatorId,
+      jti,
       type: "operator-refresh",
     };
     return this.jwtService.signAsync(payload, {
       audience: OPERATOR_JWT_AUDIENCE,
       issuer: OPERATOR_JWT_ISSUER,
       expiresIn: OPERATOR_REFRESH_TOKEN_TTL_SECONDS,
-      jwtid: jti,
     });
   }
 
